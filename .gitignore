@@ -1,0 +1,16 @@
+node_modules
+.pnp
+.pnp.js
+coverage
+.next/
+out/
+dist/
+build
+.DS_Store
+.env
+.env.*.local
+!.env.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
