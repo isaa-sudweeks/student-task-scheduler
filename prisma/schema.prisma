@@ -1,5 +1,13 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 model User {
   id        String   @id @default(cuid())
@@ -10,27 +18,27 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tasks     Task[]
-  projects  Project[]
-  courses   Course[]
-  accounts  Account[]
-  sessions  Session[]
+  tasks    Task[]
+  projects Project[]
+  courses  Course[]
+  accounts Account[]
+  sessions Session[]
 }
 
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?  @db.Text
-  access_token       String?  @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?  @db.Text
-  session_state      String?
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -52,14 +60,14 @@ model VerificationToken {
 }
 
 model Course {
-  id       String  @id @default(cuid())
-  user     User    @relation(fields: [userId], references: [id])
-  userId   String
-  title    String
-  term     String?
-  color    String?
+  id     String  @id @default(cuid())
+  user   User    @relation(fields: [userId], references: [id])
+  userId String
+  title  String
+  term   String?
+  color  String?
 
-  tasks    Task[]
+  tasks Task[]
 }
 
 model Project {
@@ -68,7 +76,8 @@ model Project {
   userId      String
   title       String
   description String?
-  tasks       Task[]
+
+  tasks Task[]
 }
 
 enum TaskStatus {
@@ -79,40 +88,45 @@ enum TaskStatus {
 }
 
 model Task {
-  id             String      @id @default(cuid())
-  user           User        @relation(fields: [userId], references: [id])
-  userId         String
-  project        Project?    @relation(fields: [projectId], references: [id])
-  projectId      String?
-  course         Course?     @relation(fields: [courseId], references: [id])
-  courseId       String?
-  title          String
-  notes          String?
-  status         TaskStatus  @default(TODO)
-  priority       Int         @default(0)
-  effortMinutes  Int?
-  dueAt          DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  events         Event[]
-  reminders      Reminder[]
+  id            String     @id @default(cuid())
+  user          User       @relation(fields: [userId], references: [id])
+  userId        String
+  project       Project?   @relation(fields: [projectId], references: [id])
+  projectId     String?
+  course        Course?    @relation(fields: [courseId], references: [id])
+  courseId      String?
+  title         String
+  notes         String?
+  status        TaskStatus @default(TODO)
+  priority      Int        @default(0)
+  effortMinutes Int?
+  dueAt         DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  events    Event[]
+  reminders Reminder[]
 }
 
 model Event {
-  id        String   @id @default(cuid())
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  taskId    String
-  startAt   DateTime
-  endAt     DateTime
-  location  String?
+  id       String   @id @default(cuid())
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId   String
+  startAt  DateTime
+  endAt    DateTime
+  location String?
 }
 
-enum ReminderChannel { EMAIL PUSH SMS }
+enum ReminderChannel {
+  EMAIL
+  PUSH
+  SMS
+}
 
 model Reminder {
-  id        String           @id @default(cuid())
-  task      Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  id        String          @id @default(cuid())
+  task      Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
   taskId    String
   channel   ReminderChannel
-  offsetMin Int              @default(30)
+  offsetMin Int             @default(30)
 }

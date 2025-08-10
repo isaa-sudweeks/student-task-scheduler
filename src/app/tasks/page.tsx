@@ -1,41 +1,5 @@
 "use client";
-
-import React, { useState } from "react";
-import { api } from "@/server/api/react";
-import { AuthButtons } from "@/components/auth-buttons";
-
-export default function TasksPage() {
-  const [title, setTitle] = useState("");
-  const utils = api.useUtils();
-  const list = api.task.list.useQuery();
-  const create = api.task.create.useMutation({ onSuccess: async ()=>{ setTitle(""); await utils.task.list.invalidate(); } });
-  const del = api.task.delete.useMutation({ onSuccess: async ()=>utils.task.list.invalidate() });
-
-  return (
-    <main className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Your Tasks</h1>
-          <p className="text-sm opacity-75">Sign in to create and manage your tasks.</p>
-        </div>
-        <AuthButtons />
-      </header>
-
-      <form className="flex gap-2" onSubmit={(e)=>{e.preventDefault(); if(!title.trim()) return; create.mutate({ title });}}>
-        <input className="flex-1 rounded border px-3 py-2" placeholder="New task title…" value={title} onChange={(e)=>setTitle(e.target.value)} />
-        <button className="rounded bg-black px-4 py-2 text-white dark:bg-white dark:text-black" disabled={create.isPending}>Add</button>
-      </form>
-
-      <ul className="space-y-2">
-        {list.data?.map((t)=> (
-          <li key={t.id} className="flex items-center justify-between rounded border px-3 py-2">
-            <span>{t.title}</span>
-            <button className="text-sm underline" onClick={()=>del.mutate({ id: t.id })}>Delete</button>
-          </li>
-        ))}
-        {list.isLoading && <li>Loading…</li>}
-        {!list.isLoading && (list.data?.length ?? 0) === 0 && <li className="opacity-60">No tasks yet.</li>}
-      </ul>
-    </main>
-  );
-}
+import React,{useState} from 'react';
+import { api } from '@/server/api/react';
+import { AuthButtons } from '@/components/auth-buttons';
+export default function TasksPage(){const [title,setTitle]=useState("");const utils=api.useUtils();const list=api.task.list.useQuery();const create=api.task.create.useMutation({onSuccess:async()=>{setTitle("");await utils.task.list.invalidate();}});const del=api.task.delete.useMutation({onSuccess:async()=>utils.task.list.invalidate()});return(<main className="space-y-6"><header className="flex items-center justify-between"><div><h1 className="text-2xl font-semibold">Your Tasks</h1><p className="text-sm opacity-75">Sign in to create and manage your tasks.</p></div><AuthButtons/></header><form className="flex gap-2" onSubmit={(e)=>{e.preventDefault();if(!title.trim())return;create.mutate({title});}}><input className="flex-1 rounded border px-3 py-2" placeholder="New task title…" value={title} onChange={(e)=>setTitle(e.target.value)} /><button className="rounded bg-black px-4 py-2 text-white dark:bg-white dark:text-black" disabled={create.isPending}>Add</button></form><ul className="space-y-2">{list.data?.map((t)=>(<li key={t.id} className="flex items-center justify-between rounded border px-3 py-2"><span>{t.title}</span><button className="text-sm underline" onClick={()=>del.mutate({id:t.id})}>Delete</button></li>))}{list.isLoading&&<li>Loading…</li>}{!list.isLoading&&(list.data?.length??0)===0&&<li className="opacity-60">No tasks yet.</li>}</ul></main>);}

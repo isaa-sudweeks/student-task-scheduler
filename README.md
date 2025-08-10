@@ -1,29 +1,23 @@
-# Student Task Scheduler (Auth + Docker)
+# Student Task Scheduler (Clean, Docker-friendly)
 
-Next.js + TypeScript + Tailwind + Prisma + tRPC + NextAuth, with Docker.
-
-## Quick start (local)
+## Run with Docker
 ```bash
-pnpm install
-cp .env.example .env
-pnpm dlx prisma generate
-pnpm db:push
-pnpm dev
-# open http://localhost:3000/tasks
-```
-
-## Auth (NextAuth)
-- GitHub OAuth (set `GITHUB_ID`, `GITHUB_SECRET`, callback: `http://localhost:3000/api/auth/callback/github`)
-- Dev Login (Credentials) for local testing
-
-## Docker
-```bash
-docker compose build
+cp .env.example .env    # optional for local runs
+docker compose build --no-cache
 docker compose up -d
 docker compose exec web npx prisma db push
 # open http://localhost:3000/tasks
 ```
 
-## Notes
-- Prisma adapter stores sessions in DB.
-- Replace Dev Login in production.
+## Local (no Docker)
+```bash
+npm install
+cp .env.example .env
+npx prisma generate
+npx prisma db push
+npm run dev
+```
+
+Notes:
+- No postinstall hook (avoids prisma generate before schema copy in Docker).
+- TypeScript 5.7.x + tRPC 11.4.4 + ESLint 8.57 aligned with Next 14.2.x.

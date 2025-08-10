@@ -2,22 +2,7 @@ import "./../styles/globals.css";
 import React from "react";
 import Providers from "./providers";
 import SessionProv from "./session-provider";
-
-export const metadata = {
-  title: "Student Task Scheduler",
-  description: "Plan, prioritize, and finish tasks.",
-};
-
+export const metadata = { title: "Student Task Scheduler", description: "Plan, prioritize, and finish tasks." };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body className="min-h-screen bg-white text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
-        <div className="mx-auto max-w-5xl p-6">
-          <SessionProv>
-            <Providers>{children}</Providers>
-          </SessionProv>
-        </div>
-      </body>
-    </html>
-  );
+  return (<html lang="en"><body className="min-h-screen bg-white text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100"><div className="mx-auto max-w-5xl p-6"><SessionProv><Providers>{children}</Providers></SessionProv></div></body></html>);
 }
