@@ -1,37 +1,44 @@
-# AGENTS
+# Repository Guidelines
 
-This repository hosts a Next.js 14 application for scheduling student tasks. It uses tRPC for API calls and Prisma with a PostgreSQL database.
+## Project Structure & Module Organization
+- `src/app`: Next.js 14 routes/pages (server/client components).
+- `src/server`: tRPC routers, auth, and DB utilities.
+- `prisma/`: Prisma schema (`schema.prisma`) and generated client.
+- `public/`: Static assets.
+- Tests: Unit tests live alongside source as `*.test.ts(x)` (or under `tests/`); Playwright specs typically under `e2e/`.
 
-## Local Setup
+## Build, Test, and Development
+- Install: `npm install`
+- Prisma: `npx prisma generate` then `npx prisma db push`
+- Dev server: `npm run dev`
+- Lint: `npm run lint`
+- Unit tests (Vitest): `npm test`
+- E2E tests (Playwright): `npm run e2e`
+- Production: `npm run build` then `npm start`
+- Docker: `docker compose build --no-cache && docker compose up -d && docker compose exec web npx prisma db push`
 
-1. Install dependencies: `npm install`.
-2. Copy `.env.example` to `.env` and fill in required values.
-3. Generate Prisma client and sync the database:
-   - `npx prisma generate`
-   - `npx prisma db push`
-4. Start the development server: `npm run dev`.
+## Coding Style & Naming Conventions
+- Language: TypeScript; prefer explicit types at module boundaries.
+- Indentation: 2 spaces; keep imports ordered (libs → internal).
+- Components/routers: `PascalCase` for React components; `camelCase` for functions/vars; route folders use Next.js conventions.
+- Linting: ESLint enforces rules; run `npm run lint` and fix warnings before PRs.
 
-## Docker
+## Testing Guidelines
+- Frameworks: Vitest for unit, Playwright for E2E.
+- Naming: `*.test.ts`/`*.test.tsx` for unit; `*.spec.ts` for E2E.
+- Scope: Test tRPC procedures, Prisma logic, and critical UI flows.
+- Running: Use `npm test` locally and in CI; add/adjust tests with any code change.
 
-- `cp .env.example .env` (optional for defaults)
-- `docker compose build --no-cache`
-- `docker compose up -d`
-- `docker compose exec web npx prisma db push`
+## Commit & Pull Request Guidelines
+- Commits: Clear, imperative subject (e.g., "feat: add task calendar"). Keep changes focused.
+- PRs: Include description, rationale, linked issues, and screenshots for UI changes. Note schema or env impacts.
+- Checklist: Run `npm run lint`, `npm test`, and relevant E2E before requesting review.
 
-## Useful Scripts
+## Security & Configuration Tips
+- Env vars: Configure `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `GITHUB_ID`, `GITHUB_SECRET`, `REDIS_URL`, `NEXTAUTH_SECRET` in `.env`. Never commit secrets.
+- Prisma: Re-run `npx prisma generate` after schema changes.
 
-- `npm run lint` – lint the codebase with ESLint.
-- `npm test` – run unit tests with Vitest.
-- `npm run e2e` – run Playwright end-to-end tests.
-- `npm run build` then `npm start` for production.
-
-## Codebase Overview
-
-- `src/app` – Next.js routes and pages.
-- `src/server` – tRPC routers, authentication, and database utilities.
-- `prisma/schema.prisma` – Prisma schema.
-
-## Agent Guidelines
-
-- Run `npm run lint` and `npm test` before committing changes.
-- Ensure environment variables such as `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `GITHUB_ID`, `GITHUB_SECRET`, `REDIS_URL`, and `NEXTAUTH_SECRET` are configured.
+## Contributor Workflow (Agents)
+- Start with `npm install` and env setup.
+- Validate with `npm run lint` and `npm test` before commits.
+- Keep PRs small and incremental; prefer typed, tRPC-first changes.
