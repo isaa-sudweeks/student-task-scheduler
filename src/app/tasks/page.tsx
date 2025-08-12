@@ -2,6 +2,7 @@
 import React,{useMemo,useState} from 'react';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
+import { toast } from 'react-hot-toast';
 
 export default function TasksPage(){
   const [title,setTitle]=useState("");
@@ -17,14 +18,14 @@ export default function TasksPage(){
       await utils.task.list.invalidate();
     },
     onError:(e)=>{
-      alert(e.message || 'Failed to create task');
+      toast.error(e.message || 'Failed to create task');
     }
   });
   const del=api.task.delete.useMutation({onSuccess:async()=>utils.task.list.invalidate()});
   const setDue=api.task.setDueDate.useMutation({
     onSuccess:async()=>utils.task.list.invalidate(),
     onError:(e)=>{
-      alert(e.message || 'Failed to set due date');
+      toast.error(e.message || 'Failed to set due date');
     }
   });
 

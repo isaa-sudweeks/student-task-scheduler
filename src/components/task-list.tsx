@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
+import { toast } from 'react-hot-toast';
 
 export function TaskList(){
   const [filter, setFilter] = useState<'all'|'overdue'|'today'>('all');
@@ -12,14 +13,14 @@ export function TaskList(){
   });
   const rename = api.task.updateTitle.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => alert(e.message || 'Failed to update title')
+    onError: (e) => toast.error(e.message || 'Failed to update title'),
   });
   const del = api.task.delete.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
   });
   const setStatus = api.task.setStatus.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => alert(e.message || 'Failed to update status')
+    onError: (e) => toast.error(e.message || 'Failed to update status'),
   });
 
   return (
