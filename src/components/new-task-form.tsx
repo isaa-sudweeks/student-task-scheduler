@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { api } from '@/server/api/react';
+import { defaultEndOfToday } from '@/lib/datetime';
 
 export function NewTaskForm(){
   const [title,setTitle]=useState("");
@@ -49,9 +50,7 @@ export function NewTaskForm(){
         className="rounded border px-4 py-2 shrink-0 bg-gray-100 text-gray-900 border-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
         onClick={()=>{
           if(!dueAtStr){
-            const d = new Date();
-            d.setHours(23,59,0,0);
-            setDueAtStr(d.toISOString().slice(0,16));
+            setDueAtStr(defaultEndOfToday());
           }
           setShowDuePicker(v=>!v);
         }}
