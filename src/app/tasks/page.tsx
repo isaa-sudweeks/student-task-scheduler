@@ -2,6 +2,7 @@
 import React,{useMemo,useState} from 'react';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
+import { TaskListSkeleton } from '@/components/task-list-skeleton';
 
 export default function TasksPage(){
   const [title,setTitle]=useState("");
@@ -120,7 +121,7 @@ export default function TasksPage(){
             </li>
           );
         })}
-        {list.isLoading&&<li>Loading…</li>}
+        {list.isLoading && <TaskListSkeleton />}
         {!list.isLoading&&(list.data?.length??0)===0&&<li className="opacity-60">No tasks yet.</li>}
       </ul>
     </main>
