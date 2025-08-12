@@ -1,6 +1,7 @@
 "use client";
 import React,{useMemo,useState} from 'react';
 import { api } from '@/server/api/react';
+import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 
 export default function TasksPage(){
   const [title,setTitle]=useState("");
@@ -40,7 +41,7 @@ export default function TasksPage(){
         onSubmit={(e)=>{
           e.preventDefault();
           if(!title.trim())return;
-          const dueAt = dueAtStr ? new Date(dueAtStr) : null;
+          const dueAt = dueAtStr ? parseLocalDateTime(dueAtStr) : null;
           create.mutate({title, dueAt});
         }}
       >
@@ -67,7 +68,7 @@ export default function TasksPage(){
             if(!dueAtStr){
               const d = new Date();
               d.setHours(23,59,0,0);
-              setDueAtStr(d.toISOString().slice(0,16));
+              setDueAtStr(formatLocalDateTime(d));
             }
             setShowDuePicker((v)=>!v);
           }}
@@ -101,10 +102,10 @@ export default function TasksPage(){
                   <input
                     type="datetime-local"
                     className="rounded border px-2 py-1"
-                    value={t.dueAt ? new Date(t.dueAt).toISOString().slice(0,16) : ''}
+                    value={t.dueAt ? formatLocalDateTime(new Date(t.dueAt)) : ''}
                     onChange={(e)=>{
                       const v = e.target.value;
-                      const date = v ? new Date(v) : null;
+                      const date = v ? parseLocalDateTime(v) : null;
                       setDue.mutate({ id: t.id, dueAt: date });
                     }}
                   />

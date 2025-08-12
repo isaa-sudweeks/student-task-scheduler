@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { api } from '@/server/api/react';
+import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 
 export function TaskList(){
   const [filter, setFilter] = useState<'all'|'overdue'|'today'>('all');
@@ -50,10 +51,10 @@ export function TaskList(){
                   <input
                     type="datetime-local"
                     className="rounded border px-2 py-1"
-                    value={t.dueAt ? new Date(t.dueAt).toISOString().slice(0,16) : ''}
+                    value={t.dueAt ? formatLocalDateTime(new Date(t.dueAt)) : ''}
                     onChange={(e)=>{
                       const v = e.target.value;
-                      const date = v ? new Date(v) : null;
+                      const date = v ? parseLocalDateTime(v) : null;
                       setDue.mutate({ id: t.id, dueAt: date });
                     }}
                   />
