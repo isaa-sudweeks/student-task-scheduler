@@ -1,0 +1,27 @@
+services:
+  web:
+    # Reuse the same image but run in dev mode with live-reload
+    command: ["sh", "-c", "chmod +x docker-entrypoint.sh && ./docker-entrypoint.sh dev"]
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/scheduler
+      # Improve reliability of file watching in containers
+      CHOKIDAR_USEPOLLING: "1"
+      WATCHPACK_POLLING: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+    # Use Compose 'watch' to sync files instead of bind mounts
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - node_modules/
+            - .next/
+            - .git/
+            - dist/
+            - build/
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: package-lock.json
