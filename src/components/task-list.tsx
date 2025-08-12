@@ -8,7 +8,6 @@ export function TaskList(){
   const tasks = api.task.list.useQuery({ filter });
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => alert(e.message || 'Failed to set due date')
   });
 
   return (
@@ -58,6 +57,16 @@ export function TaskList(){
         {tasks.isLoading && <li>Loading…</li>}
         {!tasks.isLoading && (tasks.data?.length ?? 0) === 0 && <li className="opacity-60">No tasks.</li>}
       </ul>
+      {tasks.error && (
+        <p role="alert" className="text-red-500">
+          {tasks.error.message}
+        </p>
+      )}
+      {setDue.error && (
+        <p role="alert" className="text-red-500">
+          {setDue.error.message}
+        </p>
+      )}
     </div>
   );
 }

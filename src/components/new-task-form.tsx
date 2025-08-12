@@ -13,9 +13,6 @@ export function NewTaskForm(){
       setDueAtStr("");
       setShowDuePicker(false);
       await utils.task.list.invalidate();
-    },
-    onError:(e)=>{
-      alert(e.message || 'Failed to create task');
     }
   });
 
@@ -60,6 +57,11 @@ export function NewTaskForm(){
         Set Due Date
       </button>
       <button className="rounded bg-black px-4 py-2 text-white disabled:opacity-60 dark:bg-white dark:text-black shrink-0" disabled={create.isPending}>Add</button>
+      {create.error && (
+        <p role="alert" className="w-full text-red-500">
+          {create.error.message}
+        </p>
+      )}
     </form>
   );
 }
