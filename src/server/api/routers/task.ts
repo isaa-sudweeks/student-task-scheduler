@@ -55,6 +55,13 @@ export const taskRouter = router({
       }
       return db.task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
     }),
+  updateTitle: publicProcedure
+    .input(
+      z.object({ id: z.string().min(1), title: z.string().min(1).max(200) })
+    )
+    .mutation(async ({ input }) => {
+      return db.task.update({ where: { id: input.id }, data: { title: input.title } });
+    }),
   delete: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input }) => {
