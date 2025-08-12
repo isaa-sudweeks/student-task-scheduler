@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { api } from '@/server/api/react';
+import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 
 export function TaskList(){
   const [filter, setFilter] = useState<'all'|'overdue'|'today'>('all');
@@ -8,7 +9,6 @@ export function TaskList(){
   const tasks = api.task.list.useQuery({ filter });
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => alert(e.message || 'Failed to set due date')
   });
   const rename = api.task.updateTitle.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
@@ -50,10 +50,10 @@ export function TaskList(){
                   <input
                     type="datetime-local"
                     className="rounded border px-2 py-1"
-                    value={t.dueAt ? new Date(t.dueAt).toISOString().slice(0,16) : ''}
+                    value={t.dueAt ? formatLocalDateTime(new Date(t.dueAt)) : ''}
                     onChange={(e)=>{
                       const v = e.target.value;
-                      const date = v ? new Date(v) : null;
+                      const date = v ? parseLocalDateTime(v) : null;
                       setDue.mutate({ id: t.id, dueAt: date });
                     }}
                   />
@@ -72,6 +72,16 @@ export function TaskList(){
         {tasks.isLoading && <li>Loading…</li>}
         {!tasks.isLoading && (tasks.data?.length ?? 0) === 0 && <li className="opacity-60">No tasks.</li>}
       </ul>
+      {tasks.error && (
+        <p role="alert" className="text-red-500">
+          {tasks.error.message}
+        </p>
+      )}
+      {setDue.error && (
+        <p role="alert" className="text-red-500">
+          {setDue.error.message}
+        </p>
+      )}
     </div>
   );
 }
