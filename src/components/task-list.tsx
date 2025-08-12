@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { toast } from 'react-hot-toast';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 import { TaskListSkeleton } from './task-list-skeleton';
@@ -15,14 +16,14 @@ export function TaskList(){
   });
   const rename = api.task.updateTitle.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => alert(e.message || 'Failed to update title')
+    onError: (e) => toast.error(e.message || 'Failed to update title')
   });
   const del = api.task.delete.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
   });
   const setStatus = api.task.setStatus.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => alert(e.message || 'Failed to update status')
+    onError: (e) => toast.error(e.message || 'Failed to update status')
   });
 
   return (

@@ -4,6 +4,7 @@ import React from "react";
 import { httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
 import { ThemeProvider } from "next-themes";
+import { Toaster } from "react-hot-toast";
 import { api } from "@/server/api/react";
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = React.useState(() => new QueryClient());
@@ -22,7 +23,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <api.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <Toaster />
+        </QueryClientProvider>
       </api.Provider>
     </ThemeProvider>
   );

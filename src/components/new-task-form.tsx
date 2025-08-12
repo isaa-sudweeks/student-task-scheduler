@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
+import { toast } from 'react-hot-toast';
 
 export function NewTaskForm(){
   const [title,setTitle]=useState("");
@@ -15,6 +16,9 @@ export function NewTaskForm(){
       setDueAtStr("");
       setShowDuePicker(false);
       await utils.task.list.invalidate();
+    },
+    onError:(e)=>{
+      toast.error(e.message || 'Failed to create task');
     }
   });
 
@@ -60,11 +64,6 @@ export function NewTaskForm(){
         Set Due Date
       </Button>
       <Button type="submit" className="shrink-0" disabled={create.isPending}>Add</Button>
-      {create.error && (
-        <p role="alert" className="w-full text-red-500">
-          {create.error.message}
-        </p>
-      )}
     </form>
   );
 }
