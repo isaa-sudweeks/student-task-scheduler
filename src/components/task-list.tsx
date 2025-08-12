@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
+import { TaskListSkeleton } from './task-list-skeleton';
 
 export function TaskList(){
   const [filter, setFilter] = useState<'all'|'overdue'|'today'>('all');
@@ -107,7 +108,7 @@ export function TaskList(){
             );
           })}
         </AnimatePresence>
-        {tasks.isLoading && <li>Loading…</li>}
+        {tasks.isLoading && <TaskListSkeleton />}
         {!tasks.isLoading && (tasks.data?.length ?? 0) === 0 && <li className="opacity-60">No tasks.</li>}
       </ul>
       {tasks.error && (
