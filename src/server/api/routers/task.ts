@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { TaskStatus } from '@prisma/client';
 import { publicProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 export const taskRouter = router({
@@ -29,7 +30,7 @@ export const taskRouter = router({
           { dueAt: { sort: 'asc', nulls: 'last' } as any },
           { createdAt: 'desc' },
         ],
-        select: { id: true, title: true, createdAt: true, dueAt: true },
+        select: { id: true, title: true, createdAt: true, dueAt: true, status: true },
       });
     }),
   create: publicProcedure
@@ -61,6 +62,13 @@ export const taskRouter = router({
     )
     .mutation(async ({ input }) => {
       return db.task.update({ where: { id: input.id }, data: { title: input.title } });
+    }),
+  setStatus: publicProcedure
+    .input(
+      z.object({ id: z.string().min(1), status: z.nativeEnum(TaskStatus) })
+    )
+    .mutation(async ({ input }) => {
+      return db.task.update({ where: { id: input.id }, data: { status: input.status } });
     }),
   delete: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
