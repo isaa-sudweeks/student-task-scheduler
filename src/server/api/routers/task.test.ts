@@ -119,6 +119,21 @@ describe('taskRouter (no auth)', () => {
     expect(list2).toHaveLength(0);
   });
 
+  it('updates a task title', async () => {
+    const caller = taskRouter.createCaller({});
+    const created = await caller.create({ title: 'Old' });
+    const updated = await caller.updateTitle({ id: created.id, title: 'New Title' });
+    expect(updated.title).toBe('New Title');
+    const list = await caller.list();
+    expect(list[0]!.title).toBe('New Title');
+  });
+
+  it('rejects invalid titles on update', async () => {
+    const caller = taskRouter.createCaller({});
+    const created = await caller.create({ title: 'Valid' });
+    await expect(caller.updateTitle({ id: created.id, title: '' })).rejects.toThrow();
+  });
+
   it('sets a due date on an existing task', async () => {
     const caller = taskRouter.createCaller({});
     const created = await caller.create({ title: 'With due later' });

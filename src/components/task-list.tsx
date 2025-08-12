@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { api } from '@/server/api/react';
+import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 
 export function TaskList(){
   const [filter, setFilter] = useState<'all'|'overdue'|'today'>('all');
@@ -8,7 +9,13 @@ export function TaskList(){
   const tasks = api.task.list.useQuery({ filter });
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => alert(e.message || 'Failed to set due date')
+  });
+  const rename = api.task.updateTitle.useMutation({
+    onSuccess: async () => utils.task.list.invalidate(),
+    onError: (e) => alert(e.message || 'Failed to update title')
+  });
+  const del = api.task.delete.useMutation({
+    onSuccess: async () => utils.task.list.invalidate(),
   });
   const setStatus = api.task.setStatus.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
@@ -33,25 +40,33 @@ export function TaskList(){
         {tasks.data?.map((t)=>{
           const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
           const done = t.status === 'DONE';
-            return (
-              <li key={t.id} className={`flex items-center rounded border px-3 py-2 ${overdue ? 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200' : ''}`}>
-              <input
-                type="checkbox"
-                className="mr-2"
-                checked={done}
-                onChange={() => setStatus.mutate({ id: t.id, status: done ? 'TODO' : 'DONE' })}
-              />
-              <div className="flex flex-col gap-1 flex-1">
-                <span className={`font-medium ${done ? 'line-through opacity-60' : ''}`}>{t.title}</span>
+          return (
+            <li key={t.id} className={`flex items-center justify-between rounded border px-3 py-2 ${overdue? 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200' : ''}`}>
+              <div className="flex items-start gap-2 flex-1">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={done}
+                  onChange={() => setStatus.mutate({ id: t.id, status: done ? 'TODO' : 'DONE' })}
+                  aria-label={done ? 'Mark as todo' : 'Mark as done'}
+                />
+                <div className="flex flex-col gap-1 flex-1">
+                  <input
+                    type="text"
+                    defaultValue={t.title}
+                    className={`font-medium rounded border px-2 py-1 ${done ? 'line-through opacity-60' : ''}`}
+                    onBlur={(e)=>rename.mutate({ id: t.id, title: e.currentTarget.value })}
+                    onKeyDown={(e)=>{ if (e.key==='Enter') e.currentTarget.blur(); }}
+                  />
                 <div className="flex items-center gap-2 text-xs opacity-80">
                   <label>Due:</label>
                   <input
                     type="datetime-local"
                     className="rounded border px-2 py-1"
-                    value={t.dueAt ? new Date(t.dueAt).toISOString().slice(0,16) : ''}
+                    value={t.dueAt ? formatLocalDateTime(new Date(t.dueAt)) : ''}
                     onChange={(e)=>{
                       const v = e.target.value;
-                      const date = v ? new Date(v) : null;
+                      const date = v ? parseLocalDateTime(v) : null;
                       setDue.mutate({ id: t.id, dueAt: date });
                     }}
                   />
@@ -63,12 +78,24 @@ export function TaskList(){
                   )}
                 </div>
               </div>
+              </div>
+              <button className="text-sm underline" onClick={()=>del.mutate({ id: t.id })}>Delete</button>
             </li>
           );
         })}
         {tasks.isLoading && <li>Loading…</li>}
         {!tasks.isLoading && (tasks.data?.length ?? 0) === 0 && <li className="opacity-60">No tasks.</li>}
       </ul>
+      {tasks.error && (
+        <p role="alert" className="text-red-500">
+          {tasks.error.message}
+        </p>
+      )}
+      {setDue.error && (
+        <p role="alert" className="text-red-500">
+          {setDue.error.message}
+        </p>
+      )}
     </div>
   );
 }

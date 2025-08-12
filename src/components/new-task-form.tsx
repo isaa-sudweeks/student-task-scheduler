@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { api } from '@/server/api/react';
+import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 
 export function NewTaskForm(){
   const [title,setTitle]=useState("");
@@ -13,9 +14,6 @@ export function NewTaskForm(){
       setDueAtStr("");
       setShowDuePicker(false);
       await utils.task.list.invalidate();
-    },
-    onError:(e)=>{
-      alert(e.message || 'Failed to create task');
     }
   });
 
@@ -25,7 +23,7 @@ export function NewTaskForm(){
       onSubmit={(e)=>{
         e.preventDefault();
         if(!title.trim())return;
-        const dueAt = dueAtStr ? new Date(dueAtStr) : null;
+        const dueAt = dueAtStr ? parseLocalDateTime(dueAtStr) : null;
         create.mutate({title, dueAt});
       }}
     >
@@ -51,7 +49,7 @@ export function NewTaskForm(){
           if(!dueAtStr){
             const d = new Date();
             d.setHours(23,59,0,0);
-            setDueAtStr(d.toISOString().slice(0,16));
+            setDueAtStr(formatLocalDateTime(d));
           }
           setShowDuePicker(v=>!v);
         }}
@@ -60,6 +58,11 @@ export function NewTaskForm(){
         Set Due Date
       </button>
       <button className="rounded bg-black px-4 py-2 text-white disabled:opacity-60 dark:bg-white dark:text-black shrink-0" disabled={create.isPending}>Add</button>
+      {create.error && (
+        <p role="alert" className="w-full text-red-500">
+          {create.error.message}
+        </p>
+      )}
     </form>
   );
 }
