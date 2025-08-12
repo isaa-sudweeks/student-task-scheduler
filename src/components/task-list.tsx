@@ -10,6 +10,9 @@ export function TaskList(){
     onSuccess: async () => utils.task.list.invalidate(),
     onError: (e) => alert(e.message || 'Failed to set due date')
   });
+  const del = api.task.delete.useMutation({
+    onSuccess: async () => utils.task.list.invalidate(),
+  });
 
   return (
     <div className="space-y-3">
@@ -52,6 +55,7 @@ export function TaskList(){
                   )}
                 </div>
               </div>
+              <button className="text-sm underline" onClick={()=>del.mutate({ id: t.id })}>Delete</button>
             </li>
           );
         })}
