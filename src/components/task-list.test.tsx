@@ -25,13 +25,13 @@ vi.mock('@/server/api/react', () => ({
         }),
       },
       updateTitle: {
-        useMutation: () => ({ mutate: vi.fn(), error: undefined }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
       delete: {
-        useMutation: () => ({ mutate: vi.fn(), error: undefined }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
       setStatus: {
-        useMutation: () => ({ mutate: vi.fn(), error: undefined }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
     },
   },

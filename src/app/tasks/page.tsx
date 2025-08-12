@@ -1,5 +1,6 @@
 "use client";
-import React,{useMemo,useState} from 'react';
+import React,{useState} from 'react';
+import { Button } from '@/components/ui/button';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 
@@ -60,9 +61,10 @@ export default function TasksPage(){
             aria-label="Due date"
           />
         )}
-        <button
+        <Button
           type="button"
-          className="rounded border px-4 py-2 shrink-0 bg-gray-100 text-gray-900 border-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+          variant="secondary"
+          className="shrink-0"
           onClick={()=>{
             if(!dueAtStr){
               const d = new Date();
@@ -74,8 +76,8 @@ export default function TasksPage(){
           aria-label="Toggle due date picker"
         >
           Set Due Date
-        </button>
-        <button className="rounded bg-black px-4 py-2 text-white dark:bg-white dark:text-black shrink-0" disabled={create.isPending}>Add</button>
+        </Button>
+        <Button type="submit" className="shrink-0" disabled={create.isPending}>Add</Button>
       </form>
       <div className="flex items-center gap-2">
         <label className="text-sm opacity-80">Filter:</label>
@@ -109,14 +111,26 @@ export default function TasksPage(){
                     }}
                   />
                   {t.dueAt && (
-                    <button className="underline" onClick={()=>setDue.mutate({ id: t.id, dueAt: null })}>Clear</button>
+                    <Button
+                      variant="secondary"
+                      className="underline bg-transparent border-0 px-0 py-0"
+                      onClick={()=>setDue.mutate({ id: t.id, dueAt: null })}
+                    >
+                      Clear
+                    </Button>
                   )}
                   {t.dueAt && (
                     <span className="ml-2">{overdue ? 'Overdue' : `Due ${new Date(t.dueAt).toLocaleString()}`}</span>
                   )}
                 </div>
               </div>
-              <button className="text-sm underline" onClick={()=>del.mutate({id:t.id})}>Delete</button>
+              <Button
+                variant="danger"
+                className="text-sm underline bg-transparent px-0 py-0 text-red-600"
+                onClick={()=>del.mutate({id:t.id})}
+              >
+                Delete
+              </Button>
             </li>
           );
         })}
