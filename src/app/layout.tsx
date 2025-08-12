@@ -12,12 +12,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-white text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
-        <div className="mx-auto max-w-5xl p-6">
-          <Providers>
-            <ThemeToggle />
+        <Providers>
+          <ThemeToggle />
+          <div className="mx-auto max-w-5xl p-6">
             {children}
-          </Providers>
-        </div>
+          </div>
+        </Providers>
       </body>
     </html>
   );
