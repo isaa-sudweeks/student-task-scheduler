@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { taskRouter } from './task';
 
 // In-memory store to simulate DB
-type T = { id: string; title: string; createdAt: Date };
+type T = { id: string; title: string; createdAt: Date; dueAt?: Date | null };
 let store: T[] = [];
 let idSeq = 0;
 
@@ -11,18 +11,68 @@ vi.mock('@/server/db', () => {
   return {
     db: {
       task: {
-        findMany: vi.fn(async () =>
-          store.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        findMany: vi.fn(
+          async (
+            args?: {
+              where?: { dueAt?: { lt?: Date; gte?: Date; lt2?: never; lte?: Date } | null };
+              orderBy?: any;
+              select?: any;
+            }
+          ) => {
+            let result = [...store];
+            // Very light filtering for tests
+            const where = args?.where;
+            if (where?.dueAt && (where.dueAt.lt || where.dueAt.gte || where.dueAt.lte)) {
+              result = result.filter((t) => {
+                const d = t.dueAt ?? null;
+                if (d === null) return false; // emulate where on non-null when filtering by dueAt
+                if (where.dueAt?.lt && !(d < where.dueAt.lt)) return false;
+                if (where.dueAt?.gte && !(d >= where.dueAt.gte)) return false;
+                if (where.dueAt?.lte && !(d <= where.dueAt.lte)) return false;
+                return true;
+              });
+            }
+            // Very light ordering: dueAt asc (nulls last), then createdAt desc
+            result.sort((a, b) => {
+              const ad = a.dueAt ?? null;
+              const bd = b.dueAt ?? null;
+              if (ad === null && bd === null) {
+                return b.createdAt.getTime() - a.createdAt.getTime();
+              }
+              if (ad === null) return 1;
+              if (bd === null) return -1;
+              const cmp = ad.getTime() - bd.getTime();
+              if (cmp !== 0) return cmp;
+              return b.createdAt.getTime() - a.createdAt.getTime();
+            });
+            return result.map((t) => ({
+              id: t.id,
+              title: t.title,
+              createdAt: t.createdAt,
+              dueAt: t.dueAt ?? null,
+            }));
+          }
         ),
-        create: vi.fn(async ({ data }: { data: { title: string } }) => {
-          const item: T = {
-            id: `t_${++idSeq}`,
-            title: data.title,
-            createdAt: new Date(),
-          };
-          store.push(item);
-          return item;
-        }),
+        create: vi.fn(
+          async ({ data }: { data: { title: string; dueAt?: Date | null } }) => {
+            const item: T = {
+              id: `t_${++idSeq}`,
+              title: data.title,
+              createdAt: new Date(),
+              dueAt: data.dueAt ?? null,
+            };
+            store.push(item);
+            return item;
+          }
+        ),
+        update: vi.fn(
+          async ({ where, data }: { where: { id: string }; data: Partial<T> }) => {
+            const idx = store.findIndex((t) => t.id === where.id);
+            if (idx === -1) throw new Error('Not found');
+            store[idx] = { ...store[idx], ...data };
+            return store[idx];
+          }
+        ),
         delete: vi.fn(async ({ where }: { where: { id: string } }) => {
           const idx = store.findIndex((t) => t.id === where.id);
           if (idx !== -1) {
@@ -64,5 +114,71 @@ describe('taskRouter (no auth)', () => {
     await caller.delete({ id: created.id });
     const list2 = await caller.list();
     expect(list2).toHaveLength(0);
+  });
+
+  it('sets a due date on an existing task', async () => {
+    const caller = taskRouter.createCaller({});
+    const created = await caller.create({ title: 'With due later' });
+    expect(created.dueAt ?? null).toBeNull();
+
+    const dueAt = new Date('2030-01-15T10:00:00.000Z');
+    const updated = await caller.setDueDate({ id: created.id, dueAt });
+    expect(updated.dueAt?.toISOString()).toBe(dueAt.toISOString());
+
+    const list = await caller.list();
+    expect(list[0]!.dueAt?.toISOString()).toBe(dueAt.toISOString());
+  });
+
+  it('creates a task with an initial due date', async () => {
+    const caller = taskRouter.createCaller({});
+    const dueAt = new Date('2031-05-20T09:30:00.000Z');
+    const created = await caller.create({ title: 'With due now', dueAt });
+    expect(created.dueAt?.toISOString()).toBe(dueAt.toISOString());
+
+    const list = await caller.list();
+    expect(list[0]!.dueAt?.toISOString()).toBe(dueAt.toISOString());
+  });
+
+  it('clears a due date (set to null)', async () => {
+    const caller = taskRouter.createCaller({});
+    const dueAt = new Date('2032-03-03T00:00:00.000Z');
+    const created = await caller.create({ title: 'Clear me', dueAt });
+    expect(created.dueAt).toBeTruthy();
+    const cleared = await caller.setDueDate({ id: created.id, dueAt: null });
+    expect(cleared.dueAt ?? null).toBeNull();
+  });
+
+  it('rejects past due dates on create and update', async () => {
+    const caller = taskRouter.createCaller({});
+    const past = new Date(Date.now() - 24*60*60*1000);
+    await expect(caller.create({ title: 'Past', dueAt: past })).rejects.toThrow();
+    const created = await caller.create({ title: 'OK' });
+    await expect(caller.setDueDate({ id: created.id, dueAt: past })).rejects.toThrow();
+  });
+
+  it('filters overdue and today correctly', async () => {
+    const caller = taskRouter.createCaller({});
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24*60*60*1000);
+    const endOfToday = new Date(now);
+    endOfToday.setHours(23,59,0,0);
+    const tomorrow = new Date(now.getTime() + 24*60*60*1000);
+
+    const over = await caller.create({ title: 'Overdue', dueAt: tomorrow });
+    const todayTask = await caller.create({ title: 'Today', dueAt: endOfToday });
+    await caller.create({ title: 'Future', dueAt: new Date(now.getTime() + 2*24*60*60*1000) });
+
+    // Simulate time passing: mark one as overdue by mutating the in-memory store
+    const idx = store.findIndex(s=>s.id===over.id);
+    if (idx !== -1) store[idx].dueAt = yesterday;
+
+    const overdue = await caller.list({ filter: 'overdue' });
+    expect(overdue.map(t=>t.title)).toEqual(['Overdue']);
+
+    const today = await caller.list({ filter: 'today' });
+    expect(today.map(t=>t.title)).toEqual(['Today']);
+
+    const all = await caller.list();
+    expect(all.length).toBe(3);
   });
 });
