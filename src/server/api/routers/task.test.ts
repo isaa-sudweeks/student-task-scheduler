@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { TaskStatus } from '@prisma/client';
 import { taskRouter } from './task';
 
 // In-memory store to simulate DB
-type T = { id: string; title: string; createdAt: Date; dueAt?: Date | null };
+type T = { id: string; title: string; createdAt: Date; dueAt?: Date | null; status: TaskStatus };
 let store: T[] = [];
 let idSeq = 0;
 
@@ -50,6 +51,7 @@ vi.mock('@/server/db', () => {
               title: t.title,
               createdAt: t.createdAt,
               dueAt: t.dueAt ?? null,
+              status: t.status,
             }));
           }
         ),
@@ -60,6 +62,7 @@ vi.mock('@/server/db', () => {
               title: data.title,
               createdAt: new Date(),
               dueAt: data.dueAt ?? null,
+              status: TaskStatus.TODO,
             };
             store.push(item);
             return item;
@@ -146,6 +149,16 @@ describe('taskRouter (no auth)', () => {
     expect(created.dueAt).toBeTruthy();
     const cleared = await caller.setDueDate({ id: created.id, dueAt: null });
     expect(cleared.dueAt ?? null).toBeNull();
+  });
+
+  it('sets task status', async () => {
+    const caller = taskRouter.createCaller({});
+    const created = await caller.create({ title: 'Status me' });
+    expect(created.status).toBe(TaskStatus.TODO);
+    const updated = await caller.setStatus({ id: created.id, status: TaskStatus.DONE });
+    expect(updated.status).toBe(TaskStatus.DONE);
+    const list = await caller.list();
+    expect(list[0]!.status).toBe(TaskStatus.DONE);
   });
 
   it('rejects past due dates on create and update', async () => {

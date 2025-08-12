@@ -10,6 +10,10 @@ export function TaskList(){
     onSuccess: async () => utils.task.list.invalidate(),
     onError: (e) => alert(e.message || 'Failed to set due date')
   });
+  const setStatus = api.task.setStatus.useMutation({
+    onSuccess: async () => utils.task.list.invalidate(),
+    onError: (e) => alert(e.message || 'Failed to update status')
+  });
 
   return (
     <div className="space-y-3">
@@ -28,10 +32,17 @@ export function TaskList(){
       <ul className="space-y-2">
         {tasks.data?.map((t)=>{
           const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
-          return (
-            <li key={t.id} className={`flex items-center justify-between rounded border px-3 py-2 ${overdue? 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200' : ''}`}>
-              <div className="flex flex-col gap-1">
-                <span className="font-medium">{t.title}</span>
+          const done = t.status === 'DONE';
+            return (
+              <li key={t.id} className={`flex items-center rounded border px-3 py-2 ${overdue ? 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200' : ''}`}>
+              <input
+                type="checkbox"
+                className="mr-2"
+                checked={done}
+                onChange={() => setStatus.mutate({ id: t.id, status: done ? 'TODO' : 'DONE' })}
+              />
+              <div className="flex flex-col gap-1 flex-1">
+                <span className={`font-medium ${done ? 'line-through opacity-60' : ''}`}>{t.title}</span>
                 <div className="flex items-center gap-2 text-xs opacity-80">
                   <label>Due:</label>
                   <input
