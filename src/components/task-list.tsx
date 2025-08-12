@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 
@@ -71,7 +72,13 @@ export function TaskList(){
                     }}
                   />
                   {t.dueAt && (
-                    <button className="underline" onClick={()=>setDue.mutate({ id: t.id, dueAt: null })}>Clear</button>
+                    <Button
+                      variant="secondary"
+                      className="underline bg-transparent border-0 px-0 py-0"
+                      onClick={()=>setDue.mutate({ id: t.id, dueAt: null })}
+                    >
+                      Clear
+                    </Button>
                   )}
                   {t.dueAt && (
                     <span className="ml-2">{overdue ? 'Overdue' : `Due ${new Date(t.dueAt).toLocaleString()}`}</span>
@@ -79,7 +86,13 @@ export function TaskList(){
                 </div>
               </div>
               </div>
-              <button className="text-sm underline" onClick={()=>del.mutate({ id: t.id })}>Delete</button>
+              <Button
+                variant="danger"
+                className="text-sm underline bg-transparent px-0 py-0 text-red-600"
+                onClick={()=>del.mutate({ id: t.id })}
+              >
+                Delete
+              </Button>
             </li>
           );
         })}

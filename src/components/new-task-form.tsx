@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 
@@ -42,9 +43,10 @@ export function NewTaskForm(){
           aria-label="Due date"
         />)
       }
-      <button
+      <Button
         type="button"
-        className="rounded border px-4 py-2 shrink-0 bg-gray-100 text-gray-900 border-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+        variant="secondary"
+        className="shrink-0"
         onClick={()=>{
           if(!dueAtStr){
             const d = new Date();
@@ -56,8 +58,8 @@ export function NewTaskForm(){
         aria-label="Toggle due date picker"
       >
         Set Due Date
-      </button>
-      <button className="rounded bg-black px-4 py-2 text-white disabled:opacity-60 dark:bg-white dark:text-black shrink-0" disabled={create.isPending}>Add</button>
+      </Button>
+      <Button type="submit" className="shrink-0" disabled={create.isPending}>Add</Button>
       {create.error && (
         <p role="alert" className="w-full text-red-500">
           {create.error.message}
