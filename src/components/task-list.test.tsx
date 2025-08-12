@@ -24,6 +24,15 @@ vi.mock('@/server/api/react', () => ({
           error: { message: 'Failed to set due date' },
         }),
       },
+      updateTitle: {
+        useMutation: () => ({ mutate: vi.fn(), error: undefined }),
+      },
+      delete: {
+        useMutation: () => ({ mutate: vi.fn(), error: undefined }),
+      },
+      setStatus: {
+        useMutation: () => ({ mutate: vi.fn(), error: undefined }),
+      },
     },
   },
 }));

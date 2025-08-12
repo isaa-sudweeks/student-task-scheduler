@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 
@@ -37,11 +38,19 @@ export function TaskList(){
         </select>
       </div>
       <ul className="space-y-2">
+        <AnimatePresence>
         {tasks.data?.map((t)=>{
           const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
           const done = t.status === 'DONE';
           return (
-            <li key={t.id} className={`flex items-center justify-between rounded border px-3 py-2 ${overdue? 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200' : ''}`}>
+            <motion.li
+              key={t.id}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              layout
+              className={`flex items-center justify-between rounded border px-3 py-2 ${overdue? 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200' : ''}`}
+            >
               <div className="flex items-start gap-2 flex-1">
                 <input
                   type="checkbox"
@@ -80,9 +89,10 @@ export function TaskList(){
               </div>
               </div>
               <button className="text-sm underline" onClick={()=>del.mutate({ id: t.id })}>Delete</button>
-            </li>
+            </motion.li>
           );
         })}
+        </AnimatePresence>
         {tasks.isLoading && <li>Loading…</li>}
         {!tasks.isLoading && (tasks.data?.length ?? 0) === 0 && <li className="opacity-60">No tasks.</li>}
       </ul>
