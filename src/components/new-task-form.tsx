@@ -32,6 +32,7 @@ export function NewTaskForm(){
         placeholder="Add a task…"
         value={title}
         onChange={(e)=>setTitle(e.target.value)}
+        aria-label="Task title"
       />
       {showDuePicker && (
         <input
@@ -39,7 +40,7 @@ export function NewTaskForm(){
           className="rounded border px-3 py-2 shrink-0"
           value={dueAtStr}
           onChange={(e)=>setDueAtStr(e.target.value)}
-          aria-label="Due date"
+          aria-label="Task due date"
         />)
       }
       <button
