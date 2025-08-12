@@ -10,6 +10,10 @@ export function TaskList(){
     onSuccess: async () => utils.task.list.invalidate(),
     onError: (e) => alert(e.message || 'Failed to set due date')
   });
+  const rename = api.task.updateTitle.useMutation({
+    onSuccess: async () => utils.task.list.invalidate(),
+    onError: (e) => alert(e.message || 'Failed to update title')
+  });
   const del = api.task.delete.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
   });
@@ -34,7 +38,13 @@ export function TaskList(){
           return (
             <li key={t.id} className={`flex items-center justify-between rounded border px-3 py-2 ${overdue? 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200' : ''}`}>
               <div className="flex flex-col gap-1">
-                <span className="font-medium">{t.title}</span>
+                <input
+                  type="text"
+                  defaultValue={t.title}
+                  className="font-medium rounded border px-2 py-1"
+                  onBlur={(e)=>rename.mutate({ id: t.id, title: e.currentTarget.value })}
+                  onKeyDown={(e)=>{ if (e.key==='Enter') e.currentTarget.blur(); }}
+                />
                 <div className="flex items-center gap-2 text-xs opacity-80">
                   <label>Due:</label>
                   <input
