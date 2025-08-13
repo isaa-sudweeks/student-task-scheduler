@@ -6,6 +6,8 @@ import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 import { NewTaskForm } from './new-task-form';
 
+let mutateSpy = vi.fn();
+
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ task: { list: { invalidate: vi.fn() } } }),
@@ -13,7 +15,7 @@ vi.mock('@/server/api/react', () => ({
       list: { useQuery: () => ({ data: [], isLoading: false }) },
       create: {
         useMutation: () => ({
-          mutate: vi.fn(),
+          mutate: (...args: unknown[]) => (mutateSpy as any)(...args),
           isPending: false,
           error: { message: 'Failed to create task' },
         }),
@@ -32,7 +34,10 @@ vi.mock('@/server/api/react', () => ({
   },
 }));
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  mutateSpy.mockReset();
+});
 
 describe('NewTaskForm', () => {
   it('shows error message when creation fails', () => {
@@ -57,5 +62,25 @@ describe('NewTaskForm', () => {
     expect(screen.queryByLabelText('Task due date')).not.toBeInTheDocument();
     fireEvent.click(toggle);
     expect(screen.getByLabelText('Task due date')).toBeInTheDocument();
+  });
+
+  it('submits subject when provided', () => {
+    mutateSpy = vi.fn();
+    render(<NewTaskForm />);
+    const title = screen.getByPlaceholderText('Add a task…');
+    const subject = screen.getByPlaceholderText('Subject (optional)');
+    fireEvent.change(title, { target: { value: 'Do homework' } });
+    fireEvent.change(subject, { target: { value: 'Math' } });
+    fireEvent.submit(title.closest('form')!);
+    expect(mutateSpy).toHaveBeenCalledWith({ title: 'Do homework', dueAt: null, subject: 'Math' });
+  });
+
+  it('omits subject when empty', () => {
+    mutateSpy = vi.fn();
+    render(<NewTaskForm />);
+    const title = screen.getByPlaceholderText('Add a task…');
+    fireEvent.change(title, { target: { value: 'Read book' } });
+    fireEvent.submit(title.closest('form')!);
+    expect(mutateSpy).toHaveBeenCalledWith({ title: 'Read book', dueAt: null });
   });
 });
