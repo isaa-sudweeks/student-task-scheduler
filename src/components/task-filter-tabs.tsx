@@ -22,10 +22,10 @@ export function TaskFilterTabs({ value, onChange }: TaskFilterTabsProps) {
           role="tab"
           type="button"
           aria-selected={value === opt.value}
-          className={`rounded border px-3 py-1 text-sm ${
+          className={`bg-transparent px-3 py-1 text-sm border-b-2 transition ${
             value === opt.value
-              ? 'bg-black text-white dark:bg-white dark:text-black'
-              : 'bg-transparent'
+              ? 'border-black dark:border-white'
+              : 'border-transparent'
           }`}
           onClick={() => onChange(opt.value)}
         >
