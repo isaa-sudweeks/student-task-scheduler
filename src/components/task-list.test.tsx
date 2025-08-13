@@ -6,6 +6,26 @@ import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 import { TaskList } from './task-list';
 
+// Capture items passed to SortableContext so we can assert compaction
+const sortableItemsCalls: unknown[][] = [];
+vi.mock('@dnd-kit/sortable', async () => {
+  return {
+    // Record each items prop received to verify it matches filtered list
+    SortableContext: ({ items, children }: { items: unknown; children: React.ReactNode }) => {
+      sortableItemsCalls.push(Array.isArray(items) ? [...items] : [items]);
+      return <div data-testid="sortable-context">{children}</div> as any;
+    },
+    useSortable: () => ({
+      attributes: {},
+      listeners: {},
+      setNodeRef: () => {},
+      transform: null,
+      transition: null,
+    }),
+    arrayMove: (arr: unknown[]) => arr,
+  } as any;
+});
+
 const defaultQuery = {
   data: [
     { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math' },
@@ -48,6 +68,7 @@ vi.mock('@/server/api/react', () => ({
 afterEach(() => {
   cleanup();
   useQueryMock.mockReturnValue(defaultQuery);
+  sortableItemsCalls.length = 0;
 });
 
 describe('TaskList', () => {
@@ -98,5 +119,30 @@ describe('TaskList', () => {
   it('displays completed task ratio', () => {
     render(<TaskList />);
     expect(screen.getByText('1/2 completed')).toBeInTheDocument();
+  });
+
+  it('compacts visible tasks to the top when filtering', async () => {
+    useQueryMock.mockReturnValue({
+      data: [
+        { id: 'a', title: 'Alpha', dueAt: null, status: 'TODO' },
+        { id: 'b', title: 'Beta', dueAt: null, status: 'TODO' },
+        { id: 'c', title: 'Gamma', dueAt: null, status: 'TODO' },
+      ],
+      isLoading: false,
+      error: undefined,
+    });
+    render(<TaskList />);
+
+    // Type a query that matches only one item
+    const input = screen.getByPlaceholderText('Search tasks...');
+    fireEvent.change(input, { target: { value: 'gamma' } });
+
+    // The last SortableContext call should receive only the filtered ids
+    const lastCall = sortableItemsCalls[sortableItemsCalls.length - 1] as string[];
+    expect(lastCall).toEqual(['c']);
+    // Only the matching task remains in the DOM (no gaps)
+    expect(screen.getByDisplayValue('Gamma')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Alpha')).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Beta')).not.toBeInTheDocument();
   });
 });

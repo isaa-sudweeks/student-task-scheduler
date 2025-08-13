@@ -82,14 +82,15 @@ export const taskRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
-      const max = await db.task.aggregate({ _max: { position: true } });
-      const position = (max._max.position ?? 0) + 1;
+      // Place new task at the end based on max(position)
+      const { _max } = await db.task.aggregate({ _max: { position: true } });
+      const nextPosition = (_max.position ?? -1) + 1;
       return db.task.create({
         data: {
           title: input.title,
           dueAt: input.dueAt ?? null,
           subject: input.subject ?? null,
-          position,
+          position: nextPosition,
         },
       });
     }),
@@ -120,7 +121,13 @@ export const taskRouter = router({
   delete: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input }) => {
-      return db.task.delete({ where: { id: input.id } });
+      // Be resilient even if DB referential actions aren't cascaded yet
+      const [, , deleted] = await db.$transaction([
+        db.reminder.deleteMany({ where: { taskId: input.id } }),
+        db.event.deleteMany({ where: { taskId: input.id } }),
+        db.task.delete({ where: { id: input.id } }),
+      ]);
+      return deleted;
     }),
   reorder: publicProcedure
     .input(z.object({ ids: z.array(z.string().min(1)) }))

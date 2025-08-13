@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { api } from "@/server/api/react";
@@ -111,11 +110,10 @@ export function TaskList() {
 
   const taskData = taskDataSnapshot ?? tasks.data;
   const orderedTasks = React.useMemo(() => {
-    if (!taskData) return [] as typeof taskData;
-    // If we don't yet have a client-side order, fall back to API order
-    if (items.length === 0) return taskData;
-    const map = new Map(taskData.map((t) => [t.id, t]));
-    return items.map((id) => map.get(id)).filter(Boolean) as typeof taskData;
+    const list = taskData ?? [];
+    if (items.length === 0) return list;
+    const map = new Map(list.map((t) => [t.id, t]));
+    return items.map((id) => map.get(id)).filter(Boolean) as typeof list;
   }, [taskData, items]);
 
   const filteredOrderedTasks = React.useMemo(
@@ -125,27 +123,27 @@ export function TaskList() {
       ),
     [orderedTasks, query]
   );
+  // Compute the visible ids in the current order; feed to SortableContext
+  const visibleIds = React.useMemo(
+    () => filteredOrderedTasks.map((t) => t.id),
+    [filteredOrderedTasks]
+  );
 
   const TaskItem = ({ t }: { t: (typeof orderedTasks)[number] }) => {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: t.id });
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
+    const style: React.CSSProperties = {
+      ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
+      ...(transition ? { transition } : {}),
     };
     const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
     const done = t.status === "DONE";
     return (
-      <motion.li
+      <li
         ref={setNodeRef}
         style={style}
         {...attributes}
         {...listeners}
         key={t.id}
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 8 }}
-        transition={{ duration: 0.15 }}
-        layout
         className={`flex items-center justify-between rounded border px-3 py-2 ${
           overdue
             ? "border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
@@ -175,9 +173,9 @@ export function TaskList() {
                   if (e.key === "Enter") e.currentTarget.blur();
                 }}
               />
-              {t.subject && (
+              {((t as any).subject) && (
                 <span className="rounded bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                  {t.subject}
+                  {(t as any).subject}
                 </span>
               )}
             </div>
@@ -213,7 +211,10 @@ export function TaskList() {
         <Button
           variant="danger"
           className="text-sm underline bg-transparent px-0 py-0 text-red-600"
-          onClick={() => {
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
             if (confirm("Are you sure you want to delete this task?")) {
               del.mutate({ id: t.id });
             }
@@ -221,7 +222,7 @@ export function TaskList() {
         >
           Delete
         </Button>
-      </motion.li>
+      </li>
     );
   };
 
@@ -241,14 +242,11 @@ export function TaskList() {
         </p>
       </div>
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={items}>
+        <SortableContext items={visibleIds}>
           <ul className="space-y-2">
-            <AnimatePresence>
-              {filteredOrderedTasks.map((t) => (
-                <TaskItem key={t.id} t={t} />
-              ))}
-            </AnimatePresence>
-
+            {filteredOrderedTasks.map((t) => (
+              <TaskItem key={t.id} t={t} />
+            ))}
             {tasks.isLoading && <TaskListSkeleton />}
             {!tasks.isLoading && filteredOrderedTasks.length === 0 && (
               <li className="opacity-60">No tasks.</li>

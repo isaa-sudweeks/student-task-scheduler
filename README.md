@@ -43,3 +43,7 @@ npm run dev
 Notes:
 - No postinstall hook (avoids prisma generate before schema copy in Docker).
 - TypeScript 5.7.x + tRPC 11.4.4 + ESLint 8.57 aligned with Next 14.2.x.
+
+## Problems
+- Drag reordering does not persist: Dragging tasks to a new order updates the UI briefly, but the order does not stay after refresh.
+- New task does not appear instantly: After adding a task, it may not populate immediately in the list without a manual refresh.
