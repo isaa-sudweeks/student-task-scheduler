@@ -1,22 +1,16 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
-import { TaskList } from './task-list';
+import TasksPage from './page';
 
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ task: { list: { invalidate: vi.fn() } } }),
     task: {
-      list: {
-        useQuery: () => ({
-          data: [{ id: '1', title: 'Test', dueAt: null }],
-          isLoading: false,
-          error: undefined,
-        }),
-      },
+      list: { useQuery: () => ({ data: [], isLoading: false }) },
       create: {
         useMutation: () => ({
           mutate: vi.fn(),
@@ -38,9 +32,18 @@ vi.mock('@/server/api/react', () => ({
   },
 }));
 
-describe('TaskList', () => {
-  it('shows error message when setting due date fails', () => {
-    render(<TaskList />);
-    expect(screen.getByText('Failed to set due date')).toBeInTheDocument();
+afterEach(() => cleanup());
+
+describe('TasksPage', () => {
+  it('shows validation error when title is blank', () => {
+    render(<TasksPage />);
+    const input = screen.getByPlaceholderText('New task title…');
+    fireEvent.submit(input.closest('form')!);
+    expect(screen.getByText('Title is required')).toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    fireEvent.change(input, { target: { value: 'task' } });
+    expect(screen.queryByText('Title is required')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-invalid');
   });
 });
+

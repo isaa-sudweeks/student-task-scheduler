@@ -4,8 +4,9 @@ import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
 
 export function NewTaskForm(){
-  const [title,setTitle]=useState("");
-  const [dueAtStr,setDueAtStr]=useState(""); // yyyy-MM-ddTHH:mm
+  const [title, setTitle] = useState("");
+  const [titleError, setTitleError] = useState("");
+  const [dueAtStr, setDueAtStr] = useState(""); // yyyy-MM-ddTHH:mm
   const [showDuePicker, setShowDuePicker] = useState(false);
   const utils=api.useUtils();
   const create=api.task.create.useMutation({
@@ -13,6 +14,7 @@ export function NewTaskForm(){
       setTitle("");
       setDueAtStr("");
       setShowDuePicker(false);
+      setTitleError("");
       await utils.task.list.invalidate();
     }
   });
@@ -22,16 +24,24 @@ export function NewTaskForm(){
       className="flex flex-wrap gap-2"
       onSubmit={(e)=>{
         e.preventDefault();
-        if(!title.trim())return;
+        if (!title.trim()) {
+          setTitleError("Title is required");
+          return;
+        }
+        setTitleError("");
         const dueAt = dueAtStr ? parseLocalDateTime(dueAtStr) : null;
         create.mutate({title, dueAt});
       }}
     >
       <input
-        className="flex-1 rounded border px-3 py-2"
+        className={`flex-1 rounded border px-3 py-2 ${titleError ? 'border-red-500' : ''}`}
         placeholder="Add a task…"
         value={title}
-        onChange={(e)=>setTitle(e.target.value)}
+        aria-invalid={titleError ? 'true' : undefined}
+        onChange={(e)=>{
+          setTitle(e.target.value);
+          if (titleError && e.target.value.trim()) setTitleError("");
+        }}
       />
       {showDuePicker && (
         <input
@@ -58,6 +68,11 @@ export function NewTaskForm(){
         Set Due Date
       </button>
       <button className="rounded bg-black px-4 py-2 text-white disabled:opacity-60 dark:bg-white dark:text-black shrink-0" disabled={create.isPending}>Add</button>
+      {titleError && (
+        <p role="alert" className="w-full text-red-500">
+          {titleError}
+        </p>
+      )}
       {create.error && (
         <p role="alert" className="w-full text-red-500">
           {create.error.message}
