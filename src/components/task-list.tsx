@@ -11,6 +11,7 @@ import { TaskFilterTabs } from "./task-filter-tabs";
 
 export function TaskList() {
   const [filter, setFilter] = useState<"all" | "overdue" | "today">("all");
+  const [query, setQuery] = useState("");
   const utils = api.useUtils();
 
   const queryInput = React.useMemo(() => {
@@ -30,6 +31,14 @@ export function TaskList() {
   }, [filter]);
 
   const tasks = api.task.list.useQuery(queryInput);
+
+  const filteredTasks = React.useMemo(
+    () =>
+      tasks.data?.filter((t) =>
+        t.title.toLowerCase().includes(query.toLowerCase())
+      ) ?? [],
+    [tasks.data, query]
+  );
 
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
@@ -53,10 +62,17 @@ export function TaskList() {
 
   return (
     <div className="space-y-3">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.currentTarget.value)}
+        placeholder="Search tasks..."
+        className="w-full bg-transparent border-0 px-0 py-1 outline-none placeholder:text-muted-foreground"
+      />
       <TaskFilterTabs value={filter} onChange={setFilter} />
       <ul className="space-y-2">
         <AnimatePresence>
-          {tasks.data?.map((t) => {
+          {filteredTasks.map((t) => {
             const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
             const done = t.status === "DONE";
             return (
@@ -148,7 +164,7 @@ export function TaskList() {
         </AnimatePresence>
 
         {tasks.isLoading && <TaskListSkeleton />}
-        {!tasks.isLoading && (tasks.data?.length ?? 0) === 0 && (
+        {!tasks.isLoading && filteredTasks.length === 0 && (
           <li className="opacity-60">No tasks.</li>
         )}
       </ul>
