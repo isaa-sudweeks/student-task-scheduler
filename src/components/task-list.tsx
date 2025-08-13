@@ -13,7 +13,23 @@ export function TaskList() {
   const [filter, setFilter] = useState<"all" | "overdue" | "today">("all");
   const utils = api.useUtils();
 
-  const tasks = api.task.list.useQuery({ filter });
+  const queryInput = React.useMemo(() => {
+    const tzOffsetMinutes = new Date().getTimezoneOffset();
+    const now = new Date();
+    const startLocal = new Date(now);
+    startLocal.setHours(0, 0, 0, 0);
+    const endLocal = new Date(now);
+    endLocal.setHours(23, 59, 59, 999);
+    // Pass both explicit bounds and offset (offset kept for backward compatibility/tests)
+    return {
+      filter,
+      tzOffsetMinutes,
+      todayStart: startLocal,
+      todayEnd: endLocal,
+    } as const;
+  }, [filter]);
+
+  const tasks = api.task.list.useQuery(queryInput);
 
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),

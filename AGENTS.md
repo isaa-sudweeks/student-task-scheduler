@@ -39,6 +39,7 @@
 - Naming: `*.test.ts`/`*.test.tsx` for unit; `*.spec.ts` for E2E.
 - Scope: Test tRPC procedures, Prisma logic, and critical UI flows.
 - Running: Use `npm test` locally and in CI; add/adjust tests with any code change.
+- Non-watch mode: When running tests from the Codex CLI or CI, prefer `npm test -- --watchAll=false` to avoid interactive watch mode.
 
 ## Commit & Pull Request Guidelines
 - Commits: Clear, imperative subject (e.g., "feat: add task calendar"). Keep changes focused.

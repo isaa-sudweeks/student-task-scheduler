@@ -209,4 +209,29 @@ describe('taskRouter (no auth)', () => {
     const all = await caller.list();
     expect(all.length).toBe(3);
   });
+
+  it('filters today using client timezone offset', async () => {
+    const caller = taskRouter.createCaller({});
+    // Simulate a client in UTC-7 (e.g., PDT) where local 20:00 is next day UTC
+    const clientOffsetMin = 7 * 60; // Date.getTimezoneOffset() style (positive for UTC-7)
+
+    // Suppose it's 01:30 UTC; client's local day is still "today"
+    const nowUtc = new Date();
+    // Build a due date that is 20:00 local today for the client
+    const clientNow = new Date(nowUtc.getTime() - clientOffsetMin * 60 * 1000);
+    const clientDue = new Date(clientNow);
+    clientDue.setHours(20, 0, 0, 0); // 20:00 local
+    // Convert that local time back to UTC
+    const dueUtc = new Date(clientDue.getTime() + clientOffsetMin * 60 * 1000);
+
+    await caller.create({ title: 'Client Today', dueAt: dueUtc });
+
+    // Without passing tzOffset, server local "today" might not include it in some TZs
+    const todayDefault = await caller.list({ filter: 'today' });
+    // Not asserting on default since it depends on environment timezone.
+
+    // With client offset, it must be included in today
+    const todayClient = await caller.list({ filter: 'today', tzOffsetMinutes: clientOffsetMin });
+    expect(todayClient.map((t) => t.title)).toContain('Client Today');
+  });
 });
