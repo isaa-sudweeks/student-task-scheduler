@@ -31,6 +31,10 @@ export function TaskList() {
 
   const tasks = api.task.list.useQuery(queryInput);
 
+  const totalTasks = tasks.data?.length ?? 0;
+  const completedTasks =
+    tasks.data?.filter((t) => t.status === "DONE").length ?? 0;
+
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
     onError: (e) => toast.error(e.message || "Failed to set due date"),
@@ -53,7 +57,12 @@ export function TaskList() {
 
   return (
     <div className="space-y-3">
-      <TaskFilterTabs value={filter} onChange={setFilter} />
+      <div className="flex items-center justify-between">
+        <TaskFilterTabs value={filter} onChange={setFilter} />
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {completedTasks}/{totalTasks} completed
+        </p>
+      </div>
       <ul className="space-y-2">
         <AnimatePresence>
           {tasks.data?.map((t) => {

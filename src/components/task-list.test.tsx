@@ -7,7 +7,10 @@ expect.extend(matchers);
 import { TaskList } from './task-list';
 
 const defaultQuery = {
-  data: [{ id: '1', title: 'Test', dueAt: null }],
+  data: [
+    { id: '1', title: 'Test 1', dueAt: null, status: 'DONE' },
+    { id: '2', title: 'Test 2', dueAt: null, status: 'TODO' },
+  ],
   isLoading: false,
   error: undefined,
 };
@@ -60,5 +63,10 @@ describe('TaskList', () => {
   it('shows error message when setting due date fails', () => {
     render(<TaskList />);
     expect(screen.getByText('Failed to set due date')).toBeInTheDocument();
+  });
+
+  it('displays completed task ratio', () => {
+    render(<TaskList />);
+    expect(screen.getByText('1/2 completed')).toBeInTheDocument();
   });
 });
