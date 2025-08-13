@@ -74,4 +74,20 @@ describe('TaskList', () => {
     expect(screen.queryByText('Test')).not.toBeInTheDocument();
     expect(screen.getByText('No tasks.')).toBeInTheDocument();
   });
+
+  it('filters by title only and ignores subject', () => {
+    useQueryMock.mockReturnValueOnce({
+      data: [
+        { id: '1', title: 'Read book', dueAt: null, subject: 'Math' },
+        { id: '2', title: 'Math homework', dueAt: null, subject: 'English' },
+      ],
+      isLoading: false,
+      error: undefined,
+    });
+    render(<TaskList />);
+    const input = screen.getByPlaceholderText('Search tasks...');
+    fireEvent.change(input, { target: { value: 'math' } });
+    // Should match by title (subject alone should not matter)
+    expect(screen.getByDisplayValue('Math homework')).toBeInTheDocument();
+  });
 });

@@ -40,6 +40,7 @@
 - Scope: Test tRPC procedures, Prisma logic, and critical UI flows.
 - Running: Use `npm test` locally and in CI; add/adjust tests with any code change.
 - Non-watch mode: Set `CI=true` when running tests from the Codex CLI or CI to disable watch and avoid hangs: `CI=true npm test`.
+- Test-first rule: Always add or update a relevant unit test before implementing a new feature; prefer TDD for changes to routers, Prisma logic, and UI components.
 
 ## Commit & Pull Request Guidelines
 - Commits: Clear, imperative subject (e.g., "feat: add task calendar"). Keep changes focused.
