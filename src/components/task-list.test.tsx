@@ -7,7 +7,7 @@ expect.extend(matchers);
 import { TaskList } from './task-list';
 
 const defaultQuery = {
-  data: [{ id: '1', title: 'Test', dueAt: null }],
+  data: [{ id: '1', title: 'Test', dueAt: null, subject: 'math' }],
   isLoading: false,
   error: undefined,
 };
@@ -60,5 +60,10 @@ describe('TaskList', () => {
   it('shows error message when setting due date fails', () => {
     render(<TaskList />);
     expect(screen.getByText('Failed to set due date')).toBeInTheDocument();
+  });
+
+  it('renders subject badge', () => {
+    render(<TaskList />);
+    expect(screen.getByText('math')).toBeInTheDocument();
   });
 });
