@@ -3,7 +3,15 @@ import { TaskStatus } from '@prisma/client';
 import { taskRouter } from './task';
 
 // In-memory store to simulate DB
-type T = { id: string; title: string; createdAt: Date; dueAt?: Date | null; status: TaskStatus; subject?: string | null };
+type T = {
+  id: string;
+  title: string;
+  createdAt: Date;
+  dueAt?: Date | null;
+  status: TaskStatus;
+  subject?: string | null;
+  position: number;
+};
 let store: T[] = [];
 let idSeq = 0;
 
@@ -11,6 +19,11 @@ let idSeq = 0;
 vi.mock('@/server/db', () => {
   return {
     db: {
+      $transaction: async (ops: any[]) => {
+        for (const op of ops) {
+          await op;
+        }
+      },
       task: {
         findMany: vi.fn(
           async (
@@ -33,19 +46,8 @@ vi.mock('@/server/db', () => {
                 return true;
               });
             }
-            // Very light ordering: dueAt asc (nulls last), then createdAt desc
-            result.sort((a, b) => {
-              const ad = a.dueAt ?? null;
-              const bd = b.dueAt ?? null;
-              if (ad === null && bd === null) {
-                return b.createdAt.getTime() - a.createdAt.getTime();
-              }
-              if (ad === null) return 1;
-              if (bd === null) return -1;
-              const cmp = ad.getTime() - bd.getTime();
-              if (cmp !== 0) return cmp;
-              return b.createdAt.getTime() - a.createdAt.getTime();
-            });
+            // Order by position asc
+            result.sort((a, b) => a.position - b.position);
             return result.map((t) => ({
               id: t.id,
               title: t.title,
@@ -53,11 +55,12 @@ vi.mock('@/server/db', () => {
               dueAt: t.dueAt ?? null,
               status: t.status,
               subject: t.subject ?? null,
+              position: t.position,
             }));
           }
         ),
         create: vi.fn(
-          async ({ data }: { data: { title: string; dueAt?: Date | null; subject?: string | null } }) => {
+          async ({ data }: { data: { title: string; dueAt?: Date | null; subject?: string | null; position: number } }) => {
             const item: T = {
               id: `t_${++idSeq}`,
               title: data.title,
@@ -65,11 +68,13 @@ vi.mock('@/server/db', () => {
               dueAt: data.dueAt ?? null,
               status: TaskStatus.TODO,
               subject: data.subject ?? null,
+              position: data.position,
             };
             store.push(item);
             return item;
           }
         ),
+        aggregate: vi.fn(async () => ({ _max: { position: store.length ? store[store.length - 1].position : null } })),
         update: vi.fn(
           async ({ where, data }: { where: { id: string }; data: Partial<T> }) => {
             const idx = store.findIndex((t) => t.id === where.id);
@@ -121,6 +126,15 @@ describe('taskRouter (no auth)', () => {
     await caller.delete({ id: created.id });
     const list2 = await caller.list();
     expect(list2).toHaveLength(0);
+  });
+
+  it('reorders tasks', async () => {
+    const caller = taskRouter.createCaller({});
+    const t1 = await caller.create({ title: 'First' });
+    const t2 = await caller.create({ title: 'Second' });
+    await caller.reorder({ ids: [t2.id, t1.id] });
+    const list = await caller.list();
+    expect(list.map((t) => t.id)).toEqual([t2.id, t1.id]);
   });
 
   it('updates a task title', async () => {

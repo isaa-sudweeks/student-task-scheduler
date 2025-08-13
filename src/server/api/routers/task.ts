@@ -55,10 +55,19 @@ export const taskRouter = router({
       return db.task.findMany({
         where,
         orderBy: [
+          { position: 'asc' },
           { dueAt: { sort: 'asc', nulls: 'last' } as any },
           { createdAt: 'desc' },
         ],
-        select: { id: true, title: true, createdAt: true, dueAt: true, status: true, subject: true },
+        select: {
+          id: true,
+          title: true,
+          createdAt: true,
+          dueAt: true,
+          status: true,
+          subject: true,
+          position: true,
+        },
       });
     }),
   create: publicProcedure
@@ -73,11 +82,14 @@ export const taskRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
+      const max = await db.task.aggregate({ _max: { position: true } });
+      const position = (max._max.position ?? 0) + 1;
       return db.task.create({
         data: {
           title: input.title,
           dueAt: input.dueAt ?? null,
           subject: input.subject ?? null,
+          position,
         },
       });
     }),
@@ -109,5 +121,15 @@ export const taskRouter = router({
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input }) => {
       return db.task.delete({ where: { id: input.id } });
+    }),
+  reorder: publicProcedure
+    .input(z.object({ ids: z.array(z.string().min(1)) }))
+    .mutation(async ({ input }) => {
+      await db.$transaction(
+        input.ids.map((id, index) =>
+          db.task.update({ where: { id }, data: { position: index } })
+        )
+      );
+      return { success: true };
     }),
 });

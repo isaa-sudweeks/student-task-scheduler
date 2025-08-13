@@ -100,6 +100,7 @@ model Task {
   subject       String?
   status        TaskStatus @default(TODO)
   priority      Int        @default(0)
+  position      Int        @default(0)
   effortMinutes Int?
   dueAt         DateTime?
   createdAt     DateTime   @default(now())
