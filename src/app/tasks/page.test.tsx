@@ -4,7 +4,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
-import { NewTaskForm } from './new-task-form';
+import TasksPage from './page';
 
 vi.mock('@/server/api/react', () => ({
   api: {
@@ -34,14 +34,9 @@ vi.mock('@/server/api/react', () => ({
 
 afterEach(() => cleanup());
 
-describe('NewTaskForm', () => {
-  it('shows error message when creation fails', () => {
-    render(<NewTaskForm />);
-    expect(screen.getByText('Failed to create task')).toBeInTheDocument();
-  });
-
-  it('displays validation error for blank title and clears on input', () => {
-    render(<NewTaskForm />);
+describe('TasksPage', () => {
+  it('shows validation error when title is blank', () => {
+    render(<TasksPage />);
     const input = screen.getByPlaceholderText('Add a task…');
     fireEvent.submit(input.closest('form')!);
     expect(screen.getByText('Title is required')).toBeInTheDocument();

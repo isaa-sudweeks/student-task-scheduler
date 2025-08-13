@@ -20,6 +20,13 @@ vi.mock('@/server/api/react', () => ({
       list: {
         useQuery: (...args: unknown[]) => useQueryMock(...args),
       },
+      create: {
+        useMutation: () => ({
+          mutate: vi.fn(),
+          isPending: false,
+          error: { message: 'Failed to create task' },
+        }),
+      },
       setDueDate: {
         useMutation: () => ({
           mutate: vi.fn(),
