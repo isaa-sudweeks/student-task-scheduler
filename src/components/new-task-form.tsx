@@ -23,6 +23,7 @@ export function NewTaskForm(){
   });
 
   return(
+    <>
     <form
       className="flex flex-wrap gap-2"
       onSubmit={(e)=>{
@@ -66,5 +67,9 @@ export function NewTaskForm(){
       </Button>
       <Button type="submit" className="shrink-0" disabled={create.isPending}>Add</Button>
     </form>
+    {create.error && (
+      <p role="alert" className="text-red-500">{create.error.message}</p>
+    )}
+    </>
   );
 }
