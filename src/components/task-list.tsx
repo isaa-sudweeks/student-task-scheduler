@@ -84,17 +84,24 @@ export function TaskList() {
                     aria-label={done ? "Mark as todo" : "Mark as done"}
                   />
                   <div className="flex flex-col gap-1 flex-1">
-                    <input
-                      type="text"
-                      defaultValue={t.title}
-                      className={`font-medium rounded border px-2 py-1 ${
-                        done ? "line-through opacity-60" : ""
-                      }`}
-                      onBlur={(e) => rename.mutate({ id: t.id, title: e.currentTarget.value })}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") e.currentTarget.blur();
-                      }}
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        defaultValue={t.title}
+                        className={`font-medium rounded border px-2 py-1 ${
+                          done ? "line-through opacity-60" : ""
+                        }`}
+                        onBlur={(e) => rename.mutate({ id: t.id, title: e.currentTarget.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                        }}
+                      />
+                      {t.subject && (
+                        <span className="rounded bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                          {t.subject}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 text-xs opacity-80">
                       <label>Due:</label>
                       <input

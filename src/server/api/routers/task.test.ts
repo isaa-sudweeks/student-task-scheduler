@@ -3,7 +3,7 @@ import { TaskStatus } from '@prisma/client';
 import { taskRouter } from './task';
 
 // In-memory store to simulate DB
-type T = { id: string; title: string; createdAt: Date; dueAt?: Date | null; status: TaskStatus };
+type T = { id: string; title: string; createdAt: Date; dueAt?: Date | null; status: TaskStatus; subject?: string | null };
 let store: T[] = [];
 let idSeq = 0;
 
@@ -52,17 +52,19 @@ vi.mock('@/server/db', () => {
               createdAt: t.createdAt,
               dueAt: t.dueAt ?? null,
               status: t.status,
+              subject: t.subject ?? null,
             }));
           }
         ),
         create: vi.fn(
-          async ({ data }: { data: { title: string; dueAt?: Date | null } }) => {
+          async ({ data }: { data: { title: string; dueAt?: Date | null; subject?: string | null } }) => {
             const item: T = {
               id: `t_${++idSeq}`,
               title: data.title,
               createdAt: new Date(),
               dueAt: data.dueAt ?? null,
               status: TaskStatus.TODO,
+              subject: data.subject ?? null,
             };
             store.push(item);
             return item;
@@ -100,12 +102,14 @@ describe('taskRouter (no auth)', () => {
     const before = await caller.list();
     expect(before).toHaveLength(0);
 
-    const created = await caller.create({ title: 'Write tests' });
+    const created = await caller.create({ title: 'Write tests', subject: 'math' });
     expect(created.title).toBe('Write tests');
+    expect(created.subject).toBe('math');
 
     const after = await caller.list();
     expect(after).toHaveLength(1);
     expect(after[0].title).toBe('Write tests');
+    expect(after[0].subject).toBe('math');
   });
 
   it('deletes a task', async () => {

@@ -10,6 +10,7 @@ export function NewTaskForm(){
   const [titleError, setTitleError] = useState("");
   const [dueAtStr, setDueAtStr] = useState(""); // yyyy-MM-ddTHH:mm
   const [showDuePicker, setShowDuePicker] = useState(false);
+  const [subject, setSubject] = useState("");
   const utils=api.useUtils();
   const create=api.task.create.useMutation({
     onSuccess:async()=>{
@@ -17,6 +18,7 @@ export function NewTaskForm(){
       setDueAtStr("");
       setShowDuePicker(false);
       setTitleError("");
+      setSubject("");
       await utils.task.list.invalidate();
     },
     onError:(e)=>{
@@ -36,7 +38,7 @@ export function NewTaskForm(){
         }
         setTitleError("");
         const dueAt = dueAtStr ? parseLocalDateTime(dueAtStr) : null;
-        create.mutate({title, dueAt});
+        create.mutate({title, dueAt, subject: subject || undefined});
       }}
     >
       <input
@@ -49,6 +51,13 @@ export function NewTaskForm(){
           setTitle(e.target.value);
           if (titleError && e.target.value.trim()) setTitleError("");
         }}
+      />
+      <input
+        className="rounded border px-3 py-2 w-40"
+        placeholder="Subject (optional)"
+        value={subject}
+        aria-label="Task subject"
+        onChange={(e)=>setSubject(e.target.value)}
       />
       {showDuePicker && (
         <input

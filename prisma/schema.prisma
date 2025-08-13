@@ -97,6 +97,7 @@ model Task {
   courseId      String?
   title         String
   notes         String?
+  subject       String?
   status        TaskStatus @default(TODO)
   priority      Int        @default(0)
   effortMinutes Int?

@@ -58,7 +58,7 @@ export const taskRouter = router({
           { dueAt: { sort: 'asc', nulls: 'last' } as any },
           { createdAt: 'desc' },
         ],
-        select: { id: true, title: true, createdAt: true, dueAt: true, status: true },
+        select: { id: true, title: true, createdAt: true, dueAt: true, status: true, subject: true },
       });
     }),
   create: publicProcedure
@@ -66,13 +66,20 @@ export const taskRouter = router({
       z.object({
         title: z.string().min(1).max(200),
         dueAt: z.date().nullable().optional(),
+        subject: z.string().max(100).optional(),
       })
     )
     .mutation(async ({ input }) => {
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
-      return db.task.create({ data: { title: input.title, dueAt: input.dueAt ?? null } });
+      return db.task.create({
+        data: {
+          title: input.title,
+          dueAt: input.dueAt ?? null,
+          subject: input.subject ?? null,
+        },
+      });
     }),
   setDueDate: publicProcedure
     .input(
