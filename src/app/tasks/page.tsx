@@ -3,6 +3,7 @@
 import React from "react";
 import { NewTaskForm } from "@/components/new-task-form";
 import { TaskList } from "@/components/task-list";
+import ThemeToggle from "@/components/theme-toggle";
 
 export default function TasksPage() {
   return (
@@ -14,6 +15,7 @@ export default function TasksPage() {
             Create and manage your tasks — no sign in required.
           </p>
         </div>
+        <ThemeToggle />
       </header>
       <NewTaskForm />
       <TaskList />

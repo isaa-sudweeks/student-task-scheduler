@@ -1,7 +1,6 @@
 import "./../styles/globals.css";
 import React from "react";
 import Providers from "./providers";
-import ThemeToggle from "@/components/theme-toggle";
 
 export const metadata = {
   title: "Student Task Scheduler",
@@ -13,7 +12,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-white text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
         <Providers>
-          <ThemeToggle />
           <div className="mx-auto max-w-5xl p-6">
             {children}
           </div>
