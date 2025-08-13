@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -60,5 +60,13 @@ describe('TaskList', () => {
   it('shows error message when setting due date fails', () => {
     render(<TaskList />);
     expect(screen.getByText('Failed to set due date')).toBeInTheDocument();
+  });
+
+  it('filters tasks based on search query', () => {
+    render(<TaskList />);
+    const input = screen.getByPlaceholderText('Search tasks...');
+    fireEvent.change(input, { target: { value: 'Nope' } });
+    expect(screen.queryByText('Test')).not.toBeInTheDocument();
+    expect(screen.getByText('No tasks.')).toBeInTheDocument();
   });
 });
