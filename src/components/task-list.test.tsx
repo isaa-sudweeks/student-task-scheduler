@@ -7,7 +7,10 @@ expect.extend(matchers);
 import { TaskList } from './task-list';
 
 const defaultQuery = {
-  data: [{ id: '1', title: 'Test', dueAt: null, subject: 'math' }],
+  data: [
+    { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math' },
+    { id: '2', title: 'Test 2', dueAt: null, status: 'TODO' },
+  ],
   isLoading: false,
   error: undefined,
 };
@@ -89,5 +92,10 @@ describe('TaskList', () => {
     fireEvent.change(input, { target: { value: 'math' } });
     // Should match by title (subject alone should not matter)
     expect(screen.getByDisplayValue('Math homework')).toBeInTheDocument();
+  });
+
+  it('displays completed task ratio', () => {
+    render(<TaskList />);
+    expect(screen.getByText('1/2 completed')).toBeInTheDocument();
   });
 });
