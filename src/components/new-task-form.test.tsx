@@ -50,4 +50,12 @@ describe('NewTaskForm', () => {
     expect(screen.queryByText('Title is required')).not.toBeInTheDocument();
     expect(input).not.toHaveAttribute('aria-invalid');
   });
+
+  it('toggles due date picker with calendar icon', () => {
+    render(<NewTaskForm />);
+    const toggle = screen.getByLabelText('Toggle due date picker');
+    expect(screen.queryByLabelText('Task due date')).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText('Task due date')).toBeInTheDocument();
+  });
 });
