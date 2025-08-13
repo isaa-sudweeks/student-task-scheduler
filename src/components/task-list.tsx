@@ -122,7 +122,11 @@ export function TaskList() {
                 <Button
                   variant="danger"
                   className="text-sm underline bg-transparent px-0 py-0 text-red-600"
-                  onClick={() => del.mutate({ id: t.id })}
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this task?")) {
+                      del.mutate({ id: t.id });
+                    }
+                  }}
                 >
                   Delete
                 </Button>

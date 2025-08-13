@@ -17,6 +17,8 @@ export default function TasksPage() {
       </header>
       <NewTaskForm />
       <TaskList />
+      <NewTaskForm />
+      <TaskList />
     </main>
   );
 }

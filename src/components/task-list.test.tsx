@@ -20,21 +20,15 @@ vi.mock('@/server/api/react', () => ({
       list: {
         useQuery: (...args: unknown[]) => useQueryMock(...args),
       },
+      updateTitle: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       setDueDate: {
         useMutation: () => ({
           mutate: vi.fn(),
           isPending: false,
           error: { message: 'Failed to set due date' },
         }),
-      },
-      updateTitle: {
-        useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }),
-      },
-      delete: {
-        useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }),
-      },
-      setStatus: {
-        useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }),
       },
     },
   },
