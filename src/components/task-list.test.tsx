@@ -37,6 +37,7 @@ vi.mock('@/server/api/react', () => ({
       updateTitle: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      reorder: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
     },
   },
 }));
@@ -48,7 +49,7 @@ afterEach(() => {
 
 describe('TaskList', () => {
   it('shows loading skeleton when tasks are loading', () => {
-    useQueryMock.mockReturnValueOnce({
+    useQueryMock.mockReturnValue({
       data: [],
       isLoading: true,
       error: undefined,
