@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -82,5 +82,28 @@ describe('NewTaskForm', () => {
     fireEvent.change(title, { target: { value: 'Read book' } });
     fireEvent.submit(title.closest('form')!);
     expect(mutateSpy).toHaveBeenCalledWith({ title: 'Read book', dueAt: null });
+  });
+
+  it('focuses title input on Enter when no input is active', () => {
+    render(<NewTaskForm />);
+    const input = screen.getByPlaceholderText('Add a task…') as HTMLInputElement;
+    input.blur();
+    const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('submits form on Ctrl+Enter and prevents default', () => {
+    render(<NewTaskForm />);
+    const input = screen.getByPlaceholderText('Add a task…');
+    fireEvent.change(input, { target: { value: 'task' } });
+    const event = new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, cancelable: true });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+    expect(mutateSpy).toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
   });
 });

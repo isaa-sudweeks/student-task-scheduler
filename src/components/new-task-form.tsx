@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
@@ -12,6 +12,8 @@ export function NewTaskForm(){
   const [dueAtStr, setDueAtStr] = useState(""); // yyyy-MM-ddTHH:mm
   const [showDuePicker, setShowDuePicker] = useState(false);
   const [subject, setSubject] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
   const utils=api.useUtils();
   const create=api.task.create.useMutation({
     onSuccess:async()=>{
@@ -27,9 +29,29 @@ export function NewTaskForm(){
     }
   });
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && e.ctrlKey) {
+        e.preventDefault();
+        formRef.current?.requestSubmit();
+        return;
+      }
+      if (e.key === "Enter" && !e.ctrlKey) {
+        const active = document.activeElement as HTMLElement | null;
+        if (!active || active === document.body || (active.tagName !== "INPUT" && active.tagName !== "TEXTAREA")) {
+          e.preventDefault();
+          titleRef.current?.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   return(
     <>
     <form
+      ref={formRef}
       className="flex flex-wrap gap-2"
       onSubmit={(e)=>{
         e.preventDefault();
@@ -44,6 +66,7 @@ export function NewTaskForm(){
     >
       <div className="relative flex-1">
         <input
+          ref={titleRef}
           className={`w-full rounded border pl-3 pr-8 py-2 ${titleError ? 'border-red-500' : ''}`}
           placeholder="Add a task…"
           value={title}
