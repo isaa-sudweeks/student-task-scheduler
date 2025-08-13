@@ -12,11 +12,14 @@ vi.mock('@/server/api/react', () => ({
     task: {
       list: {
         useQuery: () => ({
-          data: [{ id: '1', title: 'Test', dueAt: null }],
+          data: [{ id: '1', title: 'Test', dueAt: null, status: 'TODO' }],
           isLoading: false,
           error: undefined,
         }),
       },
+      updateTitle: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       setDueDate: {
         useMutation: () => ({
           mutate: vi.fn(),

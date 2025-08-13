@@ -116,7 +116,16 @@ export default function TasksPage(){
                   )}
                 </div>
               </div>
-              <button className="text-sm underline" onClick={()=>del.mutate({id:t.id})}>Delete</button>
+              <button
+                className="text-sm underline"
+                onClick={() => {
+                  if (confirm('Are you sure you want to delete this task?')) {
+                    del.mutate({ id: t.id });
+                  }
+                }}
+              >
+                Delete
+              </button>
             </li>
           );
         })}
