@@ -17,6 +17,17 @@
 - Production: `npm run build` then `npm start`
 - Docker: `docker compose build --no-cache && docker compose up -d && docker compose exec web npx prisma db push`
 
+### Docker Dev (Hot Reload + Watchers)
+- Start dev stack with file sync and watchers:
+  - `docker compose -f docker-compose.yml -f docker-compose.dev.yml up --watch`
+  - or simply `make dev`
+- Auto behaviors in dev:
+  - App code (TS/TSX/CSS) hot-reloads via Next.js.
+  - Prisma schema changes auto-run `prisma generate` + `prisma db push`.
+  - Config/env changes (`next.config.mjs`, `tsconfig.json`, `tailwind.config.ts`, `postcss.config.js`, `.env`) restart the dev server.
+  - Dependency changes (`package.json`, `package-lock.json`) trigger an image rebuild and container restart.
+- If the repo lives under iCloud/Dropbox/OneDrive, prefer this file-sync setup over bind mounts to avoid filesystem errors.
+
 ## Coding Style & Naming Conventions
 - Language: TypeScript; prefer explicit types at module boundaries.
 - Indentation: 2 spaces; keep imports ordered (libs → internal).
