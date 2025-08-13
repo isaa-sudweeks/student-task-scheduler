@@ -1,7 +1,8 @@
 "use client";
-import React,{useMemo,useState} from 'react';
+import React,{useState} from 'react';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
+import { TaskFilterTabs } from '@/components/task-filter-tabs';
 
 export default function TasksPage(){
   const [title,setTitle]=useState("");
@@ -77,18 +78,7 @@ export default function TasksPage(){
         </button>
         <button className="rounded bg-black px-4 py-2 text-white dark:bg-white dark:text-black shrink-0" disabled={create.isPending}>Add</button>
       </form>
-      <div className="flex items-center gap-2">
-        <label className="text-sm opacity-80">Filter:</label>
-        <select
-          className="rounded border px-2 py-1"
-          value={filter}
-          onChange={(e)=>setFilter(e.target.value as any)}
-        >
-          <option value="all">All</option>
-          <option value="overdue">Overdue</option>
-          <option value="today">Today</option>
-        </select>
-      </div>
+      <TaskFilterTabs value={filter} onChange={setFilter} />
       <ul className="space-y-2">
         {list.data?.map((t)=>{
           const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;

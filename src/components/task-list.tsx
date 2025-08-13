@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { api } from '@/server/api/react';
 import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
+import { TaskFilterTabs } from './task-filter-tabs';
 
 export function TaskList(){
   const [filter, setFilter] = useState<'all'|'overdue'|'today'>('all');
@@ -24,18 +25,7 @@ export function TaskList(){
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <label className="text-sm opacity-80">Filter:</label>
-        <select
-          className="rounded border px-2 py-1"
-          value={filter}
-          onChange={(e)=>setFilter(e.target.value as any)}
-        >
-          <option value="all">All</option>
-          <option value="overdue">Overdue</option>
-          <option value="today">Today</option>
-        </select>
-      </div>
+      <TaskFilterTabs value={filter} onChange={setFilter} />
       <ul className="space-y-2">
         {tasks.data?.map((t)=>{
           const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
