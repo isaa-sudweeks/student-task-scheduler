@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { api } from "@/server/api/react";
-import { formatLocalDateTime, parseLocalDateTime } from "@/lib/datetime";
+
 import { TaskListSkeleton } from "./task-list-skeleton";
 import { TaskFilterTabs } from "./task-filter-tabs";
 import {
@@ -18,6 +18,8 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Calendar, Tag, GripVertical } from "lucide-react";
+import { TaskModal } from "@/components/task-modal";
 
 export function TaskList() {
   const [filter, setFilter] = useState<"all" | "overdue" | "today">("all");
@@ -94,15 +96,7 @@ export function TaskList() {
     onError: (e) => toast.error(e.message || "Failed to set due date"),
   });
 
-  const rename = api.task.updateTitle.useMutation({
-    onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => toast.error(e.message || "Failed to update title"),
-  });
-
-  const del = api.task.delete.useMutation({
-    onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => toast.error(e.message || "Failed to delete task"),
-  });
+  // Inline rename/delete removed in minimalist UI; handled in modal
 
   const setStatus = api.task.setStatus.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
@@ -147,6 +141,8 @@ export function TaskList() {
     [filteredOrderedTasks]
   );
 
+  const [editingTask, setEditingTask] = useState<(typeof orderedTasks)[number] | null>(null);
+
   const TaskItem = ({ t }: { t: (typeof orderedTasks)[number] }) => {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: t.id });
     const style: React.CSSProperties = {
@@ -160,15 +156,25 @@ export function TaskList() {
         ref={setNodeRef}
         style={style}
         {...attributes}
-        {...listeners}
         key={t.id}
-        className={`flex items-center justify-between rounded border px-3 py-2 ${
+        className={`flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${
           overdue
             ? "border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
             : ""
         }`}
+        onClick={() => setEditingTask(t)}
       >
-        <div className="flex items-start gap-2 flex-1">
+        <div className="flex items-start gap-3 flex-1">
+          <button
+            type="button"
+            aria-label="Drag to reorder"
+            className="mt-0.5 -ml-1 cursor-grab touch-none select-none rounded p-1 text-slate-400 hover:text-slate-600 active:cursor-grabbing dark:text-slate-500 dark:hover:text-slate-300"
+            {...attributes}
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
           <input
             type="checkbox"
             className="mt-1"
@@ -177,69 +183,32 @@ export function TaskList() {
               setStatus.mutate({ id: t.id, status: done ? "TODO" : "DONE" })
             }
             aria-label={done ? "Mark as todo" : "Mark as done"}
+            onClick={(e) => e.stopPropagation()}
           />
           <div className="flex flex-col gap-1 flex-1">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                defaultValue={t.title}
-                className={`font-medium rounded border px-2 py-1 ${
-                  done ? "line-through opacity-60" : ""
-                }`}
-                onBlur={(e) => rename.mutate({ id: t.id, title: e.currentTarget.value })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.currentTarget.blur();
-                }}
-              />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`font-medium ${done ? "line-through opacity-60" : ""}`}>
+                {t.title}
+              </span>
               {((t as any).subject) && (
-                <span className="rounded bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                  {(t as any).subject}
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
+                  <Tag className="h-3 w-3" /> {(t as any).subject}
                 </span>
               )}
-            </div>
-            <div className="flex items-center gap-2 text-xs opacity-80">
-              <label>Due:</label>
-              <input
-                type="datetime-local"
-                className="rounded border px-2 py-1"
-                value={t.dueAt ? formatLocalDateTime(new Date(t.dueAt)) : ""}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  const date = v ? parseLocalDateTime(v) : null;
-                  setDue.mutate({ id: t.id, dueAt: date });
-                }}
-              />
               {t.dueAt && (
-                <Button
-                  variant="secondary"
-                  className="underline bg-transparent border-0 px-0 py-0"
-                  onClick={() => setDue.mutate({ id: t.id, dueAt: null })}
-                >
-                  Clear
-                </Button>
-              )}
-              {t.dueAt && (
-                <span className="ml-2">
-                  {overdue ? "Overdue" : `Due ${new Date(t.dueAt).toLocaleString()}`}
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${
+                  overdue
+                    ? "bg-red-100 text-red-700 ring-red-200 dark:bg-red-900/30 dark:text-red-200 dark:ring-red-800"
+                    : "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:ring-amber-800"
+                }`}>
+                  <Calendar className="h-3 w-3" />
+                  {new Date(t.dueAt as any).toLocaleString()}
                 </span>
               )}
             </div>
           </div>
         </div>
-        <Button
-          variant="danger"
-          className="text-sm underline bg-transparent px-0 py-0 text-red-600"
-          onPointerDown={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (confirm("Are you sure you want to delete this task?")) {
-              del.mutate({ id: t.id });
-            }
-          }}
-        >
-          Delete
-        </Button>
+        {/* Right side kept minimal on list */}
       </li>
     );
   };
@@ -279,10 +248,15 @@ export function TaskList() {
         </p>
       )}
       {setDue.error && (
-        <p role="alert" className="text-red-500">
-          {setDue.error.message}
-        </p>
+        <p role="alert" className="text-red-500">{setDue.error.message}</p>
       )}
+
+      <TaskModal
+        open={!!editingTask}
+        mode="edit"
+        onClose={() => setEditingTask(null)}
+        task={editingTask as any}
+      />
     </div>
   );
 }

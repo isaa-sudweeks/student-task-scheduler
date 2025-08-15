@@ -66,6 +66,7 @@ export const taskRouter = router({
           dueAt: true,
           status: true,
           subject: true,
+          notes: true,
           position: true,
         },
       });
@@ -76,6 +77,7 @@ export const taskRouter = router({
         title: z.string().min(1).max(200),
         dueAt: z.date().nullable().optional(),
         subject: z.string().max(100).optional(),
+        notes: z.string().max(2000).optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -90,9 +92,32 @@ export const taskRouter = router({
           title: input.title,
           dueAt: input.dueAt ?? null,
           subject: input.subject ?? null,
+          notes: input.notes ?? null,
           position: nextPosition,
         },
       });
+    }),
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.string().min(1),
+        title: z.string().min(1).max(200).optional(),
+        subject: z.string().max(100).nullable().optional(),
+        notes: z.string().max(2000).nullable().optional(),
+        dueAt: z.date().nullable().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      if (input.dueAt && input.dueAt < new Date()) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
+      }
+      const { id, ...rest } = input;
+      const data: Record<string, any> = {};
+      for (const [key, value] of Object.entries(rest)) {
+        if (typeof value !== 'undefined') data[key] = value;
+      }
+      if (Object.keys(data).length === 0) return db.task.findUniqueOrThrow({ where: { id } });
+      return db.task.update({ where: { id }, data });
     }),
   setDueDate: publicProcedure
     .input(

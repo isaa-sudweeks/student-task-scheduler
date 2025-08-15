@@ -1,125 +1,79 @@
 "use client";
-import React, { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { api } from '@/server/api/react';
-import { formatLocalDateTime, parseLocalDateTime } from '@/lib/datetime';
-import { toast } from 'react-hot-toast';
-import { Calendar } from 'lucide-react';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { api } from "@/server/api/react";
+import { toast } from "react-hot-toast";
+import { MoreHorizontal, Plus } from "lucide-react";
+import { TaskModal } from "@/components/task-modal";
 
-export function NewTaskForm(){
-  const [title, setTitle] = useState("");
-  const [titleError, setTitleError] = useState("");
-  const [dueAtStr, setDueAtStr] = useState(""); // yyyy-MM-ddTHH:mm
-  const [showDuePicker, setShowDuePicker] = useState(false);
-  const [subject, setSubject] = useState("");
-  const formRef = useRef<HTMLFormElement>(null);
-  const titleRef = useRef<HTMLInputElement>(null);
-  const utils=api.useUtils();
-  const create=api.task.create.useMutation({
-    onSuccess:async()=>{
-      setTitle("");
-      setDueAtStr("");
-      setShowDuePicker(false);
-      setTitleError("");
-      setSubject("");
+export function NewTaskForm() {
+  const utils = api.useUtils();
+  const [showQuick, setShowQuick] = useState(false);
+  const [quickTitle, setQuickTitle] = useState("");
+  const [showModal, setShowModal] = useState(false);
+
+  const create = api.task.create.useMutation({
+    onSuccess: async () => {
+      setQuickTitle("");
+      setShowQuick(false);
       await utils.task.list.invalidate();
     },
-    onError:(e)=>{
-      toast.error(e.message || 'Failed to create task');
-    }
+    onError: (e) => toast.error(e.message || "Failed to create task"),
   });
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && e.ctrlKey) {
-        e.preventDefault();
-        formRef.current?.requestSubmit();
-        return;
-      }
-      if (e.key === "Enter" && !e.ctrlKey) {
-        const active = document.activeElement as HTMLElement | null;
-        if (!active || active === document.body || (active.tagName !== "INPUT" && active.tagName !== "TEXTAREA")) {
-          e.preventDefault();
-          titleRef.current?.focus();
-        }
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
-
-  return(
-    <>
-    <form
-      ref={formRef}
-      className="flex flex-wrap gap-2"
-      onSubmit={(e)=>{
-        e.preventDefault();
-        if (!title.trim()) {
-          setTitleError("Title is required");
-          return;
-        }
-        setTitleError("");
-        const dueAt = dueAtStr ? parseLocalDateTime(dueAtStr) : null;
-        create.mutate({title, dueAt, subject: subject || undefined});
-      }}
-    >
-      <div className="relative flex-1">
-        <input
-          ref={titleRef}
-          className={`w-full rounded border pl-3 pr-8 py-2 ${titleError ? 'border-red-500' : ''}`}
-          placeholder="Add a task…"
-          value={title}
-          aria-label="Task title"
-          aria-invalid={titleError ? 'true' : undefined}
-          onChange={(e)=>{
-            setTitle(e.target.value);
-            if (titleError && e.target.value.trim()) setTitleError("");
-          }}
-        />
-        <button
-          type="button"
-          aria-label="Toggle due date picker"
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-          onClick={()=>{
-            if(!dueAtStr){
-              const d = new Date();
-              d.setHours(23,59,0,0);
-              setDueAtStr(formatLocalDateTime(d));
-            }
-            setShowDuePicker(v=>!v);
-          }}
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={() => setShowQuick((v) => !v)}
+          aria-label="Quick add task"
         >
-          <Calendar className="h-4 w-4" />
-        </button>
+          <Plus className="mr-2 h-4 w-4" /> Add Task
+        </Button>
+        <Button
+          variant="secondary"
+          aria-label="More options"
+          onClick={() => setShowModal(true)}
+          title="Add with more options"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
       </div>
-      <input
-        className="rounded border px-3 py-2 w-40"
-        placeholder="Subject (optional)"
-        value={subject}
-        aria-label="Task subject"
-        onChange={(e)=>setSubject(e.target.value)}
-      />
-      {showDuePicker && (
-        <input
-          type="datetime-local"
-          className="rounded border px-3 py-2 shrink-0"
-          value={dueAtStr}
-          onChange={(e)=>setDueAtStr(e.target.value)}
-          aria-label="Task due date"
-        />)
-      }
-      
-      <Button type="submit" className="shrink-0" disabled={create.isPending}>Add</Button>
-      {titleError && (
-        <p role="alert" className="w-full text-red-500">
-          {titleError}
-        </p>
+
+      {showQuick && (
+        <div className="absolute z-10 mt-2 w-full max-w-md rounded-lg border border-black/10 bg-white/95 p-3 shadow-xl dark:border-white/10 dark:bg-neutral-900/95">
+          <div className="flex items-center gap-2">
+            <input
+              autoFocus
+              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+              placeholder="Task title"
+              value={quickTitle}
+              onChange={(e) => setQuickTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  if (!quickTitle.trim()) return;
+                  create.mutate({ title: quickTitle.trim() });
+                }
+                if (e.key === "Escape") setShowQuick(false);
+              }}
+            />
+            <Button
+              onClick={() => {
+                if (!quickTitle.trim()) return;
+                create.mutate({ title: quickTitle.trim() });
+              }}
+              disabled={create.isPending}
+            >
+              Create
+            </Button>
+            <Button variant="secondary" onClick={() => setShowQuick(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
       )}
-    </form>
-    {create.error && (
-      <p role="alert" className="text-red-500">{create.error.message}</p>
-    )}
-    </>
+
+      <TaskModal open={showModal} mode="create" onClose={() => setShowModal(false)} />
+    </div>
   );
 }
