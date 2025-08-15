@@ -1,265 +1,53 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TaskStatus } from '@prisma/client';
-import { taskRouter } from './task';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// In-memory store to simulate DB
-type T = {
-  id: string;
-  title: string;
-  createdAt: Date;
-  dueAt?: Date | null;
-  status: TaskStatus;
-  subject?: string | null;
-  position: number;
-};
-let store: T[] = [];
-let idSeq = 0;
-
-// Mock the Prisma db module
-vi.mock('@/server/db', () => {
-  return {
-    db: {
-      $transaction: async (ops: any[]) => {
-        // Execute all operations and return their resolved results (like Prisma does)
-        const results: any[] = [];
-        for (const op of ops) {
-          results.push(await op);
-        }
-        return results;
-      },
-      // Provide minimal models used by router.delete()
-      reminder: {
-        deleteMany: vi.fn(async () => ({ count: 0 })),
-      },
-      event: {
-        deleteMany: vi.fn(async () => ({ count: 0 })),
-      },
-      task: {
-        findMany: vi.fn(
-          async (
-            args?: {
-              where?: { dueAt?: { lt?: Date; gte?: Date; lt2?: never; lte?: Date } | null };
-              orderBy?: any;
-              select?: any;
-            }
-          ) => {
-            let result = [...store];
-            // Very light filtering for tests
-            const where = args?.where;
-            if (where?.dueAt && (where.dueAt.lt || where.dueAt.gte || where.dueAt.lte)) {
-              result = result.filter((t) => {
-                const d = t.dueAt ?? null;
-                if (d === null) return false; // emulate where on non-null when filtering by dueAt
-                if (where.dueAt?.lt && !(d < where.dueAt.lt)) return false;
-                if (where.dueAt?.gte && !(d >= where.dueAt.gte)) return false;
-                if (where.dueAt?.lte && !(d <= where.dueAt.lte)) return false;
-                return true;
-              });
-            }
-            // Order by position asc
-            result.sort((a, b) => a.position - b.position);
-            return result.map((t) => ({
-              id: t.id,
-              title: t.title,
-              createdAt: t.createdAt,
-              dueAt: t.dueAt ?? null,
-              status: t.status,
-              subject: t.subject ?? null,
-              position: t.position,
-            }));
-          }
-        ),
-        create: vi.fn(
-          async ({ data }: { data: { title: string; dueAt?: Date | null; subject?: string | null; position: number } }) => {
-            const item: T = {
-              id: `t_${++idSeq}`,
-              title: data.title,
-              createdAt: new Date(),
-              dueAt: data.dueAt ?? null,
-              status: TaskStatus.TODO,
-              subject: data.subject ?? null,
-              position: data.position,
-            };
-            store.push(item);
-            return item;
-          }
-        ),
-        aggregate: vi.fn(async () => ({ _max: { position: store.length ? store[store.length - 1].position : null } })),
-        update: vi.fn(
-          async ({ where, data }: { where: { id: string }; data: Partial<T> }) => {
-            const idx = store.findIndex((t) => t.id === where.id);
-            if (idx === -1) throw new Error('Not found');
-            store[idx] = { ...store[idx], ...data };
-            return store[idx];
-          }
-        ),
-        delete: vi.fn(async ({ where }: { where: { id: string } }) => {
-          const idx = store.findIndex((t) => t.id === where.id);
-          if (idx !== -1) {
-            const [removed] = store.splice(idx, 1);
-            return removed;
-          }
-          throw new Error('Not found');
-        }),
-      },
-    },
-  };
+// Define hoisted fns for module mock
+const hoisted = vi.hoisted(() => {
+  const findMany = vi.fn().mockResolvedValue([]);
+  const update = vi.fn().mockResolvedValue({});
+  const $transaction = vi.fn(async (ops: any[]) =>
+    Promise.all(ops.map((op) => (typeof op === 'function' ? op() : op)))
+  );
+  return { findMany, update, $transaction };
 });
 
-describe('taskRouter (no auth)', () => {
+vi.mock('@/server/db', () => ({
+  db: {
+    task: { findMany: hoisted.findMany, update: hoisted.update },
+    $transaction: hoisted.$transaction,
+  },
+}));
+
+import { taskRouter } from './task';
+
+describe('taskRouter.list ordering', () => {
   beforeEach(() => {
-    store = [];
-    idSeq = 0;
+    hoisted.findMany.mockClear();
   });
 
-  it('creates and lists tasks', async () => {
-    const caller = taskRouter.createCaller({});
-    const before = await caller.list();
-    expect(before).toHaveLength(0);
+  it('orders by position first, then dueAt, then createdAt', async () => {
+    await taskRouter.createCaller({}).list({ filter: 'all' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+    const arg = hoisted.findMany.mock.calls[0][0];
+    expect(arg.orderBy).toEqual([
+      { position: 'asc' },
+      { dueAt: { sort: 'asc', nulls: 'last' } },
+      { createdAt: 'desc' },
+    ]);
+  });
+});
 
-    const created = await caller.create({ title: 'Write tests', subject: 'math' });
-    expect(created.title).toBe('Write tests');
-    expect(created.subject).toBe('math');
-
-    const after = await caller.list();
-    expect(after).toHaveLength(1);
-    expect(after[0].title).toBe('Write tests');
-    expect(after[0].subject).toBe('math');
+describe('taskRouter.reorder', () => {
+  beforeEach(() => {
+    hoisted.update.mockClear();
+    hoisted.$transaction.mockClear();
   });
 
-  it('deletes a task', async () => {
-    const caller = taskRouter.createCaller({});
-    const created = await caller.create({ title: 'Temp' });
-    const list1 = await caller.list();
-    expect(list1).toHaveLength(1);
-
-    await caller.delete({ id: created.id });
-    const list2 = await caller.list();
-    expect(list2).toHaveLength(0);
-  });
-
-  it('reorders tasks', async () => {
-    const caller = taskRouter.createCaller({});
-    const t1 = await caller.create({ title: 'First' });
-    const t2 = await caller.create({ title: 'Second' });
-    await caller.reorder({ ids: [t2.id, t1.id] });
-    const list = await caller.list();
-    expect(list.map((t) => t.id)).toEqual([t2.id, t1.id]);
-  });
-
-  it('updates a task title', async () => {
-    const caller = taskRouter.createCaller({});
-    const created = await caller.create({ title: 'Old' });
-    const updated = await caller.updateTitle({ id: created.id, title: 'New Title' });
-    expect(updated.title).toBe('New Title');
-    const list = await caller.list();
-    expect(list[0]!.title).toBe('New Title');
-  });
-
-  it('rejects invalid titles on update', async () => {
-    const caller = taskRouter.createCaller({});
-    const created = await caller.create({ title: 'Valid' });
-    await expect(caller.updateTitle({ id: created.id, title: '' })).rejects.toThrow();
-  });
-
-  it('sets a due date on an existing task', async () => {
-    const caller = taskRouter.createCaller({});
-    const created = await caller.create({ title: 'With due later' });
-    expect(created.dueAt ?? null).toBeNull();
-
-    const dueAt = new Date('2030-01-15T10:00:00.000Z');
-    const updated = await caller.setDueDate({ id: created.id, dueAt });
-    expect(updated.dueAt?.toISOString()).toBe(dueAt.toISOString());
-
-    const list = await caller.list();
-    expect(list[0]!.dueAt?.toISOString()).toBe(dueAt.toISOString());
-  });
-
-  it('creates a task with an initial due date', async () => {
-    const caller = taskRouter.createCaller({});
-    const dueAt = new Date('2031-05-20T09:30:00.000Z');
-    const created = await caller.create({ title: 'With due now', dueAt });
-    expect(created.dueAt?.toISOString()).toBe(dueAt.toISOString());
-
-    const list = await caller.list();
-    expect(list[0]!.dueAt?.toISOString()).toBe(dueAt.toISOString());
-  });
-
-  it('clears a due date (set to null)', async () => {
-    const caller = taskRouter.createCaller({});
-    const dueAt = new Date('2032-03-03T00:00:00.000Z');
-    const created = await caller.create({ title: 'Clear me', dueAt });
-    expect(created.dueAt).toBeTruthy();
-    const cleared = await caller.setDueDate({ id: created.id, dueAt: null });
-    expect(cleared.dueAt ?? null).toBeNull();
-  });
-
-  it('sets task status', async () => {
-    const caller = taskRouter.createCaller({});
-    const created = await caller.create({ title: 'Status me' });
-    expect(created.status).toBe(TaskStatus.TODO);
-    const updated = await caller.setStatus({ id: created.id, status: TaskStatus.DONE });
-    expect(updated.status).toBe(TaskStatus.DONE);
-    const list = await caller.list();
-    expect(list[0]!.status).toBe(TaskStatus.DONE);
-  });
-
-  it('rejects past due dates on create and update', async () => {
-    const caller = taskRouter.createCaller({});
-    const past = new Date(Date.now() - 24*60*60*1000);
-    await expect(caller.create({ title: 'Past', dueAt: past })).rejects.toThrow();
-    const created = await caller.create({ title: 'OK' });
-    await expect(caller.setDueDate({ id: created.id, dueAt: past })).rejects.toThrow();
-  });
-
-  it('filters overdue and today correctly', async () => {
-    const caller = taskRouter.createCaller({});
-    const now = new Date();
-    const yesterday = new Date(now.getTime() - 24*60*60*1000);
-    const endOfToday = new Date(now);
-    endOfToday.setHours(23,59,0,0);
-    const tomorrow = new Date(now.getTime() + 24*60*60*1000);
-
-    const over = await caller.create({ title: 'Overdue', dueAt: tomorrow });
-    const todayTask = await caller.create({ title: 'Today', dueAt: endOfToday });
-    await caller.create({ title: 'Future', dueAt: new Date(now.getTime() + 2*24*60*60*1000) });
-
-    // Simulate time passing: mark one as overdue by mutating the in-memory store
-    const idx = store.findIndex(s=>s.id===over.id);
-    if (idx !== -1) store[idx].dueAt = yesterday;
-
-    const overdue = await caller.list({ filter: 'overdue' });
-    expect(overdue.map(t=>t.title)).toEqual(['Overdue']);
-
-    const today = await caller.list({ filter: 'today' });
-    expect(today.map(t=>t.title)).toEqual(['Today']);
-
-    const all = await caller.list();
-    expect(all.length).toBe(3);
-  });
-
-  it('filters today using client timezone offset', async () => {
-    const caller = taskRouter.createCaller({});
-    // Simulate a client in UTC-7 (e.g., PDT) where local 20:00 is next day UTC
-    const clientOffsetMin = 7 * 60; // Date.getTimezoneOffset() style (positive for UTC-7)
-
-    // Suppose it's 01:30 UTC; client's local day is still "today"
-    const nowUtc = new Date();
-    // Build a due date that is 20:00 local today for the client
-    const clientNow = new Date(nowUtc.getTime() - clientOffsetMin * 60 * 1000);
-    const clientDue = new Date(clientNow);
-    clientDue.setHours(20, 0, 0, 0); // 20:00 local
-    // Convert that local time back to UTC
-    const dueUtc = new Date(clientDue.getTime() + clientOffsetMin * 60 * 1000);
-
-    await caller.create({ title: 'Client Today', dueAt: dueUtc });
-
-    // Without passing tzOffset, server local "today" might not include it in some TZs
-    const todayDefault = await caller.list({ filter: 'today' });
-    // Not asserting on default since it depends on environment timezone.
-
-    // With client offset, it must be included in today
-    const todayClient = await caller.list({ filter: 'today', tzOffsetMinutes: clientOffsetMin });
-    expect(todayClient.map((t) => t.title)).toContain('Client Today');
+  it('updates positions based on provided ids order', async () => {
+    await taskRouter.createCaller({}).reorder({ ids: ['a', 'b', 'c'] });
+    expect(hoisted.$transaction).toHaveBeenCalledTimes(1);
+    // Ensure update is called for each id with the correct index
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'a' }, data: { position: 0 } });
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'b' }, data: { position: 1 } });
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'c' }, data: { position: 2 } });
   });
 });

@@ -55,7 +55,11 @@ export const taskRouter = router({
       return db.task.findMany({
         where,
         orderBy: [
+          // Respect manual ordering first
+          { position: 'asc' },
+          // Then sort by due date (nulls last) for items with equal positions
           { dueAt: { sort: 'asc', nulls: 'last' } as any },
+          // Finally, newest first as a tiebreaker
           { createdAt: 'desc' },
         ],
       });

@@ -82,47 +82,44 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
     onError: (e) => toast.error(e.message || "Failed to delete task"),
   });
 
-  const footer = useMemo(
-    () => (
-      <>
-        {isEdit && task && (
-          <Button
-            variant="danger"
-            className="mr-auto"
-            onClick={() => del.mutate({ id: task.id })}
-          >
-            Delete
-          </Button>
-        )}
-        <Button variant="secondary" onClick={onClose}>
-          Cancel
-        </Button>
+  const footer = (
+    <>
+      {isEdit && task && (
         <Button
-          disabled={create.isPending || update.isPending}
-          onClick={() => {
-            const dueAt = dueEnabled && due ? parseLocalDateTime(due) : null;
-            if (isEdit && task) {
-              update.mutate({
-                id: task.id,
-                title: title.trim() || task.title,
-                subject: subject.trim() || null,
-                notes: notes.trim() || null,
-                dueAt,
-              });
-            } else {
-              if (!title.trim()) {
-                toast.error("Title is required");
-                return;
-              }
-              create.mutate({ title: title.trim(), subject: subject || undefined, notes: notes || undefined, dueAt });
-            }
-          }}
+          variant="danger"
+          className="mr-auto"
+          onClick={() => del.mutate({ id: task.id })}
         >
-          {isEdit ? "Save" : "Create"}
+          Delete
         </Button>
-      </>
-    ),
-    [isEdit, task, title, subject, notes, due, dueEnabled, create.isPending, update.isPending]
+      )}
+      <Button variant="secondary" onClick={onClose}>
+        Cancel
+      </Button>
+      <Button
+        disabled={create.isPending || update.isPending}
+        onClick={() => {
+          const dueAt = dueEnabled && due ? parseLocalDateTime(due) : null;
+          if (isEdit && task) {
+            update.mutate({
+              id: task.id,
+              title: title.trim() || task.title,
+              subject: subject.trim() || null,
+              notes: notes.trim() || null,
+              dueAt,
+            });
+          } else {
+            if (!title.trim()) {
+              toast.error("Title is required");
+              return;
+            }
+            create.mutate({ title: title.trim(), subject: subject || undefined, notes: notes || undefined, dueAt });
+          }
+        }}
+      >
+        {isEdit ? "Save" : "Create"}
+      </Button>
+    </>
   );
 
   return (

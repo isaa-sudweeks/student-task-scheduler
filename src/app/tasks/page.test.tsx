@@ -18,6 +18,7 @@ vi.mock('@/server/api/react', () => ({
           error: { message: 'Failed to create task' },
         }),
       },
+      update: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       setDueDate: {
         useMutation: () => ({
           mutate: vi.fn(),

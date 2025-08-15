@@ -12,5 +12,9 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // Ensure stability in constrained environments
+    pool: 'threads',
+    maxWorkers: 1,
+    minWorkers: 1,
   },
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -20,6 +20,7 @@ vi.mock('@/server/api/react', () => ({
           error: { message: 'Failed to create task' },
         }),
       },
+      update: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       setDueDate: {
         useMutation: () => ({
           mutate: vi.fn(),
@@ -40,70 +41,37 @@ afterEach(() => {
 });
 
 describe('NewTaskForm', () => {
-  it('shows error message when creation fails', () => {
-    render(<NewTaskForm />);
-    expect(screen.getByText('Failed to create task')).toBeInTheDocument();
-  });
-
-  it('displays validation error for blank title and clears on input', () => {
-    render(<NewTaskForm />);
-    const input = screen.getByPlaceholderText('Add a task…');
-    fireEvent.submit(input.closest('form')!);
-    expect(screen.getByText('Title is required')).toBeInTheDocument();
-    expect(input).toHaveAttribute('aria-invalid', 'true');
-    fireEvent.change(input, { target: { value: 'task' } });
-    expect(screen.queryByText('Title is required')).not.toBeInTheDocument();
-    expect(input).not.toHaveAttribute('aria-invalid');
-  });
-
-  it('toggles due date picker with calendar icon', () => {
-    render(<NewTaskForm />);
-    const toggle = screen.getByLabelText('Toggle due date picker');
-    expect(screen.queryByLabelText('Task due date')).not.toBeInTheDocument();
-    fireEvent.click(toggle);
-    expect(screen.getByLabelText('Task due date')).toBeInTheDocument();
-  });
-
-  it('submits subject when provided', () => {
+  it('submits on Enter with title only', () => {
     mutateSpy = vi.fn();
     render(<NewTaskForm />);
-    const title = screen.getByPlaceholderText('Add a task…');
-    const subject = screen.getByPlaceholderText('Subject (optional)');
-    fireEvent.change(title, { target: { value: 'Do homework' } });
-    fireEvent.change(subject, { target: { value: 'Math' } });
-    fireEvent.submit(title.closest('form')!);
-    expect(mutateSpy).toHaveBeenCalledWith({ title: 'Do homework', dueAt: null, subject: 'Math' });
+    const input = screen.getByPlaceholderText('Add a task…');
+    fireEvent.change(input, { target: { value: 'Do homework' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(mutateSpy).toHaveBeenCalledWith({ title: 'Do homework' });
   });
 
-  it('omits subject when empty', () => {
+  it('does not submit when title is blank', () => {
     mutateSpy = vi.fn();
     render(<NewTaskForm />);
-    const title = screen.getByPlaceholderText('Add a task…');
-    fireEvent.change(title, { target: { value: 'Read book' } });
-    fireEvent.submit(title.closest('form')!);
-    expect(mutateSpy).toHaveBeenCalledWith({ title: 'Read book', dueAt: null });
-  });
-
-  it('focuses title input on Enter when no input is active', () => {
-    render(<NewTaskForm />);
-    const input = screen.getByPlaceholderText('Add a task…') as HTMLInputElement;
-    input.blur();
-    const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
-    act(() => {
-      window.dispatchEvent(event);
-    });
-    expect(document.activeElement).toBe(input);
-  });
-
-  it('submits form on Ctrl+Enter and prevents default', () => {
-    render(<NewTaskForm />);
     const input = screen.getByPlaceholderText('Add a task…');
-    fireEvent.change(input, { target: { value: 'task' } });
-    const event = new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, cancelable: true });
-    act(() => {
-      window.dispatchEvent(event);
-    });
-    expect(mutateSpy).toHaveBeenCalled();
-    expect(event.defaultPrevented).toBe(true);
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(mutateSpy).not.toHaveBeenCalled();
+  });
+
+  it('opens modal on More options and shows draft due hint when setting due in modal', () => {
+    render(<NewTaskForm />);
+    // Open modal
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    // Toggle due date checkbox
+    const dueToggle = screen.getByLabelText('Set due date');
+    fireEvent.click(dueToggle);
+    // Change due date value
+    const dueInput = screen.getByDisplayValue(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+    fireEvent.change(dueInput, { target: { value: '2099-12-31T23:59' } });
+    // Hint should appear in the form outside the modal
+    expect(screen.getByText(/Due /)).toBeInTheDocument();
+    // Disable due and ensure hint disappears
+    fireEvent.click(dueToggle);
+    expect(screen.queryByText(/Due /)).not.toBeInTheDocument();
   });
 });

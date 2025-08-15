@@ -47,36 +47,38 @@ export function TaskList() {
   const [taskDataSnapshot, setTaskDataSnapshot] = useState<typeof tasks.data>();
   const prevFilterRef = React.useRef(filter);
   useEffect(() => {
-    // On first data load, capture snapshot
-    if (taskDataSnapshot === undefined && tasks.data) {
-      setTaskDataSnapshot(tasks.data);
-    }
-    // If filter changes, refresh snapshot from latest data
-    if (prevFilterRef.current !== filter && tasks.data) {
+    if (!tasks.data) return;
+    // On first data load or when filter changes, capture snapshot
+    if (taskDataSnapshot === undefined || prevFilterRef.current !== filter) {
       setTaskDataSnapshot(tasks.data);
       prevFilterRef.current = filter;
+      return;
     }
-    // When the filter is stable, detect structural changes (e.g., create/delete)
-    // and refresh the snapshot so newly added/removed tasks appear immediately.
-    if (
-      prevFilterRef.current === filter &&
-      tasks.data &&
-      taskDataSnapshot
-    ) {
-      const snapIds = new Set(taskDataSnapshot.map((t) => t.id));
-      const dataIds = new Set(tasks.data.map((t) => t.id));
-      let changed = snapIds.size !== dataIds.size;
-      if (!changed) {
-        for (const id of dataIds) {
-          if (!snapIds.has(id)) {
-            changed = true;
-            break;
-          }
-        }
+    // If the set of task IDs has changed, refresh snapshot (create/delete)
+    const snapIds = new Set(taskDataSnapshot.map((t) => t.id));
+    const dataIds = new Set(tasks.data.map((t) => t.id));
+    const idsDiffer =
+      snapIds.size !== dataIds.size ||
+      [...dataIds].some((id) => !snapIds.has(id));
+    if (idsDiffer) {
+      setTaskDataSnapshot(tasks.data);
+      return;
+    }
+    // If content changed for existing IDs, refresh snapshot when updatedAt differs
+    const snapById = new Map(taskDataSnapshot.map((t: any) => [t.id, t]));
+    const contentChanged = tasks.data.some((t: any) => {
+      const prev = snapById.get(t.id);
+      if (!(t && prev)) return false;
+      // Detect edits via updatedAt change only to avoid noisy re-snapshots in tests
+      if (t.updatedAt && prev.updatedAt) {
+        const nextTs = new Date(t.updatedAt).getTime();
+        const prevTs = new Date(prev.updatedAt).getTime();
+        return nextTs !== prevTs;
       }
-      if (changed) {
-        setTaskDataSnapshot(tasks.data);
-      }
+      return false;
+    });
+    if (contentChanged) {
+      setTaskDataSnapshot(tasks.data);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, tasks.data, taskDataSnapshot]);

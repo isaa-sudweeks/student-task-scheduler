@@ -50,6 +50,7 @@ vi.mock('@/server/api/react', () => ({
           error: { message: 'Failed to create task' },
         }),
       },
+      update: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       setDueDate: {
         useMutation: () => ({
           mutate: vi.fn(),
@@ -113,7 +114,7 @@ describe('TaskList', () => {
     const input = screen.getByPlaceholderText('Search tasks...');
     fireEvent.change(input, { target: { value: 'math' } });
     // Should match by title (subject alone should not matter)
-    expect(screen.getByDisplayValue('Math homework')).toBeInTheDocument();
+    expect(screen.getByText('Math homework')).toBeInTheDocument();
   });
 
   it('displays completed task ratio', () => {
@@ -141,8 +142,8 @@ describe('TaskList', () => {
     const lastCall = sortableItemsCalls[sortableItemsCalls.length - 1] as string[];
     expect(lastCall).toEqual(['c']);
     // Only the matching task remains in the DOM (no gaps)
-    expect(screen.getByDisplayValue('Gamma')).toBeInTheDocument();
-    expect(screen.queryByDisplayValue('Alpha')).not.toBeInTheDocument();
-    expect(screen.queryByDisplayValue('Beta')).not.toBeInTheDocument();
+    expect(screen.getByText('Gamma')).toBeInTheDocument();
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
+    expect(screen.queryByText('Beta')).not.toBeInTheDocument();
   });
 });
