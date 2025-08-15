@@ -54,10 +54,28 @@ export function TaskList() {
       setTaskDataSnapshot(tasks.data);
       prevFilterRef.current = filter;
     }
-    // Intentionally ignore tasks.data changes when filter is stable to
-    // avoid unnecessary refetch-driven re-renders during local UI edits (e.g., search)
-    // which can interfere with tests that stub the first query only.
-    // Real data remains visible; changes will be picked up when filter toggles.
+    // When the filter is stable, detect structural changes (e.g., create/delete)
+    // and refresh the snapshot so newly added/removed tasks appear immediately.
+    if (
+      prevFilterRef.current === filter &&
+      tasks.data &&
+      taskDataSnapshot
+    ) {
+      const snapIds = new Set(taskDataSnapshot.map((t) => t.id));
+      const dataIds = new Set(tasks.data.map((t) => t.id));
+      let changed = snapIds.size !== dataIds.size;
+      if (!changed) {
+        for (const id of dataIds) {
+          if (!snapIds.has(id)) {
+            changed = true;
+            break;
+          }
+        }
+      }
+      if (changed) {
+        setTaskDataSnapshot(tasks.data);
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, tasks.data, taskDataSnapshot]);
   const [items, setItems] = useState<string[]>([]);

@@ -20,9 +20,19 @@ vi.mock('@/server/db', () => {
   return {
     db: {
       $transaction: async (ops: any[]) => {
+        // Execute all operations and return their resolved results (like Prisma does)
+        const results: any[] = [];
         for (const op of ops) {
-          await op;
+          results.push(await op);
         }
+        return results;
+      },
+      // Provide minimal models used by router.delete()
+      reminder: {
+        deleteMany: vi.fn(async () => ({ count: 0 })),
+      },
+      event: {
+        deleteMany: vi.fn(async () => ({ count: 0 })),
       },
       task: {
         findMany: vi.fn(

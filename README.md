@@ -46,4 +46,3 @@ Notes:
 
 ## Problems
 - Drag reordering does not persist: Dragging tasks to a new order updates the UI briefly, but the order does not stay after refresh.
-- New task does not appear instantly: After adding a task, it may not populate immediately in the list without a manual refresh.
