@@ -55,20 +55,9 @@ export const taskRouter = router({
       return db.task.findMany({
         where,
         orderBy: [
-          { position: 'asc' },
           { dueAt: { sort: 'asc', nulls: 'last' } as any },
           { createdAt: 'desc' },
         ],
-        select: {
-          id: true,
-          title: true,
-          createdAt: true,
-          dueAt: true,
-          status: true,
-          subject: true,
-          notes: true,
-          position: true,
-        },
       });
     }),
   create: publicProcedure
@@ -84,16 +73,12 @@ export const taskRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
-      // Place new task at the end based on max(position)
-      const { _max } = await db.task.aggregate({ _max: { position: true } });
-      const nextPosition = (_max.position ?? -1) + 1;
-      return db.task.create({
+      return (db as any).task.create({
         data: {
           title: input.title,
           dueAt: input.dueAt ?? null,
           subject: input.subject ?? null,
           notes: input.notes ?? null,
-          position: nextPosition,
         },
       });
     }),
@@ -127,39 +112,39 @@ export const taskRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
-      return db.task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
+      return (db as any).task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
     }),
   updateTitle: publicProcedure
     .input(
       z.object({ id: z.string().min(1), title: z.string().min(1).max(200) })
     )
     .mutation(async ({ input }) => {
-      return db.task.update({ where: { id: input.id }, data: { title: input.title } });
+      return (db as any).task.update({ where: { id: input.id }, data: { title: input.title } });
     }),
   setStatus: publicProcedure
     .input(
       z.object({ id: z.string().min(1), status: z.nativeEnum(TaskStatus) })
     )
     .mutation(async ({ input }) => {
-      return db.task.update({ where: { id: input.id }, data: { status: input.status } });
+      return (db as any).task.update({ where: { id: input.id }, data: { status: input.status } });
     }),
   delete: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input }) => {
       // Be resilient even if DB referential actions aren't cascaded yet
-      const [, , deleted] = await db.$transaction([
-        db.reminder.deleteMany({ where: { taskId: input.id } }),
-        db.event.deleteMany({ where: { taskId: input.id } }),
-        db.task.delete({ where: { id: input.id } }),
+      const [, , deleted] = await (db as any).$transaction([
+        (db as any).reminder.deleteMany({ where: { taskId: input.id } }),
+        (db as any).event.deleteMany({ where: { taskId: input.id } }),
+        (db as any).task.delete({ where: { id: input.id } }),
       ]);
       return deleted;
     }),
   reorder: publicProcedure
     .input(z.object({ ids: z.array(z.string().min(1)) }))
     .mutation(async ({ input }) => {
-      await db.$transaction(
+      await (db as any).$transaction(
         input.ids.map((id, index) =>
-          db.task.update({ where: { id }, data: { position: index } })
+          (db as any).task.update({ where: { id }, data: { position: index } })
         )
       );
       return { success: true };

@@ -4,7 +4,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { api } from "@/server/api/react";
 import { toast } from "react-hot-toast";
-import { formatLocalDateTime, parseLocalDateTime } from "@/lib/datetime";
+import { formatLocalDateTime, parseLocalDateTime, defaultEndOfToday } from "@/lib/datetime";
 
 type BaseTask = {
   id: string;
@@ -20,9 +20,12 @@ interface TaskModalProps {
   onClose: () => void;
   // For edit mode, pass the task snapshot
   task?: BaseTask;
+  initialTitle?: string;
+  initialDueAt?: Date | null;
+  onDraftDueChange?: (dueAt: Date | null) => void;
 }
 
-export function TaskModal({ open, mode, onClose, task }: TaskModalProps) {
+export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueAt, onDraftDueChange }: TaskModalProps) {
   const utils = api.useUtils();
   const isEdit = mode === "edit";
 
@@ -30,6 +33,7 @@ export function TaskModal({ open, mode, onClose, task }: TaskModalProps) {
   const [subject, setSubject] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [due, setDue] = useState<string>(""); // datetime-local
+  const [dueEnabled, setDueEnabled] = useState<boolean>(false);
 
   useEffect(() => {
     if (!open) return;
@@ -37,14 +41,22 @@ export function TaskModal({ open, mode, onClose, task }: TaskModalProps) {
       setTitle(task.title);
       setSubject(task.subject ?? "");
       setNotes(task.notes ?? "");
-      setDue(task.dueAt ? formatLocalDateTime(new Date(task.dueAt)) : "");
+      const hasDue = task.dueAt != null;
+      setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt as any)) : "");
+      setDueEnabled(hasDue);
     } else {
-      setTitle("");
+      setTitle(initialTitle ?? "");
       setSubject("");
       setNotes("");
-      setDue("");
+      if (initialDueAt) {
+        setDueEnabled(true);
+        setDue(formatLocalDateTime(new Date(initialDueAt)));
+      } else {
+        setDue("");
+        setDueEnabled(false);
+      }
     }
-  }, [open, isEdit, task]);
+  }, [open, isEdit, task, initialTitle, initialDueAt]);
 
   const create = api.task.create.useMutation({
     onSuccess: async () => {
@@ -88,7 +100,7 @@ export function TaskModal({ open, mode, onClose, task }: TaskModalProps) {
         <Button
           disabled={create.isPending || update.isPending}
           onClick={() => {
-            const dueAt = due ? parseLocalDateTime(due) : null;
+            const dueAt = dueEnabled && due ? parseLocalDateTime(due) : null;
             if (isEdit && task) {
               update.mutate({
                 id: task.id,
@@ -110,7 +122,7 @@ export function TaskModal({ open, mode, onClose, task }: TaskModalProps) {
         </Button>
       </>
     ),
-    [isEdit, task, title, subject, notes, due, create.isPending, update.isPending]
+    [isEdit, task, title, subject, notes, due, dueEnabled, create.isPending, update.isPending]
   );
 
   return (
@@ -126,7 +138,7 @@ export function TaskModal({ open, mode, onClose, task }: TaskModalProps) {
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="flex flex-col gap-1">
             <span className="text-xs uppercase tracking-wide opacity-60">Subject</span>
             <input
@@ -136,15 +148,36 @@ export function TaskModal({ open, mode, onClose, task }: TaskModalProps) {
               onChange={(e) => setSubject(e.target.value)}
             />
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide opacity-60">Due date</span>
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-2 text-xs uppercase tracking-wide opacity-60">
+              <input
+                type="checkbox"
+                className="accent-black dark:accent-white"
+                checked={dueEnabled}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  setDueEnabled(enabled);
+                  if (enabled && !due) {
+                    const v = defaultEndOfToday();
+                    setDue(v);
+                    onDraftDueChange?.(parseLocalDateTime(v));
+                  }
+                  if (!enabled) onDraftDueChange?.(null);
+                }}
+              />
+              Set due date
+            </label>
             <input
               type="datetime-local"
-              className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+              className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 disabled:opacity-50 dark:border-white/10 dark:focus:ring-white/20"
               value={due}
-              onChange={(e) => setDue(e.target.value)}
+              onChange={(e) => {
+                setDue(e.target.value);
+                onDraftDueChange?.(e.target.value ? parseLocalDateTime(e.target.value) : null);
+              }}
+              disabled={!dueEnabled}
             />
-          </label>
+          </div>
         </div>
 
         <label className="flex flex-col gap-1">
