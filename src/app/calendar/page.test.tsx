@@ -1,0 +1,136 @@
+// @vitest-environment jsdom
+import React from 'react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as matchers from '@testing-library/jest-dom/matchers';
+expect.extend(matchers);
+
+import CalendarPage from './page';
+
+const focusStart = vi.fn();
+const focusStop = vi.fn();
+const scheduleMutate = vi.fn();
+const moveMutate = vi.fn();
+
+const tasks = [
+  { id: 't1', title: 'Unscheduled task', status: 'TODO', dueAt: null },
+  { id: 't2', title: 'Scheduled task', status: 'TODO', dueAt: null },
+];
+
+const events = [
+  { id: 'e1', taskId: 't2', startAt: new Date('2099-01-01T10:00:00Z'), endAt: new Date('2099-01-01T11:00:00Z') },
+];
+
+vi.mock('@/server/api/react', () => ({
+  api: {
+    useUtils: () => ({
+      task: { list: { invalidate: vi.fn() } },
+      event: { listRange: { invalidate: vi.fn() } },
+      focus: { status: { invalidate: vi.fn() } },
+    }),
+    task: {
+      list: { useQuery: () => ({ data: tasks, isLoading: false }) },
+    },
+    event: {
+      listRange: { useQuery: () => ({ data: events, isLoading: false }) },
+      schedule: { useMutation: () => ({ mutate: (...a: unknown[]) => scheduleMutate(...a) }) },
+      move: { useMutation: () => ({ mutate: (...a: unknown[]) => moveMutate(...a) }) },
+    },
+    focus: {
+      start: { useMutation: () => ({ mutate: (...a: unknown[]) => focusStart(...a) }) },
+      stop: { useMutation: () => ({ mutate: (...a: unknown[]) => focusStop(...a) }) },
+    },
+  },
+}));
+
+describe('CalendarPage', () => {
+  beforeEach(() => {
+    focusStart.mockReset();
+    focusStop.mockReset();
+    scheduleMutate.mockReset();
+    moveMutate.mockReset();
+  });
+
+  it('defaults to Week view and can switch views', () => {
+    render(<CalendarPage />);
+
+    // Default selected is Week
+    const tabs = screen.getByRole('tablist', { name: /calendar view/i });
+    expect(within(tabs).getByRole('tab', { selected: true, name: /week/i })).toBeInTheDocument();
+
+    // Switch to Day
+    fireEvent.click(within(tabs).getByRole('tab', { name: /day/i }));
+    expect(within(tabs).getByRole('tab', { selected: true, name: /day/i })).toBeInTheDocument();
+
+    // Switch to Month
+    fireEvent.click(within(tabs).getByRole('tab', { name: /month/i }));
+    expect(within(tabs).getByRole('tab', { selected: true, name: /month/i })).toBeInTheDocument();
+  });
+
+  it('shows a link back to Home', () => {
+    render(<CalendarPage />);
+    const link = screen.getByRole('link', { name: /home/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '/');
+  });
+
+  it('shows unscheduled tasks in backlog and scheduled tasks on grid', () => {
+    render(<CalendarPage />);
+
+    // Backlog shows the unscheduled item
+    expect(screen.getByText('Unscheduled task')).toBeInTheDocument();
+    // Scheduled task appears in the grid area
+    expect(screen.getByTestId('calendar-grid')).toHaveTextContent('Scheduled task');
+  });
+
+  it('focus mode toggles with Space on a task and calls start/stop', () => {
+    render(<CalendarPage />);
+    const backlogItem = screen.getByRole('button', { name: /focus Unscheduled task/i });
+
+    // Hover + Space simulated by focusing then keydown
+    backlogItem.focus();
+    fireEvent.keyDown(backlogItem, { key: ' ' });
+    expect(focusStart).toHaveBeenCalledWith({ taskId: 't1' });
+    expect(screen.getByText(/Focusing:/i)).toBeInTheDocument();
+
+    // Toggle off
+    fireEvent.keyDown(backlogItem, { key: ' ' });
+    expect(focusStop).toHaveBeenCalledWith({ taskId: 't1' });
+  });
+
+  it('schedules an unscheduled task with default 30 minutes when dropped onto calendar', () => {
+    render(<CalendarPage />);
+    // Simulate a drop handler call via exposed test hook button
+    const simulateDrop = screen.getByRole('button', { name: /simulate-drop-unscheduled/i });
+    fireEvent.click(simulateDrop);
+    expect(scheduleMutate).toHaveBeenCalled();
+    const arg = scheduleMutate.mock.calls[0][0] as any;
+    expect(arg.taskId).toBe('t1');
+    expect(arg.durationMinutes).toBe(30);
+  });
+
+  it('reschedules an existing event when moved to a new slot', () => {
+    render(<CalendarPage />);
+    const simulateMove = screen.getByRole('button', { name: /simulate-move-event/i });
+    fireEvent.click(simulateMove);
+    expect(moveMutate).toHaveBeenCalled();
+    const arg = moveMutate.mock.calls[0][0] as any;
+    expect(arg.eventId).toBe('e1');
+    expect(arg.startAt).toBeInstanceOf(Date);
+    expect(arg.endAt).toBeInstanceOf(Date);
+    expect(arg.endAt.getTime()).toBeGreaterThan(arg.startAt.getTime());
+  });
+
+  it('resizes an existing event when resize handle is dropped to a later slot', () => {
+    render(<CalendarPage />);
+    const simulateResize = screen.getByRole('button', { name: /simulate-resize-event/i });
+    fireEvent.click(simulateResize);
+    expect(moveMutate).toHaveBeenCalled();
+    const arg = moveMutate.mock.calls.at(-1)![0] as any;
+    // Start should remain the same; end should extend
+    expect(arg.eventId).toBe('e1');
+    expect(arg.startAt).toBeInstanceOf(Date);
+    expect(arg.endAt).toBeInstanceOf(Date);
+    expect(arg.endAt.getTime()).toBeGreaterThan(arg.startAt.getTime());
+  });
+});
