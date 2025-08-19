@@ -34,6 +34,13 @@ describe('taskRouter.list ordering', () => {
       { createdAt: 'desc' },
     ]);
   });
+
+  it('filters by subject when provided', async () => {
+    await taskRouter.createCaller({}).list({ filter: 'all', subject: 'math' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+    const arg = hoisted.findMany.mock.calls[0][0];
+    expect(arg.where).toEqual({ subject: 'math' });
+  });
 });
 
 describe('taskRouter.reorder', () => {
