@@ -22,6 +22,8 @@ import { Calendar, Tag, GripVertical } from "lucide-react";
 import { TaskModal } from "@/components/task-modal";
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
 
+type Priority = "LOW" | "MEDIUM" | "HIGH";
+
 export function TaskList() {
   const [filter, setFilter] = useState<"all" | "overdue" | "today" | "archive">("all");
   const [subject, setSubject] = useState<string | null>(null);
@@ -169,6 +171,12 @@ export function TaskList() {
     };
     const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
     const done = t.status === "DONE";
+    const priority: Priority = (t as any).priority ?? "MEDIUM";
+    const priorityStyles: Record<Priority, string> = {
+      HIGH: "bg-red-100 text-red-700 ring-red-200 dark:bg-red-900/30 dark:text-red-200 dark:ring-red-800",
+      MEDIUM: "bg-blue-100 text-blue-700 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:ring-blue-800",
+      LOW: "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700",
+    };
     return (
       <li
         ref={setNodeRef}
@@ -204,6 +212,11 @@ export function TaskList() {
             <div className="flex flex-wrap items-center gap-2">
               <span className={`font-medium ${done ? "line-through opacity-60" : ""}`}>
                 {t.title}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${priorityStyles[priority]}`}
+              >
+                {priority.charAt(0) + priority.slice(1).toLowerCase()}
               </span>
               {((t as any).subject) && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">

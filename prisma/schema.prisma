@@ -87,6 +87,12 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model Task {
   id            String     @id @default(cuid())
   user          User?      @relation(fields: [userId], references: [id])
@@ -99,7 +105,7 @@ model Task {
   notes         String?
   subject       String?
   status        TaskStatus @default(TODO)
-  priority      Int        @default(0)
+  priority      TaskPriority @default(MEDIUM)
   position      Int        @default(0)
   effortMinutes Int?
   dueAt         DateTime?

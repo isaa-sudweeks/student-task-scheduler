@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { TaskStatus, Prisma } from '@prisma/client';
+import { TaskStatus, TaskPriority, Prisma } from '@prisma/client';
 import { publicProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 export const taskRouter = router({
@@ -70,7 +70,9 @@ export const taskRouter = router({
       return db.task.findMany({
         where,
         orderBy: [
-          // Respect manual ordering first
+          // Highest priority first
+          { priority: 'desc' },
+          // Respect manual ordering within same priority
           { position: 'asc' },
           // Then sort by due date (nulls last) for items with equal positions
           dueAtOrder,
@@ -86,6 +88,7 @@ export const taskRouter = router({
         dueAt: z.date().nullable().optional(),
         subject: z.string().max(100).optional(),
         notes: z.string().max(2000).optional(),
+        priority: z.nativeEnum(TaskPriority).optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -98,6 +101,7 @@ export const taskRouter = router({
           dueAt: input.dueAt ?? null,
           subject: input.subject ?? null,
           notes: input.notes ?? null,
+          priority: input.priority ?? undefined,
         },
       });
     }),
@@ -109,6 +113,7 @@ export const taskRouter = router({
         subject: z.string().max(100).nullable().optional(),
         notes: z.string().max(2000).nullable().optional(),
         dueAt: z.date().nullable().optional(),
+        priority: z.nativeEnum(TaskPriority).optional(),
       })
     )
     .mutation(async ({ input }) => {

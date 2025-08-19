@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
@@ -14,6 +14,7 @@ type BaseTask = {
   notes: string | null;
   dueAt: Date | string | null;
   status?: TaskStatus;
+  priority?: "LOW" | "MEDIUM" | "HIGH";
 };
 
 interface TaskModalProps {
@@ -36,6 +37,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
   const [notes, setNotes] = useState<string>("");
   const [due, setDue] = useState<string>(""); // datetime-local
   const [dueEnabled, setDueEnabled] = useState<boolean>(false);
+  const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
 
   useEffect(() => {
     if (!open) return;
@@ -43,6 +45,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
       setTitle(task.title);
       setSubject(task.subject ?? "");
       setNotes(task.notes ?? "");
+      setPriority((task as any).priority ?? "MEDIUM");
       const hasDue = task.dueAt != null;
       setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt as any)) : "");
       setDueEnabled(hasDue);
@@ -50,6 +53,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
       setTitle(initialTitle ?? "");
       setSubject("");
       setNotes("");
+      setPriority("MEDIUM");
       if (initialDueAt) {
         setDueEnabled(true);
         setDue(formatLocalDateTime(new Date(initialDueAt)));
@@ -116,13 +120,14 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
               subject: subject.trim() || null,
               notes: notes.trim() || null,
               dueAt,
+              priority,
             });
           } else {
             if (!title.trim()) {
               toast.error("Title is required");
               return;
             }
-            create.mutate({ title: title.trim(), subject: subject || undefined, notes: notes || undefined, dueAt });
+            create.mutate({ title: title.trim(), subject: subject || undefined, notes: notes || undefined, dueAt, priority });
           }
         }}
       >
@@ -197,6 +202,18 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
             />
           </div>
         </div>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs uppercase tracking-wide opacity-60">Priority</span>
+          <select
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as any)}
+          >
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+          </select>
+        </label>
 
         <label className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide opacity-60">Notes</span>
