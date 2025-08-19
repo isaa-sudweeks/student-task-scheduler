@@ -29,7 +29,7 @@ vi.mock('@dnd-kit/sortable', async () => {
 const defaultQuery = {
   data: [
     { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math' },
-    { id: '2', title: 'Test 2', dueAt: null, status: 'TODO' },
+    { id: '2', title: 'Test 2', dueAt: null, status: 'TODO', subject: 'science' },
   ],
   isLoading: false,
   error: undefined,
@@ -90,7 +90,7 @@ describe('TaskList', () => {
 
   it('renders subject badge', () => {
     render(<TaskList />);
-    expect(screen.getByText('math')).toBeInTheDocument();
+    expect(screen.getByText('math', { selector: 'span' })).toBeInTheDocument();
   });
 
   it('filters tasks based on search query', () => {
@@ -145,5 +145,13 @@ describe('TaskList', () => {
     expect(screen.getByText('Gamma')).toBeInTheDocument();
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
     expect(screen.queryByText('Beta')).not.toBeInTheDocument();
+  });
+
+  it('filters tasks by subject', () => {
+    render(<TaskList />);
+    const select = screen.getByLabelText('Subject filter');
+    fireEvent.change(select, { target: { value: 'math' } });
+    expect(screen.getByText('Test 1')).toBeInTheDocument();
+    expect(screen.queryByText('Test 2')).not.toBeInTheDocument();
   });
 });

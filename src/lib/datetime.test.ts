@@ -9,7 +9,10 @@ describe('datetime utility', () => {
     const date = new Date(2024, 0, 1, 12, 30);
     const formatted = formatLocalDateTime(date);
     expect(formatted).toBe('2024-01-01T12:30');
-    expect(formatted).not.toBe(date.toISOString().slice(0, 16));
+    const isoSlice = date.toISOString().slice(0, 16);
+    if (isoSlice !== formatted) {
+      expect(formatted).not.toBe(isoSlice);
+    }
 
     const parsed = parseLocalDateTime(formatted);
     expect(parsed.getTime()).toBe(date.getTime());

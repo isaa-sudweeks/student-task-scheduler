@@ -10,6 +10,7 @@ export const taskRouter = router({
       z
         .object({
           filter: z.enum(['all', 'overdue', 'today']).optional(),
+          subject: z.string().optional(),
           // Minutes to add to UTC to get client local time offset (Date.getTimezoneOffset style)
           tzOffsetMinutes: z.number().int().optional(),
           // Optional explicit client-local day bounds as absolute instants
@@ -20,6 +21,7 @@ export const taskRouter = router({
     )
     .query(async ({ input }) => {
       const filter = input?.filter ?? 'all';
+      const subject = input?.subject;
       const tzOffsetMinutes = input?.tzOffsetMinutes ?? null;
       const nowUtc = new Date();
 
@@ -45,15 +47,19 @@ export const taskRouter = router({
           : endClient;
       }
 
-      const where =
+      const where: Record<string, any> =
         filter === 'overdue'
           ? { dueAt: { lt: nowUtc } }
           : filter === 'today'
           ? { dueAt: { gte: startUtc, lte: endUtc } }
-          : undefined;
+          : {};
+
+      if (subject) {
+        (where as any).subject = subject;
+      }
 
       return db.task.findMany({
-        where,
+        where: Object.keys(where).length ? where : undefined,
         orderBy: [
           // Respect manual ordering first
           { position: 'asc' },

@@ -23,6 +23,7 @@ import { TaskModal } from "@/components/task-modal";
 
 export function TaskList() {
   const [filter, setFilter] = useState<"all" | "overdue" | "today">("all");
+  const [subject, setSubject] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const utils = api.useUtils();
 
@@ -36,11 +37,12 @@ export function TaskList() {
     // Pass both explicit bounds and offset (offset kept for backward compatibility/tests)
     return {
       filter,
+      subject: subject ?? undefined,
       tzOffsetMinutes,
       todayStart: startLocal,
       todayEnd: endLocal,
     } as const;
-  }, [filter]);
+  }, [filter, subject]);
 
   const tasks = api.task.list.useQuery(queryInput);
   // Keep a stable snapshot of the fetched tasks for the current filter
@@ -132,10 +134,12 @@ export function TaskList() {
 
   const filteredOrderedTasks = React.useMemo(
     () =>
-      orderedTasks.filter((t) =>
-        t.title.toLowerCase().includes(query.toLowerCase())
+      orderedTasks.filter(
+        (t) =>
+          t.title.toLowerCase().includes(query.toLowerCase()) &&
+          (!subject || (t as any).subject === subject)
       ),
-    [orderedTasks, query]
+    [orderedTasks, query, subject]
   );
   // Compute the visible ids in the current order; feed to SortableContext
   const visibleIds = React.useMemo(
@@ -225,7 +229,12 @@ export function TaskList() {
         className="w-full bg-transparent border-0 px-0 py-1 outline-none placeholder:text-muted-foreground"
       />
       <div className="flex items-center justify-between">
-        <TaskFilterTabs value={filter} onChange={setFilter} />
+        <TaskFilterTabs
+          value={filter}
+          onChange={setFilter}
+          subject={subject}
+          onSubjectChange={setSubject}
+        />
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {completedTasks}/{totalTasks} completed
         </p>
