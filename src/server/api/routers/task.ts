@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus, Prisma } from '@prisma/client';
 import { publicProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 export const taskRouter = router({
@@ -48,12 +48,12 @@ export const taskRouter = router({
       }
 
       // Hide DONE tasks from all regular filters; show only DONE in archive
-      const baseWhere =
+      const baseWhere: Prisma.TaskWhereInput =
         filter === 'archive'
-          ? ({ status: 'DONE' } as any)
-          : ({ status: { not: 'DONE' } } as any);
+          ? { status: TaskStatus.DONE }
+          : { status: { not: TaskStatus.DONE } };
 
-      let where: Record<string, any> =
+      let where: Prisma.TaskWhereInput =
         filter === 'overdue'
           ? { ...baseWhere, dueAt: { lt: nowUtc } }
           : filter === 'today'
@@ -61,16 +61,19 @@ export const taskRouter = router({
           : baseWhere;
 
       if (subject) {
-        (where as any).subject = subject;
+        where = { ...where, subject };
       }
 
-      return (db as any).task.findMany({
+      const dueAtOrder: Prisma.TaskOrderByWithRelationInput = {
+        dueAt: { sort: 'asc', nulls: 'last' },
+      };
+      return db.task.findMany({
         where,
         orderBy: [
           // Respect manual ordering first
           { position: 'asc' },
           // Then sort by due date (nulls last) for items with equal positions
-          { dueAt: { sort: 'asc', nulls: 'last' } as any },
+          dueAtOrder,
           // Finally, newest first as a tiebreaker
           { createdAt: 'desc' },
         ],
@@ -89,7 +92,7 @@ export const taskRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
-      return (db as any).task.create({
+      return db.task.create({
         data: {
           title: input.title,
           dueAt: input.dueAt ?? null,
@@ -113,12 +116,12 @@ export const taskRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
       const { id, ...rest } = input;
-      const data: Record<string, any> = {};
+      const data: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(rest)) {
         if (typeof value !== 'undefined') data[key] = value;
       }
       if (Object.keys(data).length === 0) return db.task.findUniqueOrThrow({ where: { id } });
-      return db.task.update({ where: { id }, data });
+      return db.task.update({ where: { id }, data: data as Prisma.TaskUpdateInput });
     }),
   setDueDate: publicProcedure
     .input(
@@ -128,14 +131,14 @@ export const taskRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
-      return (db as any).task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
+      return db.task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
     }),
   updateTitle: publicProcedure
     .input(
       z.object({ id: z.string().min(1), title: z.string().min(1).max(200) })
     )
     .mutation(async ({ input }) => {
-      return (db as any).task.update({ where: { id: input.id }, data: { title: input.title } });
+      return db.task.update({ where: { id: input.id }, data: { title: input.title } });
     }),
   setStatus: publicProcedure
     .input(
@@ -145,28 +148,25 @@ export const taskRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      return (db as any).task.update({
-        where: { id: input.id },
-        data: { status: input.status as TaskStatus },
-      });
+      return db.task.update({ where: { id: input.id }, data: { status: input.status } });
     }),
   delete: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input }) => {
       // Be resilient even if DB referential actions aren't cascaded yet
-      const [, , deleted] = await (db as any).$transaction([
-        (db as any).reminder.deleteMany({ where: { taskId: input.id } }),
-        (db as any).event.deleteMany({ where: { taskId: input.id } }),
-        (db as any).task.delete({ where: { id: input.id } }),
+      const [, , deleted] = await db.$transaction([
+        db.reminder.deleteMany({ where: { taskId: input.id } }),
+        db.event.deleteMany({ where: { taskId: input.id } }),
+        db.task.delete({ where: { id: input.id } }),
       ]);
       return deleted;
     }),
   reorder: publicProcedure
     .input(z.object({ ids: z.array(z.string().min(1)) }))
     .mutation(async ({ input }) => {
-      await (db as any).$transaction(
+      await db.$transaction(
         input.ids.map((id, index) =>
-          (db as any).task.update({ where: { id }, data: { position: index } })
+          db.task.update({ where: { id }, data: { position: index } })
         )
       );
       return { success: true };
