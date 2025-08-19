@@ -9,7 +9,7 @@ export const taskRouter = router({
     .input(
       z
         .object({
-          filter: z.enum(['all', 'overdue', 'today']).optional(),
+          filter: z.enum(['all', 'overdue', 'today', 'archive']).optional(),
           // Minutes to add to UTC to get client local time offset (Date.getTimezoneOffset style)
           tzOffsetMinutes: z.number().int().optional(),
           // Optional explicit client-local day bounds as absolute instants
@@ -45,12 +45,18 @@ export const taskRouter = router({
           : endClient;
       }
 
+      // Hide DONE tasks from all regular filters; show only DONE in archive
+      const baseWhere =
+        filter === 'archive'
+          ? ({ status: 'DONE' } as any)
+          : ({ status: { not: 'DONE' } } as any);
+
       const where =
         filter === 'overdue'
-          ? { dueAt: { lt: nowUtc } }
+          ? { ...baseWhere, dueAt: { lt: nowUtc } }
           : filter === 'today'
-          ? { dueAt: { gte: startUtc, lte: endUtc } }
-          : undefined;
+          ? { ...baseWhere, dueAt: { gte: startUtc, lte: endUtc } }
+          : baseWhere;
 
       return (db as any).task.findMany({
         where,

@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
 import { api } from "@/server/api/react";
 import { toast } from "react-hot-toast";
 import { formatLocalDateTime, parseLocalDateTime, defaultEndOfToday } from "@/lib/datetime";
@@ -12,6 +13,7 @@ type BaseTask = {
   subject: string | null;
   notes: string | null;
   dueAt: Date | string | null;
+  status?: TaskStatus;
 };
 
 interface TaskModalProps {
@@ -74,6 +76,13 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
     onError: (e) => toast.error(e.message || "Failed to update task"),
   });
 
+  const setStatus = api.task.setStatus.useMutation({
+    onSuccess: async () => {
+      await utils.task.list.invalidate();
+    },
+    onError: (e) => toast.error(e.message || "Failed to update status"),
+  });
+
   const del = api.task.delete.useMutation({
     onSuccess: async () => {
       await utils.task.list.invalidate();
@@ -125,6 +134,18 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? "Edit Task" : "New Task"} footer={footer}>
       <div className="grid grid-cols-1 gap-3">
+        {isEdit && task && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wide opacity-60">Status</span>
+            <StatusDropdown
+              value={(task.status ?? "TODO") as TaskStatus}
+              onChange={(next) => {
+                setStatus.mutate({ id: task.id, status: next as any });
+                if (next === "DONE") onClose();
+              }}
+            />
+          </div>
+        )}
         <label className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide opacity-60">Title</span>
           <input

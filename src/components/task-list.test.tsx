@@ -151,10 +151,16 @@ describe('TaskList', () => {
 
   it('updates task status via dropdown', () => {
     render(<TaskList />);
-    const selects = screen.getAllByLabelText('Change status');
-    fireEvent.change(selects[1], { target: { value: 'IN_PROGRESS' } });
+    const toggles = screen.getAllByLabelText('Change status');
+    // Open dropdown for the second task (id: '2')
+    fireEvent.click(toggles[1]);
+    // Click "In progress"
+    fireEvent.click(screen.getByText('In progress'));
     expect(setStatusMock).toHaveBeenCalledWith({ id: '2', status: 'IN_PROGRESS' });
-    fireEvent.change(selects[1], { target: { value: 'CANCELLED' } });
+
+    // Open again and choose "Cancelled"
+    fireEvent.click(toggles[1]);
+    fireEvent.click(screen.getByText('Cancelled'));
     expect(setStatusMock).toHaveBeenCalledWith({ id: '2', status: 'CANCELLED' });
   });
 });

@@ -20,9 +20,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Calendar, Tag, GripVertical } from "lucide-react";
 import { TaskModal } from "@/components/task-modal";
+import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
 
 export function TaskList() {
-  const [filter, setFilter] = useState<"all" | "overdue" | "today">("all");
+  const [filter, setFilter] = useState<"all" | "overdue" | "today" | "archive">("all");
   const [query, setQuery] = useState("");
   const utils = api.useUtils();
 
@@ -177,23 +178,13 @@ export function TaskList() {
           >
             <GripVertical className="h-4 w-4" />
           </button>
-          <select
-            className="mt-1 rounded border bg-transparent text-xs"
-            value={t.status}
-            onChange={(e) =>
-              setStatus.mutate({
-                id: t.id,
-                status: e.currentTarget.value as any,
-              })
+          <StatusDropdown
+            className="mt-0.5"
+            value={t.status as TaskStatus}
+            onChange={(next) =>
+              setStatus.mutate({ id: t.id, status: next as any })
             }
-            aria-label="Change status"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <option value="TODO">TODO</option>
-            <option value="IN_PROGRESS">IN_PROGRESS</option>
-            <option value="DONE">DONE</option>
-            <option value="CANCELLED">CANCELLED</option>
-          </select>
+          />
           <div className="flex flex-col gap-1 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className={`font-medium ${done ? "line-through opacity-60" : ""}`}>

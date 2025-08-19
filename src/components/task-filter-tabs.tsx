@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type TaskFilter = 'all' | 'overdue' | 'today';
+export type TaskFilter = 'all' | 'overdue' | 'today' | 'archive';
 
 interface TaskFilterTabsProps {
   value: TaskFilter;
@@ -12,6 +12,7 @@ export function TaskFilterTabs({ value, onChange }: TaskFilterTabsProps) {
     { value: 'all', label: 'All' },
     { value: 'overdue', label: 'Overdue' },
     { value: 'today', label: 'Today' },
+    { value: 'archive', label: 'Archive' },
   ];
 
   return (
