@@ -177,16 +177,23 @@ export function TaskList() {
           >
             <GripVertical className="h-4 w-4" />
           </button>
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={done}
-            onChange={() =>
-              setStatus.mutate({ id: t.id, status: done ? "TODO" : "DONE" })
+          <select
+            className="mt-1 rounded border bg-transparent text-xs"
+            value={t.status}
+            onChange={(e) =>
+              setStatus.mutate({
+                id: t.id,
+                status: e.currentTarget.value as any,
+              })
             }
-            aria-label={done ? "Mark as todo" : "Mark as done"}
+            aria-label="Change status"
             onClick={(e) => e.stopPropagation()}
-          />
+          >
+            <option value="TODO">TODO</option>
+            <option value="IN_PROGRESS">IN_PROGRESS</option>
+            <option value="DONE">DONE</option>
+            <option value="CANCELLED">CANCELLED</option>
+          </select>
           <div className="flex flex-col gap-1 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className={`font-medium ${done ? "line-through opacity-60" : ""}`}>
