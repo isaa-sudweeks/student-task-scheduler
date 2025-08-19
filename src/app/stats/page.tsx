@@ -1,0 +1,100 @@
+"use client";
+
+import React from "react";
+import { api } from "@/server/api/react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+
+export default function StatsPage() {
+  const { data: tasks = [], isLoading } = api.task.list.useQuery();
+
+  if (isLoading) return <main>Loading...</main>;
+
+  const total = tasks.length;
+  const completed = tasks.filter((t: any) => t.status === "DONE").length;
+  const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+  const statusCounts = tasks.reduce(
+    (acc: Record<string, number>, task: any) => {
+      acc[task.status] = (acc[task.status] ?? 0) + 1;
+      return acc;
+    },
+    {}
+  );
+
+  const statusData = Object.entries(statusCounts).map(([status, count]) => ({
+    status,
+    count,
+  }));
+
+  const subjectCounts = tasks.reduce(
+    (acc: Record<string, number>, task: any) => {
+      const subject = task.subject ?? "Uncategorized";
+      acc[subject] = (acc[subject] ?? 0) + 1;
+      return acc;
+    },
+    {}
+  );
+
+  const subjectData = Object.entries(subjectCounts).map(([subject, count]) => ({
+    subject,
+    count,
+  }));
+
+  const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"];
+
+  return (
+    <main className="space-y-6">
+      <header>
+        <h1 className="text-2xl font-semibold">Task Statistics</h1>
+      </header>
+      <section className="space-y-2">
+        <p>Total Tasks: {total}</p>
+        <p>Completion Rate: {completionRate}%</p>
+      </section>
+      <section className="space-y-2">
+        <h2 className="text-xl font-medium">By Status</h2>
+        <ul>
+          {statusData.map((s) => (
+            <li key={s.status}>
+              {s.status}: {s.count}
+            </li>
+          ))}
+        </ul>
+        <BarChart width={400} height={200} data={statusData}>
+          <XAxis dataKey="status" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Bar dataKey="count" fill="#8884d8" />
+        </BarChart>
+      </section>
+      <section className="space-y-2">
+        <h2 className="text-xl font-medium">By Subject</h2>
+        <ul>
+          {subjectData.map((s) => (
+            <li key={s.subject}>
+              {s.subject}: {s.count}
+            </li>
+          ))}
+        </ul>
+        <PieChart width={400} height={200}>
+          <Pie data={subjectData} dataKey="count" nameKey="subject" outerRadius={80}>
+            {subjectData.map((_, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </section>
+    </main>
+  );
+}
+
