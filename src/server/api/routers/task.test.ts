@@ -51,3 +51,22 @@ describe('taskRouter.reorder', () => {
     expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'c' }, data: { position: 2 } });
   });
 });
+
+describe('taskRouter.setStatus', () => {
+  beforeEach(() => {
+    hoisted.update.mockClear();
+  });
+
+  it.each([
+    'TODO',
+    'IN_PROGRESS',
+    'DONE',
+    'CANCELLED',
+  ] as const)('updates status to %s', async (status) => {
+    await taskRouter.createCaller({}).setStatus({ id: '1', status });
+    expect(hoisted.update).toHaveBeenCalledWith({
+      where: { id: '1' },
+      data: { status },
+    });
+  });
+});

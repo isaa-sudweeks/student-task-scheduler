@@ -127,10 +127,16 @@ export const taskRouter = router({
     }),
   setStatus: publicProcedure
     .input(
-      z.object({ id: z.string().min(1), status: z.nativeEnum(TaskStatus) })
+      z.object({
+        id: z.string().min(1),
+        status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]),
+      })
     )
     .mutation(async ({ input }) => {
-      return (db as any).task.update({ where: { id: input.id }, data: { status: input.status } });
+      return (db as any).task.update({
+        where: { id: input.id },
+        data: { status: input.status as TaskStatus },
+      });
     }),
   delete: publicProcedure
     .input(z.object({ id: z.string().min(1) }))

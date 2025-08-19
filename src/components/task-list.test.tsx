@@ -35,6 +35,7 @@ const defaultQuery = {
   error: undefined,
 };
 const useQueryMock = vi.fn().mockReturnValue(defaultQuery);
+const setStatusMock = vi.fn();
 
 vi.mock('@/server/api/react', () => ({
   api: {
@@ -60,7 +61,7 @@ vi.mock('@/server/api/react', () => ({
       },
       updateTitle: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      setStatus: { useMutation: () => ({ mutate: setStatusMock, isPending: false, error: undefined }) },
       reorder: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
     },
   },
@@ -70,6 +71,7 @@ afterEach(() => {
   cleanup();
   useQueryMock.mockReturnValue(defaultQuery);
   sortableItemsCalls.length = 0;
+  setStatusMock.mockClear();
 });
 
 describe('TaskList', () => {
@@ -145,5 +147,14 @@ describe('TaskList', () => {
     expect(screen.getByText('Gamma')).toBeInTheDocument();
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
     expect(screen.queryByText('Beta')).not.toBeInTheDocument();
+  });
+
+  it('updates task status via dropdown', () => {
+    render(<TaskList />);
+    const selects = screen.getAllByLabelText('Change status');
+    fireEvent.change(selects[1], { target: { value: 'IN_PROGRESS' } });
+    expect(setStatusMock).toHaveBeenCalledWith({ id: '2', status: 'IN_PROGRESS' });
+    fireEvent.change(selects[1], { target: { value: 'CANCELLED' } });
+    expect(setStatusMock).toHaveBeenCalledWith({ id: '2', status: 'CANCELLED' });
   });
 });
