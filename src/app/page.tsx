@@ -20,6 +20,13 @@ export default function HomePage() {
           >
             Calendar View
           </Link>
+          <Link
+            href="/stats"
+            className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+            title="Open Statistics"
+          >
+            Statistics
+          </Link>
           <ThemeToggle />
         </div>
       </header>

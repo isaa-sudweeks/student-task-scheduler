@@ -30,10 +30,11 @@ export default function StatsPage() {
     {}
   );
 
-  const statusData = Object.entries(statusCounts).map(([status, count]) => ({
-    status,
-    count,
-  }));
+  const statusData: { status: string; count: number }[] =
+    Object.entries(statusCounts).map(([status, count]) => ({
+      status,
+      count: Number(count),
+    }));
 
   const subjectCounts = tasks.reduce(
     (acc: Record<string, number>, task: any) => {
@@ -44,10 +45,11 @@ export default function StatsPage() {
     {}
   );
 
-  const subjectData = Object.entries(subjectCounts).map(([subject, count]) => ({
-    subject,
-    count,
-  }));
+  const subjectData: { subject: string; count: number }[] =
+    Object.entries(subjectCounts).map(([subject, count]) => ({
+      subject,
+      count: Number(count),
+    }));
 
   const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"];
 
@@ -97,4 +99,3 @@ export default function StatsPage() {
     </main>
   );
 }
-
