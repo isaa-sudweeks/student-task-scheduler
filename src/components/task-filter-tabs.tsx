@@ -1,5 +1,6 @@
 import React from 'react';
 import { api } from '@/server/api/react';
+import { Tag, ChevronDown } from 'lucide-react';
 
 export type TaskFilter = 'all' | 'overdue' | 'today' | 'archive';
 
@@ -29,7 +30,7 @@ export function TaskFilterTabs({
     subjectsQuery.data?.forEach((t: any) => {
       if (t.subject) set.add(t.subject as string);
     });
-    return Array.from(set);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [subjectsQuery.data]);
 
   return (
@@ -51,19 +52,24 @@ export function TaskFilterTabs({
         </button>
       ))}
       {onSubjectChange && (
-        <select
-          aria-label="Subject filter"
-          className="ml-2 bg-transparent px-2 py-1 text-sm border rounded"
-          value={subject ?? ''}
-          onChange={(e) => onSubjectChange(e.target.value || null)}
-        >
-          <option value="">All subjects</option>
-          {subjects.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <div className="relative ml-2">
+          <Tag className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <select
+            aria-label="Subject filter"
+            title="Filter by subject"
+            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            value={subject ?? ''}
+            onChange={(e) => onSubjectChange(e.target.value || null)}
+          >
+            <option value="">All subjects</option>
+            {subjects.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        </div>
       )}
     </div>
   );
