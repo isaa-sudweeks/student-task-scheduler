@@ -52,7 +52,7 @@ export const taskRouter = router({
           ? { dueAt: { gte: startUtc, lte: endUtc } }
           : undefined;
 
-      return db.task.findMany({
+      return (db as any).task.findMany({
         where,
         orderBy: [
           // Respect manual ordering first

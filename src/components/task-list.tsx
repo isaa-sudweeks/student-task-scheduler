@@ -55,8 +55,8 @@ export function TaskList() {
       return;
     }
     // If the set of task IDs has changed, refresh snapshot (create/delete)
-    const snapIds = new Set(taskDataSnapshot.map((t) => t.id));
-    const dataIds = new Set(tasks.data.map((t) => t.id));
+    const snapIds = new Set((taskDataSnapshot as any[]).map((t: any) => t.id));
+    const dataIds = new Set((tasks.data as any[]).map((t: any) => t.id));
     const idsDiffer =
       snapIds.size !== dataIds.size ||
       [...dataIds].some((id) => !snapIds.has(id));
@@ -65,8 +65,8 @@ export function TaskList() {
       return;
     }
     // If content changed for existing IDs, refresh snapshot when updatedAt differs
-    const snapById = new Map(taskDataSnapshot.map((t: any) => [t.id, t]));
-    const contentChanged = tasks.data.some((t: any) => {
+    const snapById = new Map((taskDataSnapshot as any[]).map((t: any) => [t.id, t]));
+    const contentChanged = (tasks.data as any[]).some((t: any) => {
       const prev = snapById.get(t.id);
       if (!(t && prev)) return false;
       // Detect edits via updatedAt change only to avoid noisy re-snapshots in tests
@@ -86,12 +86,12 @@ export function TaskList() {
 
   useEffect(() => {
     if (tasks.data) {
-      setItems(tasks.data.map((t) => t.id));
+      setItems((tasks.data as any[]).map((t: any) => t.id));
     }
   }, [tasks.data]);
 
   const totalTasks = tasks.data?.length ?? 0;
-  const completedTasks = tasks.data?.filter((t) => t.status === "DONE").length ?? 0;
+  const completedTasks = (tasks.data as any[] | undefined)?.filter((t: any) => t.status === "DONE").length ?? 0;
 
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
@@ -126,20 +126,20 @@ export function TaskList() {
   const orderedTasks = React.useMemo(() => {
     const list = taskData ?? [];
     if (items.length === 0) return list;
-    const map = new Map(list.map((t) => [t.id, t]));
+    const map = new Map((list as any[]).map((t: any) => [t.id, t]));
     return items.map((id) => map.get(id)).filter(Boolean) as typeof list;
   }, [taskData, items]);
 
   const filteredOrderedTasks = React.useMemo(
     () =>
-      orderedTasks.filter((t) =>
+      (orderedTasks as any[]).filter((t: any) =>
         t.title.toLowerCase().includes(query.toLowerCase())
       ),
     [orderedTasks, query]
   );
   // Compute the visible ids in the current order; feed to SortableContext
   const visibleIds = React.useMemo(
-    () => filteredOrderedTasks.map((t) => t.id),
+    () => (filteredOrderedTasks as any[]).map((t: any) => t.id),
     [filteredOrderedTasks]
   );
 
@@ -240,7 +240,7 @@ export function TaskList() {
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={visibleIds}>
           <ul className="space-y-2">
-            {filteredOrderedTasks.map((t) => (
+            {(filteredOrderedTasks as any[]).map((t: any) => (
               <TaskItem key={t.id} t={t} />
             ))}
             {tasks.isLoading && <TaskListSkeleton />}

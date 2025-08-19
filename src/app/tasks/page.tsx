@@ -4,6 +4,7 @@ import React from "react";
 import { NewTaskForm } from "@/components/new-task-form";
 import { TaskList } from "@/components/task-list";
 import ThemeToggle from "@/components/theme-toggle";
+import Link from "next/link";
 
 export default function TasksPage() {
   return (
@@ -15,7 +16,16 @@ export default function TasksPage() {
             Create and manage your tasks — no sign in required.
           </p>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/calendar"
+            className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+            title="Open Calendar"
+          >
+            Calendar View
+          </Link>
+          <ThemeToggle />
+        </div>
       </header>
       <NewTaskForm />
       <TaskList />
