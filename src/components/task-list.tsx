@@ -44,6 +44,17 @@ export function TaskList() {
   }, [filter]);
 
   const tasks = api.task.list.useQuery(queryInput);
+  // Query archived count for header stats
+  const archivedQueryInput = React.useMemo(
+    () => ({
+      filter: "archive" as const,
+      tzOffsetMinutes: queryInput.tzOffsetMinutes,
+      todayStart: queryInput.todayStart,
+      todayEnd: queryInput.todayEnd,
+    }),
+    [queryInput]
+  );
+  const archived = api.task.list.useQuery(archivedQueryInput);
   // Keep a stable snapshot of the fetched tasks for the current filter
   const [taskDataSnapshot, setTaskDataSnapshot] = useState<typeof tasks.data>();
   const prevFilterRef = React.useRef(filter);
@@ -92,7 +103,7 @@ export function TaskList() {
   }, [tasks.data]);
 
   const totalTasks = tasks.data?.length ?? 0;
-  const completedTasks = (tasks.data as any[] | undefined)?.filter((t: any) => t.status === "DONE").length ?? 0;
+  const archivedCount = archived.data?.length ?? 0;
 
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
@@ -225,7 +236,7 @@ export function TaskList() {
       <div className="flex items-center justify-between">
         <TaskFilterTabs value={filter} onChange={setFilter} />
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          {completedTasks}/{totalTasks} completed
+          {archivedCount} archived
         </p>
       </div>
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

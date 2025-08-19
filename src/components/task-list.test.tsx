@@ -119,9 +119,24 @@ describe('TaskList', () => {
     expect(screen.getByText('Math homework')).toBeInTheDocument();
   });
 
-  it('displays completed task ratio', () => {
+  it('displays archived count', () => {
+    // Return DONE only for archive filter, everything for others
+    useQueryMock.mockImplementation((input?: any) => {
+      const base = {
+        data: [
+          { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math' },
+          { id: '2', title: 'Test 2', dueAt: null, status: 'TODO' },
+        ],
+        isLoading: false,
+        error: undefined,
+      };
+      if (input && input.filter === 'archive') {
+        return { data: base.data.filter((t: any) => t.status === 'DONE'), isLoading: false, error: undefined };
+      }
+      return base;
+    });
     render(<TaskList />);
-    expect(screen.getByText('1/2 completed')).toBeInTheDocument();
+    expect(screen.getByText('1 archived')).toBeInTheDocument();
   });
 
   it('compacts visible tasks to the top when filtering', async () => {
