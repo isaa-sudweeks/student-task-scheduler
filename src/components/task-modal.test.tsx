@@ -4,6 +4,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { TaskModal } from './task-modal';
+import type { RouterOutputs } from '@/server/api/root';
+
+type Task = RouterOutputs['task']['list'][number];
 
 expect.extend(matchers);
 
@@ -17,6 +20,7 @@ vi.mock('@/server/api/react', () => ({
       create: { useMutation: () => ({ mutate: (...a: unknown[]) => mutateCreate(...a), isPending: false }) },
       update: { useMutation: () => ({ mutate: (...a: unknown[]) => mutateUpdate(...a), isPending: false }) },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
 }));
@@ -28,9 +32,9 @@ describe('TaskModal due date editing', () => {
   });
 
   it('adds a due date to a task that previously had none when saving', () => {
-    const task = { id: 't1', title: 'Write essay', subject: null, notes: null, dueAt: null };
+    const task = { id: 't1', title: 'Write essay', subject: null, notes: null, dueAt: null } as Task;
     render(
-      <TaskModal open mode="edit" onClose={() => {}} task={task as any} />
+      <TaskModal open mode="edit" onClose={() => {}} task={task} />
     );
 
     // Enable due date
@@ -46,7 +50,7 @@ describe('TaskModal due date editing', () => {
     fireEvent.click(screen.getByText('Save'));
 
     expect(mutateUpdate).toHaveBeenCalledTimes(1);
-    const arg = mutateUpdate.mock.calls[0][0] as any;
+    const arg = mutateUpdate.mock.calls[0][0] as { id: string; dueAt: Date };
     expect(arg.id).toBe('t1');
     expect(arg.dueAt).toBeInstanceOf(Date);
     // The local time parsed should match the chosen fields

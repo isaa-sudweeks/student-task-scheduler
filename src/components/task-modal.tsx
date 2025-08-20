@@ -2,27 +2,21 @@
 import React, { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
+import { StatusDropdown } from "@/components/status-dropdown";
 import { api } from "@/server/api/react";
 import { toast } from "react-hot-toast";
 import { formatLocalDateTime, parseLocalDateTime, defaultEndOfToday } from "@/lib/datetime";
 
-type BaseTask = {
-  id: string;
-  title: string;
-  subject: string | null;
-  notes: string | null;
-  dueAt: Date | string | null;
-  status?: TaskStatus;
-  priority?: "LOW" | "MEDIUM" | "HIGH";
-};
+import type { RouterOutputs } from "@/server/api/root";
+
+type Task = RouterOutputs["task"]["list"][number];
 
 interface TaskModalProps {
   open: boolean;
   mode: "create" | "edit";
   onClose: () => void;
   // For edit mode, pass the task snapshot
-  task?: BaseTask;
+  task?: Task;
   initialTitle?: string;
   initialDueAt?: Date | null;
   onDraftDueChange?: (dueAt: Date | null) => void;
@@ -45,9 +39,9 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
       setTitle(task.title);
       setSubject(task.subject ?? "");
       setNotes(task.notes ?? "");
-      setPriority((task as any).priority ?? "MEDIUM");
+      setPriority(task.priority ?? "MEDIUM");
       const hasDue = task.dueAt != null;
-      setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt as any)) : "");
+      setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
       setDueEnabled(hasDue);
     } else {
       setTitle(initialTitle ?? "");
@@ -143,9 +137,9 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-wide opacity-60">Status</span>
             <StatusDropdown
-              value={(task.status ?? "TODO") as TaskStatus}
+              value={task.status ?? "TODO"}
               onChange={(next) => {
-                setStatus.mutate({ id: task.id, status: next as any });
+                setStatus.mutate({ id: task.id, status: next });
                 if (next === "DONE") onClose();
               }}
             />
@@ -207,7 +201,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
           <select
             className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
             value={priority}
-            onChange={(e) => setPriority(e.target.value as any)}
+            onChange={(e) => setPriority(e.target.value as Task["priority"])}
           >
             <option value="LOW">Low</option>
             <option value="MEDIUM">Medium</option>

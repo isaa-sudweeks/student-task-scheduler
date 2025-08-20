@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { api } from "@/server/api/react";
+import type { RouterOutputs } from "@/server/api/root";
 
 import { TaskListSkeleton } from "./task-list-skeleton";
 import { TaskFilterTabs } from "./task-filter-tabs";
@@ -22,6 +22,7 @@ import { Calendar, Tag, GripVertical } from "lucide-react";
 import { TaskModal } from "@/components/task-modal";
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
 
+type Task = RouterOutputs["task"]["list"][number];
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 
 export function TaskList() {
@@ -71,8 +72,8 @@ export function TaskList() {
       return;
     }
     // If the set of task IDs has changed, refresh snapshot (create/delete)
-    const snapIds = new Set((taskDataSnapshot as any[]).map((t: any) => t.id));
-    const dataIds = new Set((tasks.data as any[]).map((t: any) => t.id));
+    const snapIds = new Set((taskDataSnapshot as Task[]).map((t: Task) => t.id));
+    const dataIds = new Set((tasks.data as Task[]).map((t: Task) => t.id));
     const idsDiffer =
       snapIds.size !== dataIds.size ||
       [...dataIds].some((id) => !snapIds.has(id));
@@ -81,8 +82,8 @@ export function TaskList() {
       return;
     }
     // If content changed for existing IDs, refresh snapshot when updatedAt differs
-    const snapById = new Map((taskDataSnapshot as any[]).map((t: any) => [t.id, t]));
-    const contentChanged = (tasks.data as any[]).some((t: any) => {
+    const snapById = new Map((taskDataSnapshot as Task[]).map((t: Task) => [t.id, t]));
+    const contentChanged = (tasks.data as Task[]).some((t: Task) => {
       const prev = snapById.get(t.id);
       if (!(t && prev)) return false;
       // Detect edits via updatedAt change only to avoid noisy re-snapshots in tests
@@ -102,7 +103,7 @@ export function TaskList() {
 
   useEffect(() => {
     if (tasks.data) {
-      setItems((tasks.data as any[]).map((t: any) => t.id));
+      setItems((tasks.data as Task[]).map((t: Task) => t.id));
     }
   }, [tasks.data]);
 
@@ -142,28 +143,28 @@ export function TaskList() {
   const orderedTasks = React.useMemo(() => {
     const list = taskData ?? [];
     if (items.length === 0) return list;
-    const map = new Map((list as any[]).map((t: any) => [t.id, t]));
-    return items.map((id) => map.get(id)).filter(Boolean) as typeof list;
+    const map = new Map((list as Task[]).map((t: Task) => [t.id, t]));
+    return items.map((id) => map.get(id)).filter(Boolean) as Task[];
   }, [taskData, items]);
 
   const filteredOrderedTasks = React.useMemo(
     () =>
-      (orderedTasks as any[]).filter(
-        (t: any) =>
+      orderedTasks.filter(
+        (t) =>
           t.title.toLowerCase().includes(query.toLowerCase()) &&
-          (!subject || (t as any).subject === subject)
+          (!subject || t.subject === subject)
       ),
     [orderedTasks, query, subject]
   );
   // Compute the visible ids in the current order; feed to SortableContext
   const visibleIds = React.useMemo(
-    () => (filteredOrderedTasks as any[]).map((t: any) => t.id),
+    () => filteredOrderedTasks.map((t) => t.id),
     [filteredOrderedTasks]
   );
 
-  const [editingTask, setEditingTask] = useState<(typeof orderedTasks)[number] | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  const TaskItem = ({ t }: { t: (typeof orderedTasks)[number] }) => {
+  const TaskItem = ({ t }: { t: Task }) => {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: t.id });
     const style: React.CSSProperties = {
       ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
@@ -171,7 +172,7 @@ export function TaskList() {
     };
     const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
     const done = t.status === "DONE";
-    const priority: Priority = (t as any).priority ?? "MEDIUM";
+    const priority: Priority = t.priority ?? "MEDIUM";
     const priorityStyles: Record<Priority, string> = {
       HIGH: "bg-red-100 text-red-700 ring-red-200 dark:bg-red-900/30 dark:text-red-200 dark:ring-red-800",
       MEDIUM: "bg-blue-100 text-blue-700 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:ring-blue-800",
@@ -205,7 +206,7 @@ export function TaskList() {
             className="mt-0.5"
             value={t.status as TaskStatus}
             onChange={(next) =>
-              setStatus.mutate({ id: t.id, status: next as any })
+              setStatus.mutate({ id: t.id, status: next })
             }
           />
           <div className="flex flex-col gap-1 flex-1">
@@ -218,9 +219,9 @@ export function TaskList() {
               >
                 {priority.charAt(0) + priority.slice(1).toLowerCase()}
               </span>
-              {((t as any).subject) && (
+              {t.subject && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
-                  <Tag className="h-3 w-3" /> {(t as any).subject}
+                  <Tag className="h-3 w-3" /> {t.subject}
                 </span>
               )}
               {t.dueAt && (
@@ -230,7 +231,7 @@ export function TaskList() {
                     : "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:ring-amber-800"
                 }`}>
                   <Calendar className="h-3 w-3" />
-                  {new Date(t.dueAt as any).toLocaleString()}
+                  {new Date(t.dueAt!).toLocaleString()}
                 </span>
               )}
             </div>
@@ -264,7 +265,7 @@ export function TaskList() {
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={visibleIds}>
           <ul className="space-y-2">
-            {(filteredOrderedTasks as any[]).map((t: any) => (
+            {filteredOrderedTasks.map((t) => (
               <TaskItem key={t.id} t={t} />
             ))}
             {tasks.isLoading && <TaskListSkeleton />}
@@ -288,7 +289,7 @@ export function TaskList() {
         open={!!editingTask}
         mode="edit"
         onClose={() => setEditingTask(null)}
-        task={editingTask as any}
+        task={editingTask ?? undefined}
       />
     </div>
   );
