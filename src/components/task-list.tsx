@@ -133,7 +133,13 @@ export function TaskList() {
       const oldIndex = prev.indexOf(active.id as string);
       const newIndex = prev.indexOf(over.id as string);
       const newItems = arrayMove(prev, oldIndex, newIndex);
-      reorder.mutate({ ids: newItems });
+      const snapshot = prev;
+      reorder.mutate(
+        { ids: newItems },
+        {
+          onError: () => setItems(snapshot),
+        }
+      );
       return newItems;
     });
   };
