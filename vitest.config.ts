@@ -8,6 +8,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
+      // Stub heavy browser-only libs in unit tests
+      'recharts': resolve(__dirname, 'src/test/recharts.mock.ts'),
     },
   },
   test: {
@@ -16,5 +18,26 @@ export default defineConfig({
     pool: 'threads',
     maxWorkers: 1,
     minWorkers: 1,
+    setupFiles: ['src/test/setup.ts'],
+    // Prevent runaway watchers and memory use on large folders
+    watch: false,
+    watchExclude: [
+      '**/.next/**',
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/coverage/**',
+      '**/tsconfig.tsbuildinfo',
+    ],
+    // Keep Vitest from crawling generated/output directories
+    exclude: [
+      'node_modules',
+      'dist',
+      'build',
+      'coverage',
+      '.next',
+      '**/.next/**',
+      'e2e/**',
+    ],
   },
 });

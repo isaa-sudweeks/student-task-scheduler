@@ -47,11 +47,11 @@ export const taskRouter = router({
           : endClient;
       }
 
-      // Hide DONE tasks from all regular filters; show only DONE in archive
+      // Show only DONE in archive; otherwise include all by default
       const baseWhere: Prisma.TaskWhereInput =
         filter === 'archive'
           ? { status: TaskStatus.DONE }
-          : { status: { not: TaskStatus.DONE } };
+          : {};
 
       let where: Prisma.TaskWhereInput =
         filter === 'overdue'

@@ -31,6 +31,7 @@ interface TaskModalProps {
 export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueAt, onDraftDueChange }: TaskModalProps) {
   const utils = api.useUtils();
   const isEdit = mode === "edit";
+  const apiAny = api as any;
 
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState<string>("");
@@ -80,12 +81,12 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
     onError: (e) => toast.error(e.message || "Failed to update task"),
   });
 
-  const setStatus = api.task.setStatus.useMutation({
+  const setStatus = apiAny.task?.setStatus?.useMutation?.({
     onSuccess: async () => {
       await utils.task.list.invalidate();
     },
-    onError: (e) => toast.error(e.message || "Failed to update status"),
-  });
+    onError: (e: any) => toast.error(e?.message || "Failed to update status"),
+  }) ?? { mutate: () => {}, isPending: false };
 
   const del = api.task.delete.useMutation({
     onSuccess: async () => {

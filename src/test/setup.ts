@@ -1,0 +1,90 @@
+import { vi, afterEach, beforeAll } from 'vitest';
+import { cleanup } from '@testing-library/react';
+// Force a deterministic timezone for date logic tests
+process.env.TZ = 'UTC';
+// Freeze time to a deterministic date so calendar/event tests render predictable weeks
+beforeAll(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2099-01-01T00:00:00Z'));
+});
+// Ensure DOM is reset between tests to avoid state leakage
+afterEach(() => {
+  vi.clearAllTimers();
+  cleanup();
+});
+import React from 'react';
+
+// Mock Next.js app router hooks for client components during unit tests
+vi.mock('next/navigation', () => {
+  const push = vi.fn();
+  const replace = vi.fn();
+  const back = vi.fn();
+  const forward = vi.fn();
+  const refresh = vi.fn();
+  const prefetch = vi.fn();
+  return {
+    useRouter: () => ({ push, replace, back, forward, refresh, prefetch }),
+    usePathname: () => '/',
+    useSearchParams: () => new URLSearchParams(''),
+    redirect: vi.fn(),
+    notFound: vi.fn(),
+  };
+});
+
+// Provide a safe default mock for tRPC React hooks; individual tests can override.
+vi.mock('@/server/api/react', () => {
+  const fn = () => ({ mutate: vi.fn(), isPending: false, error: undefined });
+  return {
+    api: {
+      useUtils: () => ({
+        task: { list: { invalidate: vi.fn() } },
+        event: { listRange: { invalidate: vi.fn() } },
+        focus: { status: { invalidate: vi.fn() } },
+      }),
+      task: {
+        list: { useQuery: () => ({ data: [], isLoading: false, error: undefined }) },
+        create: { useMutation: fn },
+        update: { useMutation: fn },
+        delete: { useMutation: fn },
+        updateTitle: { useMutation: fn },
+        setStatus: { useMutation: fn },
+        setDueDate: { useMutation: fn },
+        reorder: { useMutation: fn },
+      },
+      event: {
+        listRange: { useQuery: () => ({ data: [], isLoading: false }) },
+        schedule: { useMutation: fn },
+        move: { useMutation: fn },
+      },
+      focus: {
+        start: { useMutation: fn },
+        stop: { useMutation: fn },
+      },
+    },
+  } as any;
+});
+
+// Mock recharts to lightweight React stubs so charts don't require the library in unit tests
+vi.mock('recharts', () => {
+  const Div = (props: any) => React.createElement('div', props);
+  const Null = () => null;
+  return {
+    BarChart: Div,
+    Bar: Null,
+    XAxis: Null,
+    YAxis: Null,
+    Tooltip: Null,
+    PieChart: Div,
+    Pie: Null,
+    Cell: Null,
+  } as any;
+});
+
+// Mock Prisma enums to avoid requiring generated client in unit tests
+vi.mock('@prisma/client', () => {
+  return {
+    TaskPriority: { LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH' },
+    TaskStatus: { TODO: 'TODO', IN_PROGRESS: 'IN_PROGRESS', DONE: 'DONE', CANCELLED: 'CANCELLED' },
+    Prisma: {},
+  } as any;
+});

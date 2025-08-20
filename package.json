@@ -11,7 +11,7 @@
     "prisma:sync": "prisma generate && prisma db push",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "test": "vitest",
+    "test": "vitest run",
     "e2e": "playwright test"
   },
   "dependencies": {

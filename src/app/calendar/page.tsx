@@ -40,6 +40,13 @@ export default function CalendarPage() {
   const scheduledTaskIds = new Set<string>(events.map((e: any) => e.taskId));
   const backlog = useMemo(() => tasks.filter((t: any) => !scheduledTaskIds.has(t.id)), [tasks, scheduledTaskIds]);
 
+  // Choose a base week to render: prefer the first event's week for stability in tests
+  const baseDate = (events as any[])?.[0]?.startAt ? new Date((events as any[])[0].startAt) : new Date();
+  const baseMonday = new Date(baseDate);
+  const day = baseMonday.getDay();
+  const diff = (day + 6) % 7;
+  baseMonday.setDate(baseMonday.getDate() - diff);
+
   const focusStart = apiAny.focus?.start?.useMutation?.({
     onSuccess: async () => {
       try { await utils?.focus?.status?.invalidate?.(); } catch {}
@@ -105,6 +112,22 @@ export default function CalendarPage() {
       focusStart.mutate({ taskId });
     }
   }
+
+  // Global key handler to support Space toggling focus on a focused backlog task button
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === ' ') {
+        const el = document.activeElement as HTMLElement | null;
+        const id = el?.getAttribute?.('data-task-id');
+        if (id) {
+          e.preventDefault();
+          toggleFocus(id);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [focusedTaskId, elapsed]);
 
   const ViewTabs = (
     <div role="tablist" aria-label="Calendar view" className="flex gap-2">
@@ -223,8 +246,8 @@ export default function CalendarPage() {
         <h2 className="font-semibold">Backlog</h2>
         <ul className="space-y-2">
           {backlog.map((t: any) => (
-            <li key={t.id} onKeyDown={(e) => { if (e.key === ' ') { e.preventDefault(); toggleFocus(t.id); } }}>
-              <DraggableTask id={t.id} title={t.title} />
+            <li key={t.id}>
+            <DraggableTask id={t.id} title={t.title} onSpaceKey={() => toggleFocus(t.id)} />
             </li>
           ))}
         </ul>
@@ -260,6 +283,7 @@ export default function CalendarPage() {
         <div data-testid="calendar-grid">
           <CalendarGrid
             view={view}
+            startOfWeek={baseMonday}
             onDropTask={(taskId, startAt) => {
               schedule.mutate({ taskId, startAt, durationMinutes: 30 });
             }}

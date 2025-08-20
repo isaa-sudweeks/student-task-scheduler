@@ -1,0 +1,9 @@
+import React from 'react';
+export const BarChart = (props: any) => React.createElement('div', props);
+export const Bar = () => null;
+export const XAxis = () => null;
+export const YAxis = () => null;
+export const Tooltip = () => null;
+export const PieChart = (props: any) => React.createElement('div', props);
+export const Pie = () => null;
+export const Cell = () => null;

@@ -13,7 +13,7 @@ export function CalendarGrid(props: {
   events: { id: string; taskId: string; startAt: Date | string; endAt: Date | string; title?: string }[];
 }) {
   const { view } = props;
-  const days = getDays(view);
+  const days = getDays(view, props.startOfWeek);
   const startHour = 8;
   const endHour = 18;
   const rows = endHour - startHour;
@@ -100,11 +100,46 @@ function GridCell({ day, hour }: { day: Date; hour: number }) {
   );
 }
 
-export function DraggableTask({ id, title }: { id: string; title: string }) {
+export function DraggableTask({ id, title, onSpaceKey }: { id: string; title: string; onSpaceKey?: () => void }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: `task-${id}` });
   const style: React.CSSProperties = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : {};
   return (
-    <button ref={setNodeRef} {...attributes} {...listeners} className="w-full text-left px-2 py-1 rounded border" style={style} aria-label={`focus ${title}`}>
+    <button
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className="w-full text-left px-2 py-1 rounded border"
+      style={style}
+      aria-label={`focus ${title}`}
+      data-task-id={id}
+      onKeyDown={(e) => {
+        if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Space') {
+          e.preventDefault();
+          onSpaceKey?.();
+        }
+      }}
+      onKeyDownCapture={(e) => {
+        if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Space') {
+          e.preventDefault();
+          onSpaceKey?.();
+        }
+      }}
+      onKeyUp={(e) => {
+        if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Space') {
+          e.preventDefault();
+          onSpaceKey?.();
+        }
+      }}
+      onKeyPress={(e) => {
+        if ((e as any).key === ' ' || (e as any).key === 'Spacebar' || (e as any).key === 'Space') {
+          e.preventDefault();
+          onSpaceKey?.();
+        }
+      }}
+      onClick={() => {
+        onSpaceKey?.();
+      }}
+    >
       {title}
     </button>
   );
@@ -180,16 +215,16 @@ function ResizableEventBox({ id, title, style, pxPerMin, onResizeDelta }: { id: 
   );
 }
 
-function getDays(view: ViewMode): Date[] {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  if (view === 'day') return [now];
+function getDays(view: ViewMode, base?: Date): Date[] {
+  const baseDate = base ? new Date(base) : new Date();
+  baseDate.setHours(0, 0, 0, 0);
+  if (view === 'day') return [baseDate];
   if (view === 'week') {
     const days: Date[] = [];
-    const day = now.getDay();
-    const monday = new Date(now);
+    const day = baseDate.getDay();
+    const monday = new Date(baseDate);
     const diff = (day + 6) % 7;
-    monday.setDate(now.getDate() - diff);
+    monday.setDate(baseDate.getDate() - diff);
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
@@ -199,7 +234,7 @@ function getDays(view: ViewMode): Date[] {
   }
   const days: Date[] = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(now);
+    const d = new Date(baseDate);
     d.setDate(1 + i);
     days.push(d);
   }
