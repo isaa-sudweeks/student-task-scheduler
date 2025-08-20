@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -8,6 +8,15 @@ import { TaskList } from './task-list';
 
 // Capture items passed to SortableContext so we can assert compaction
 const sortableItemsCalls: unknown[][] = [];
+let triggerDragEnd: ((event: any) => void) | undefined;
+
+vi.mock('@dnd-kit/core', () => ({
+  DndContext: ({ children, onDragEnd }: any) => {
+    triggerDragEnd = onDragEnd;
+    return <div>{children}</div>;
+  },
+  closestCenter: vi.fn(),
+}));
 vi.mock('@dnd-kit/sortable', async () => {
   return {
     // Record each items prop received to verify it matches filtered list
@@ -36,6 +45,7 @@ const defaultQuery = {
 };
 const useQueryMock = vi.fn().mockReturnValue(defaultQuery);
 const setStatusMock = vi.fn();
+const reorderMutate = vi.fn();
 
 vi.mock('@/server/api/react', () => ({
   api: {
@@ -62,7 +72,7 @@ vi.mock('@/server/api/react', () => ({
       updateTitle: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       setStatus: { useMutation: () => ({ mutate: setStatusMock, isPending: false, error: undefined }) },
-      reorder: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      reorder: { useMutation: () => ({ mutate: reorderMutate, isPending: false, error: undefined }) },
     },
   },
 }));
@@ -72,6 +82,8 @@ afterEach(() => {
   useQueryMock.mockReturnValue(defaultQuery);
   sortableItemsCalls.length = 0;
   setStatusMock.mockClear();
+  reorderMutate.mockClear();
+  triggerDragEnd = undefined;
 });
 
 describe('TaskList', () => {
@@ -185,5 +197,22 @@ describe('TaskList', () => {
     fireEvent.change(select, { target: { value: 'math' } });
     expect(screen.getByText('Test 1')).toBeInTheDocument();
     expect(screen.queryByText('Test 2')).not.toBeInTheDocument();
+  });
+
+  it('reverts order when reorder mutation fails', async () => {
+    reorderMutate.mockImplementation((_vars, opts) => {
+      opts?.onError?.(new Error('fail'));
+    });
+    render(<TaskList />);
+    const initialOrder = screen
+      .getAllByRole('listitem')
+      .map((li) => li.textContent);
+    triggerDragEnd?.({ active: { id: '1' }, over: { id: '2' } });
+    await waitFor(() => {
+      const order = screen
+        .getAllByRole('listitem')
+        .map((li) => li.textContent);
+      expect(order).toEqual(initialOrder);
+    });
   });
 });
