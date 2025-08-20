@@ -5,6 +5,9 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 import { TaskList } from './task-list';
+import type { RouterOutputs } from '@/server/api/root';
+
+type Task = RouterOutputs['task']['list'][number];
 
 // Capture items passed to SortableContext so we can assert compaction
 const sortableItemsCalls: unknown[][] = [];
@@ -133,7 +136,7 @@ describe('TaskList', () => {
 
   it('displays archived count', () => {
     // Return DONE only for archive filter, everything for others
-    useQueryMock.mockImplementation((input?: any) => {
+    useQueryMock.mockImplementation((input?: unknown) => {
       const base = {
         data: [
           { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math' },
@@ -143,7 +146,7 @@ describe('TaskList', () => {
         error: undefined,
       };
       if (input && input.filter === 'archive') {
-        return { data: base.data.filter((t: any) => t.status === 'DONE'), isLoading: false, error: undefined };
+        return { data: base.data.filter((t: Task) => t.status === 'DONE'), isLoading: false, error: undefined };
       }
       return base;
     });
