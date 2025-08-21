@@ -15,7 +15,7 @@ vi.mock('@/server/api/react', () => ({
         useMutation: () => ({
           mutate: vi.fn(),
           isPending: false,
-          error: { message: 'Failed to create task' },
+          error: undefined,
         }),
       },
       update: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
@@ -23,12 +23,12 @@ vi.mock('@/server/api/react', () => ({
         useMutation: () => ({
           mutate: vi.fn(),
           isPending: false,
-          error: { message: 'Failed to set due date' },
+          error: undefined,
         }),
       },
       delete: { useMutation: () => ({ mutate: vi.fn() }) },
       updateTitle: { useMutation: () => ({ mutate: vi.fn() }) },
-      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: { message: 'Failed to update status' } }) },
+      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       reorder: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       bulkUpdate: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       bulkDelete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },

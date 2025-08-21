@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/server/api/react';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
 import { DndContext, type DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
@@ -177,6 +178,7 @@ export default function CalendarPage() {
   }
 
   return (
+    <ErrorBoundary fallback={<main>Failed to load calendar</main>}>
     <main className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div className="md:col-span-4 flex items-center justify-end">
         <a
@@ -341,5 +343,6 @@ export default function CalendarPage() {
       )}
       </DndContext>
     </main>
+    </ErrorBoundary>
   );
 }

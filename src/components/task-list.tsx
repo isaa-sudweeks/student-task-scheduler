@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { toast } from "react-hot-toast";
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
 
@@ -118,19 +117,16 @@ export function TaskList() {
 
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => toast.error(e.message || "Failed to set due date"),
   });
 
   // Inline rename/delete removed in minimalist UI; handled in modal
 
   const setStatus = api.task.setStatus.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => toast.error(e.message || "Failed to update status"),
   });
 
   const reorder = api.task.reorder.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
-    onError: (e) => toast.error(e.message || "Failed to reorder tasks"),
   });
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -191,7 +187,6 @@ export function TaskList() {
       setSelected(new Set());
       await utils.task.list.invalidate();
     },
-    onError: (e) => toast.error(e.message || "Failed to update tasks"),
   });
 
   const bulkDelete = api.task.bulkDelete.useMutation({
@@ -199,7 +194,6 @@ export function TaskList() {
       setSelected(new Set());
       await utils.task.list.invalidate();
     },
-    onError: (e) => toast.error(e.message || "Failed to delete tasks"),
   });
 
   const parentRef = useRef<HTMLDivElement>(null);
@@ -209,6 +203,13 @@ export function TaskList() {
     estimateSize: () => 64,
   });
   const useVirtual = filteredOrderedTasks.length >= 20;
+
+  if (tasks.error) throw tasks.error;
+  if (setDue.error) throw setDue.error;
+  if (setStatus.error) throw setStatus.error;
+  if (reorder.error) throw reorder.error;
+  if (bulkUpdate.error) throw bulkUpdate.error;
+  if (bulkDelete.error) throw bulkDelete.error;
 
   const TaskItem = ({
     t,
@@ -372,15 +373,6 @@ export function TaskList() {
         )}
         {useVirtual && tasks.isLoading && <TaskListSkeleton />}
       </DndContext>
-
-      {tasks.error && (
-        <p role="alert" className="text-red-500">
-          {tasks.error.message}
-        </p>
-      )}
-      {setDue.error && (
-        <p role="alert" className="text-red-500">{setDue.error.message}</p>
-      )}
 
       {selected.size > 0 && (
         <div data-testid="bulk-actions" className="flex gap-2">

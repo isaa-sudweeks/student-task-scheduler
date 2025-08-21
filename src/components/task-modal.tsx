@@ -4,7 +4,6 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { StatusDropdown } from "@/components/status-dropdown";
 import { api } from "@/server/api/react";
-import { toast } from "react-hot-toast";
 import { formatLocalDateTime, parseLocalDateTime, defaultEndOfToday } from "@/lib/datetime";
 
 import type { RouterOutputs } from "@/server/api/root";
@@ -70,7 +69,6 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
       await utils.task.list.invalidate();
       onClose();
     },
-    onError: (e) => toast.error(e.message || "Failed to create task"),
   });
 
   const update = api.task.update.useMutation({
@@ -78,23 +76,25 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
       await utils.task.list.invalidate();
       onClose();
     },
-    onError: (e) => toast.error(e.message || "Failed to update task"),
   });
 
   const setStatus = apiAny.task?.setStatus?.useMutation?.({
     onSuccess: async () => {
       await utils.task.list.invalidate();
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update status"),
-  }) ?? { mutate: () => {}, isPending: false };
+  }) ?? { mutate: () => {}, isPending: false, error: undefined };
 
   const del = api.task.delete.useMutation({
     onSuccess: async () => {
       await utils.task.list.invalidate();
       onClose();
     },
-    onError: (e) => toast.error(e.message || "Failed to delete task"),
   });
+
+  if (create.error) throw create.error;
+  if (update.error) throw update.error;
+  if (setStatus.error) throw setStatus.error;
+  if (del.error) throw del.error;
 
   const footer = (
     <>
@@ -127,7 +127,6 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
             });
           } else {
             if (!title.trim()) {
-              toast.error("Title is required");
               return;
             }
             create.mutate({

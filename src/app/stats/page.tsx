@@ -3,6 +3,7 @@
 import React from "react";
 import { useTheme } from "next-themes";
 import { api } from "@/server/api/react";
+import { ErrorBoundary } from "@/components/error-boundary";
 import {
   BarChart,
   Bar,
@@ -31,7 +32,7 @@ export default function StatsPage() {
     [isDark]
   );
 
-  if (error) return <main>Error loading tasks</main>;
+  if (error) throw error;
   if (isLoading) return <main>Loading...</main>;
 
   const total = tasks.length;
@@ -68,59 +69,61 @@ export default function StatsPage() {
     }));
 
   return (
-    <main className="space-y-6 text-neutral-900 dark:text-neutral-100">
-      <header>
-        <h1 className="text-2xl font-semibold">Task Statistics</h1>
-      </header>
-      <section className="space-y-2">
-        <p>Total Tasks: {total}</p>
-        <p>Completion Rate: {completionRate}%</p>
-      </section>
-      <section className="space-y-2">
-        <h2 className="text-xl font-medium">By Status</h2>
-        <ul>
-          {statusData.map((s) => (
-            <li key={s.status}>
-              {s.status}: {s.count}
-            </li>
-          ))}
-        </ul>
-        <BarChart width={400} height={200} data={statusData}>
-          <XAxis
-            dataKey="status"
-            stroke={chartColors.axis}
-            tick={{ fill: chartColors.text }}
-          />
-          <YAxis
-            allowDecimals={false}
-            stroke={chartColors.axis}
-            tick={{ fill: chartColors.text }}
-          />
-          <Tooltip />
-          <Bar dataKey="count" fill={chartColors.bar} />
-        </BarChart>
-      </section>
-      <section className="space-y-2">
-        <h2 className="text-xl font-medium">By Subject</h2>
-        <ul>
-          {subjectData.map((s) => (
-            <li key={s.subject}>
-              {s.subject}: {s.count}
-            </li>
-          ))}
-        </ul>
-        <PieChart width={400} height={200}>
-          <Pie data={subjectData} dataKey="count" nameKey="subject" outerRadius={80}>
-            {subjectData.map((_, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={chartColors.pie[index % chartColors.pie.length]}
-              />
+    <ErrorBoundary fallback={<main>Failed to load stats</main>}>
+      <main className="space-y-6 text-neutral-900 dark:text-neutral-100">
+        <header>
+          <h1 className="text-2xl font-semibold">Task Statistics</h1>
+        </header>
+        <section className="space-y-2">
+          <p>Total Tasks: {total}</p>
+          <p>Completion Rate: {completionRate}%</p>
+        </section>
+        <section className="space-y-2">
+          <h2 className="text-xl font-medium">By Status</h2>
+          <ul>
+            {statusData.map((s) => (
+              <li key={s.status}>
+                {s.status}: {s.count}
+              </li>
             ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
-      </section>
-    </main>
+          </ul>
+          <BarChart width={400} height={200} data={statusData}>
+            <XAxis
+              dataKey="status"
+              stroke={chartColors.axis}
+              tick={{ fill: chartColors.text }}
+            />
+            <YAxis
+              allowDecimals={false}
+              stroke={chartColors.axis}
+              tick={{ fill: chartColors.text }}
+            />
+            <Tooltip />
+            <Bar dataKey="count" fill={chartColors.bar} />
+          </BarChart>
+        </section>
+        <section className="space-y-2">
+          <h2 className="text-xl font-medium">By Subject</h2>
+          <ul>
+            {subjectData.map((s) => (
+              <li key={s.subject}>
+                {s.subject}: {s.count}
+              </li>
+            ))}
+          </ul>
+          <PieChart width={400} height={200}>
+            <Pie data={subjectData} dataKey="count" nameKey="subject" outerRadius={80}>
+              {subjectData.map((_, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={chartColors.pie[index % chartColors.pie.length]}
+                />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </section>
+      </main>
+    </ErrorBoundary>
   );
 }
