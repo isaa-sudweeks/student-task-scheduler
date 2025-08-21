@@ -14,6 +14,42 @@ export function CalendarGrid(props: {
 }) {
   const { view } = props;
   const days = getDays(view);
+
+  // Special handling for month view - show a simple month grid
+  if (view === 'month') {
+    const first = days[0];
+    const startIdx = ((first.getDay() + 6) % 7);
+    const blanks = Array.from({ length: startIdx });
+    const cells = [...blanks, ...days];
+    const weekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return (
+      <div className="border rounded overflow-hidden">
+        <div className="grid grid-cols-7">
+          {weekday.map((w) => (
+            <div key={w} className="bg-slate-50 dark:bg-slate-900 p-2 text-xs text-center">
+              {w}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {cells.map((d, i) =>
+            d ? (
+              <div
+                key={d.toDateString()}
+                data-testid="day-cell"
+                className="h-24 border p-2 text-xs"
+              >
+                {d.getDate()}
+              </div>
+            ) : (
+              <div key={`blank-${i}`} className="h-24 border p-2 text-xs" />
+            )
+          )}
+        </div>
+      </div>
+    );
+  }
+
   const startHour = 8;
   const endHour = 18;
   const rows = endHour - startHour;
@@ -197,11 +233,12 @@ function getDays(view: ViewMode): Date[] {
     }
     return days;
   }
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days: Date[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(now);
-    d.setDate(1 + i);
-    days.push(d);
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(new Date(year, month, i));
   }
   return days;
 }
