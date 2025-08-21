@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
@@ -18,6 +18,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Calendar, Tag, GripVertical } from "lucide-react";
 import { TaskModal } from "@/components/task-modal";
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
@@ -170,9 +171,24 @@ export function TaskList() {
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  const TaskItem = ({ t }: { t: Task }) => {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: filteredOrderedTasks.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 64,
+  });
+  const useVirtual = filteredOrderedTasks.length >= 20;
+
+  const TaskItem = ({
+    t,
+    virtualStyle,
+  }: {
+    t: Task;
+    virtualStyle?: React.CSSProperties;
+  }) => {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: t.id });
     const style: React.CSSProperties = {
+      ...virtualStyle,
       ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
       ...(transition ? { transition } : {}),
     };
@@ -270,16 +286,49 @@ export function TaskList() {
       </div>
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={visibleIds}>
-          <ul className="space-y-2">
-            {filteredOrderedTasks.map((t) => (
-              <TaskItem key={t.id} t={t} />
-            ))}
-            {tasks.isLoading && <TaskListSkeleton />}
-            {!tasks.isLoading && filteredOrderedTasks.length === 0 && (
-              <li className="opacity-60">No tasks.</li>
-            )}
-          </ul>
+          {useVirtual ? (
+            <div ref={parentRef} className="overflow-auto max-h-[600px]">
+              <div
+                style={{
+                  height: rowVirtualizer!.getTotalSize(),
+                  position: "relative",
+                }}
+              >
+                {rowVirtualizer!.getVirtualItems().map((virtualRow) => {
+                  const t = filteredOrderedTasks[virtualRow.index];
+                  return (
+                    <TaskItem
+                      key={t.id}
+                      t={t}
+                      virtualStyle={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        transform: `translateY(${virtualRow.start}px)`,
+                        height: `${virtualRow.size}px`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {filteredOrderedTasks.map((t) => (
+                <TaskItem key={t.id} t={t} />
+              ))}
+              {tasks.isLoading && <TaskListSkeleton />}
+              {!tasks.isLoading && filteredOrderedTasks.length === 0 && (
+                <li className="opacity-60">No tasks.</li>
+              )}
+            </ul>
+          )}
         </SortableContext>
+        {useVirtual && !tasks.isLoading && filteredOrderedTasks.length === 0 && (
+          <div className="opacity-60">No tasks.</div>
+        )}
+        {useVirtual && tasks.isLoading && <TaskListSkeleton />}
       </DndContext>
 
       {tasks.error && (

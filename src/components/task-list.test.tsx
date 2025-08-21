@@ -49,6 +49,9 @@ const defaultQuery = {
 const useQueryMock = vi.fn().mockReturnValue(defaultQuery);
 const setStatusMock = vi.fn();
 const reorderMutate = vi.fn();
+const virtualizerMock = vi
+  .fn()
+  .mockReturnValue({ getTotalSize: () => 0, getVirtualItems: () => [] });
 
 vi.mock('@/server/api/react', () => ({
   api: {
@@ -80,12 +83,18 @@ vi.mock('@/server/api/react', () => ({
   },
 }));
 
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: (opts: any) => virtualizerMock(opts),
+}));
+
 afterEach(() => {
   cleanup();
   useQueryMock.mockReturnValue(defaultQuery);
   sortableItemsCalls.length = 0;
   setStatusMock.mockClear();
   reorderMutate.mockClear();
+  virtualizerMock.mockReset();
+  virtualizerMock.mockReturnValue({ getTotalSize: () => 0, getVirtualItems: () => [] });
   triggerDragEnd = undefined;
 });
 
@@ -200,6 +209,27 @@ describe('TaskList', () => {
     fireEvent.change(select, { target: { value: 'math' } });
     expect(screen.getByText('Test 1')).toBeInTheDocument();
     expect(screen.queryByText('Test 2')).not.toBeInTheDocument();
+  });
+
+  it('renders all items normally for small lists', () => {
+    const small = Array.from({ length: 10 }, (_, i) => ({ id: `${i}`, title: `Task ${i}`, dueAt: null }));
+    useQueryMock.mockReturnValue({ data: small, isLoading: false, error: undefined });
+    render(<TaskList />);
+    expect(virtualizerMock).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('listitem')).toHaveLength(10);
+  });
+
+  it('virtualizes large lists to limit DOM nodes', () => {
+    const big = Array.from({ length: 250 }, (_, i) => ({ id: `${i}`, title: `Task ${i}`, dueAt: null }));
+    useQueryMock.mockReturnValue({ data: big, isLoading: false, error: undefined });
+    virtualizerMock.mockReturnValue({
+      getTotalSize: () => big.length * 60,
+      getVirtualItems: () =>
+        Array.from({ length: 20 }, (_, i) => ({ index: i, start: i * 60, size: 60 })),
+    });
+    render(<TaskList />);
+    expect(virtualizerMock).toHaveBeenCalled();
+    expect(screen.getAllByRole('listitem')).toHaveLength(20);
   });
 
   it('reverts order when reorder mutation fails', async () => {
