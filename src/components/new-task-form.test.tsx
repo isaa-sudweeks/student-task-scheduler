@@ -31,6 +31,7 @@ vi.mock('@/server/api/react', () => ({
       delete: { useMutation: () => ({ mutate: vi.fn() }) },
       updateTitle: { useMutation: () => ({ mutate: vi.fn() }) },
       setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: { message: 'Failed to update status' } }) },
+      saveSubscription: { useMutation: () => ({ mutateAsync: vi.fn() }) },
     },
   },
 }));

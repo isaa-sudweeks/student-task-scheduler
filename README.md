@@ -44,5 +44,10 @@ Notes:
 - No postinstall hook (avoids prisma generate before schema copy in Docker).
 - TypeScript 5.7.x + tRPC 11.4.4 + ESLint 8.57 aligned with Next 14.2.x.
 
+## Push Notifications
+- Set `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in your environment and expose the public key as `NEXT_PUBLIC_VAPID_PUBLIC_KEY`.
+- Start the app and visit the tasks page; the browser will ask for notification permission.
+- Allow notifications to receive reminders for tasks due within the next hour.
+
 ## Problems
 - Drag reordering does not persist: Dragging tasks to a new order updates the UI briefly, but the order does not stay after refresh.

@@ -50,6 +50,7 @@ vi.mock('@/server/api/react', () => {
         setStatus: { useMutation: fn },
         setDueDate: { useMutation: fn },
         reorder: { useMutation: fn },
+        saveSubscription: { useMutation: fn },
       },
       event: {
         listRange: { useQuery: () => ({ data: [], isLoading: false }) },

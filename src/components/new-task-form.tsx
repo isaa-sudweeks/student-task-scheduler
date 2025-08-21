@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/server/api/react";
 import { toast } from "react-hot-toast";
@@ -11,6 +11,27 @@ export function NewTaskForm() {
   const [title, setTitle] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [pendingDueAt, setPendingDueAt] = useState<Date | null>(null);
+  const saveSubscription = api.task.saveSubscription.useMutation();
+
+  useEffect(() => {
+    async function subscribe() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: key ? urlBase64ToUint8Array(key) : undefined,
+        });
+        await saveSubscription.mutateAsync(sub.toJSON());
+      } catch (err) {
+        console.error('push subscribe failed', err);
+      }
+    }
+    void subscribe();
+  }, [saveSubscription]);
 
   const create = api.task.create.useMutation({
     onSuccess: async () => {
@@ -72,4 +93,15 @@ function formatDueHint(d: Date): string {
   if (sameDay) return `today ${time}`;
   if (isTomorrow) return `tomorrow ${time}`;
   return d.toLocaleString();
+}
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }

@@ -9,12 +9,14 @@ const hoisted = vi.hoisted(() => {
   const $transaction = vi.fn(async (ops: any[]) =>
     Promise.all(ops.map((op) => (typeof op === 'function' ? op() : op)))
   );
-  return { findMany, update, create, $transaction };
+  const upsertSub = vi.fn().mockResolvedValue({});
+  return { findMany, update, create, upsertSub, $transaction };
 });
 
 vi.mock('@/server/db', () => ({
   db: {
     task: { findMany: hoisted.findMany, update: hoisted.update, create: hoisted.create },
+    pushSubscription: { upsert: hoisted.upsertSub },
     $transaction: hoisted.$transaction,
   },
 }));
@@ -90,6 +92,24 @@ describe('taskRouter.create', () => {
     await taskRouter.createCaller({}).create({ title: 'a', priority: TaskPriority.HIGH });
     expect(hoisted.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ priority: TaskPriority.HIGH, title: 'a', dueAt: null, subject: null, notes: null }),
+    });
+  });
+});
+
+describe('taskRouter.saveSubscription', () => {
+  beforeEach(() => {
+    hoisted.upsertSub.mockClear();
+  });
+
+  it('stores subscription data', async () => {
+    await taskRouter.createCaller({}).saveSubscription({
+      endpoint: 'e',
+      keys: { p256dh: 'p', auth: 'a' },
+    });
+    expect(hoisted.upsertSub).toHaveBeenCalledWith({
+      where: { endpoint: 'e' },
+      update: { p256dh: 'p', auth: 'a' },
+      create: { endpoint: 'e', p256dh: 'p', auth: 'a' },
     });
   });
 });

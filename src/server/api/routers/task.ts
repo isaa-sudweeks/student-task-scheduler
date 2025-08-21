@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { TaskStatus, TaskPriority, Prisma } from '@prisma/client';
+import webpush from 'web-push';
 import { publicProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 export const taskRouter = router({
@@ -176,4 +177,60 @@ export const taskRouter = router({
       );
       return { success: true };
     }),
+  saveSubscription: publicProcedure
+    .input(
+      z.object({
+        endpoint: z.string(),
+        keys: z.object({ p256dh: z.string(), auth: z.string() }),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return db.pushSubscription.upsert({
+        where: { endpoint: input.endpoint },
+        update: { p256dh: input.keys.p256dh, auth: input.keys.auth },
+        create: {
+          endpoint: input.endpoint,
+          p256dh: input.keys.p256dh,
+          auth: input.keys.auth,
+        },
+      });
+    }),
+  notifyDueSoon: publicProcedure.mutation(async () => {
+    const now = new Date();
+    const inHour = new Date(now.getTime() + 60 * 60 * 1000);
+    const tasks = await db.task.findMany({
+      where: {
+        dueAt: { gte: now, lte: inHour },
+        status: { in: ['TODO', 'IN_PROGRESS'] },
+      },
+    });
+    if (tasks.length === 0) return { sent: 0 };
+    const subs = await db.pushSubscription.findMany();
+    const pub = process.env.VAPID_PUBLIC_KEY;
+    const priv = process.env.VAPID_PRIVATE_KEY;
+    if (!pub || !priv) return { sent: 0 };
+    webpush.setVapidDetails('mailto:example@example.com', pub, priv);
+    let sent = 0;
+    for (const sub of subs) {
+      for (const task of tasks) {
+        const payload = JSON.stringify({
+          title: 'Task due soon',
+          body: task.title,
+        });
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            },
+            payload
+          );
+          sent++;
+        } catch (err) {
+          console.error('push failed', err);
+        }
+      }
+    }
+    return { sent };
+  }),
 });

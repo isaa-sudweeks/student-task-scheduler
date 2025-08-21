@@ -23,6 +23,7 @@ model User {
   courses  Course[]
   accounts Account[]
   sessions Session[]
+  pushSubscriptions PushSubscription[]
 }
 
 model Account {
@@ -148,4 +149,14 @@ model TaskTimeLog {
   endedAt   DateTime?
 
   @@index([taskId])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  createdAt DateTime @default(now())
 }
