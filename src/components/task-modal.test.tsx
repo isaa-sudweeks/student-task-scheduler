@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { TaskModal } from './task-modal';
 import type { RouterOutputs } from '@/server/api/root';
+import { ErrorBoundary } from './error-boundary';
 
 type Task = RouterOutputs['task']['list'][number];
 
@@ -13,14 +14,19 @@ expect.extend(matchers);
 const mutateUpdate = vi.fn();
 const mutateCreate = vi.fn();
 
+const createMutation = { mutate: (...a: unknown[]) => mutateCreate(...a), isPending: false, error: undefined as any };
+const updateMutation = { mutate: (...a: unknown[]) => mutateUpdate(...a), isPending: false, error: undefined as any };
+const deleteMutation = { mutate: vi.fn(), isPending: false, error: undefined as any };
+const setStatusMutation = { mutate: vi.fn(), isPending: false, error: undefined as any };
+
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ task: { list: { invalidate: vi.fn() } } }),
     task: {
-      create: { useMutation: () => ({ mutate: (...a: unknown[]) => mutateCreate(...a), isPending: false }) },
-      update: { useMutation: () => ({ mutate: (...a: unknown[]) => mutateUpdate(...a), isPending: false }) },
-      delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
-      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      create: { useMutation: () => createMutation },
+      update: { useMutation: () => updateMutation },
+      delete: { useMutation: () => deleteMutation },
+      setStatus: { useMutation: () => setStatusMutation },
     },
     project: { list: { useQuery: () => ({ data: [{ id: 'p1', title: 'Project 1' }] }) } },
     course: { list: { useQuery: () => ({ data: [{ id: 'c1', title: 'Course 1' }] }) } },
@@ -31,6 +37,10 @@ describe('TaskModal due date editing', () => {
   beforeEach(() => {
     mutateUpdate.mockReset();
     mutateCreate.mockReset();
+    createMutation.error = undefined;
+    updateMutation.error = undefined;
+    deleteMutation.error = undefined;
+    setStatusMutation.error = undefined;
   });
 
   it('adds a due date to a task that previously had none when saving', () => {
@@ -62,6 +72,16 @@ describe('TaskModal due date editing', () => {
     expect(d.getDate()).toBe(31);
     expect(d.getHours()).toBe(23);
     expect(d.getMinutes()).toBe(59);
+  });
+
+  it('renders fallback when creation fails', () => {
+    createMutation.error = new Error('fail');
+    render(
+      <ErrorBoundary fallback={<div>fallback</div>}>
+        <TaskModal open mode="create" onClose={() => {}} />
+      </ErrorBoundary>
+    );
+    expect(screen.getByText('fallback')).toBeInTheDocument();
   });
 });
 

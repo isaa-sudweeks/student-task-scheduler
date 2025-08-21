@@ -4,6 +4,7 @@ import React from "react";
 import { useTheme } from "next-themes";
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
+import { ErrorBoundary } from "@/components/error-boundary";
 import {
   BarChart,
   Bar,
@@ -36,7 +37,7 @@ export default function StatsPage() {
     [isDark]
   );
 
-  if (error) return <main>Error loading tasks</main>;
+  if (error) throw error;
   if (isLoading) return <main>Loading...</main>;
 
   const total = tasks.length;
@@ -73,25 +74,25 @@ export default function StatsPage() {
     }));
 
   return (
-    <main className="space-y-6 text-neutral-900 dark:text-neutral-100">
-      <header>
-        <h1 className="text-2xl font-semibold">Task Statistics</h1>
-      </header>
-      <section className="space-y-2">
-        <p>Total Tasks: {total}</p>
-        <p>Completion Rate: {completionRate}%</p>
-      </section>
-      <section className="space-y-2">
-        <h2 className="text-xl font-medium">By Status</h2>
-        <ul>
-          {statusData.map((s) => (
-            <li key={s.status}>
-              {s.status}: {s.count}
-            </li>
-          ))}
-        </ul>
-        <ResponsiveContainer width="100%" aspect={2}>
-          <BarChart data={statusData}>
+    <ErrorBoundary fallback={<main>Failed to load stats</main>}>
+      <main className="space-y-6 text-neutral-900 dark:text-neutral-100">
+        <header>
+          <h1 className="text-2xl font-semibold">Task Statistics</h1>
+        </header>
+        <section className="space-y-2">
+          <p>Total Tasks: {total}</p>
+          <p>Completion Rate: {completionRate}%</p>
+        </section>
+        <section className="space-y-2">
+          <h2 className="text-xl font-medium">By Status</h2>
+          <ul>
+            {statusData.map((s) => (
+              <li key={s.status}>
+                {s.status}: {s.count}
+              </li>
+            ))}
+          </ul>
+          <BarChart width={400} height={200} data={statusData}>
             <XAxis
               dataKey="status"
               stroke={chartColors.axis}
@@ -105,19 +106,17 @@ export default function StatsPage() {
             <Tooltip />
             <Bar dataKey="count" fill={chartColors.bar} />
           </BarChart>
-        </ResponsiveContainer>
-      </section>
-      <section className="space-y-2">
-        <h2 className="text-xl font-medium">By Subject</h2>
-        <ul>
-          {subjectData.map((s) => (
-            <li key={s.subject}>
-              {s.subject}: {s.count}
-            </li>
-          ))}
-        </ul>
-        <ResponsiveContainer width="100%" aspect={2}>
-          <PieChart>
+        </section>
+        <section className="space-y-2">
+          <h2 className="text-xl font-medium">By Subject</h2>
+          <ul>
+            {subjectData.map((s) => (
+              <li key={s.subject}>
+                {s.subject}: {s.count}
+              </li>
+            ))}
+          </ul>
+          <PieChart width={400} height={200}>
             <Pie data={subjectData} dataKey="count" nameKey="subject" outerRadius={80}>
               {subjectData.map((_, index) => (
                 <Cell
@@ -128,8 +127,8 @@ export default function StatsPage() {
             </Pie>
             <Tooltip />
           </PieChart>
-        </ResponsiveContainer>
-      </section>
-    </main>
+        </section>
+      </main>
+    </ErrorBoundary>
   );
 }

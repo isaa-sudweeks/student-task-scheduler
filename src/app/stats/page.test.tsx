@@ -74,7 +74,7 @@ describe('StatsPage', () => {
     expect(screen.getByText('Science: 1')).toBeInTheDocument();
   });
 
-  it('renders error message when query fails', () => {
+  it('renders fallback when query fails', () => {
     useQueryMock.mockReturnValue({
       data: [],
       isLoading: false,
@@ -82,7 +82,7 @@ describe('StatsPage', () => {
     });
 
     render(<StatsPage />);
-    expect(screen.getByText('Error loading tasks')).toBeInTheDocument();
+    expect(screen.getByText('Failed to load stats')).toBeInTheDocument();
   });
 
   describe('visual regression', () => {

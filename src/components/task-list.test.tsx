@@ -6,6 +6,7 @@ import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 import { TaskList } from './task-list';
 import type { RouterOutputs } from '@/server/api/root';
+import { ErrorBoundary } from './error-boundary';
 
 type Task = RouterOutputs['task']['list'][number];
 
@@ -66,6 +67,15 @@ const virtualizerMock = vi
   .fn()
   .mockReturnValue({ getTotalSize: () => 0, getVirtualItems: () => [] });
 
+const createMutation = { mutate: vi.fn(), isPending: false, error: undefined as any };
+const setDueMutation = { mutate: vi.fn(), isPending: false, error: undefined as any };
+const updateMutation = { mutate: vi.fn(), isPending: false, error: undefined as any };
+const deleteMutation = { mutate: vi.fn(), isPending: false, error: undefined as any };
+const setStatusMutation = { mutate: setStatusMock, isPending: false, error: undefined as any };
+const reorderMutation = { mutate: reorderMutate, isPending: false, error: undefined as any };
+const bulkUpdateMutation = { mutate: bulkUpdateMock, isPending: false, error: undefined as any };
+const bulkDeleteMutation = { mutate: bulkDeleteMock, isPending: false, error: undefined as any };
+
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ task: { list: { invalidate: vi.fn() } } }),
@@ -74,19 +84,15 @@ vi.mock('@/server/api/react', () => ({
         useInfiniteQuery: (...args: any[]) => useInfiniteQueryMock(...args),
         useQuery: (...args: any[]) => useQueryMock(...args),
       },
-      create: {
-        useMutation: () => ({ mutate: vi.fn(), isPending: false, error: { message: 'Failed to create task' } }),
-      },
-      update: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-      setDueDate: {
-        useMutation: () => ({ mutate: vi.fn(), isPending: false, error: { message: 'Failed to set due date' } }),
-      },
+      create: { useMutation: () => createMutation },
+      update: { useMutation: () => updateMutation },
+      setDueDate: { useMutation: () => setDueMutation },
       updateTitle: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-      delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-      setStatus: { useMutation: () => ({ mutate: setStatusMock, isPending: false, error: undefined }) },
-      reorder: { useMutation: () => ({ mutate: reorderMutate, isPending: false, error: undefined }) },
-      bulkUpdate: { useMutation: () => ({ mutate: bulkUpdateMock, isPending: false, error: undefined }) },
-      bulkDelete: { useMutation: () => ({ mutate: bulkDeleteMock, isPending: false, error: undefined }) },
+      delete: { useMutation: () => deleteMutation },
+      setStatus: { useMutation: () => setStatusMutation },
+      reorder: { useMutation: () => reorderMutation },
+      bulkUpdate: { useMutation: () => bulkUpdateMutation },
+      bulkDelete: { useMutation: () => bulkDeleteMutation },
     },
     project: { list: { useQuery: () => ({ data: [] }) } },
     course: { list: { useQuery: () => ({ data: [] }) } },
@@ -108,6 +114,15 @@ afterEach(() => {
   reorderMutate.mockReset();
   virtualizerMock.mockReset();
   virtualizerMock.mockReturnValue({ getTotalSize: () => 0, getVirtualItems: () => [] });
+  triggerDragEnd = undefined;
+  createMutation.error = undefined;
+  setDueMutation.error = undefined;
+  updateMutation.error = undefined;
+  deleteMutation.error = undefined;
+  setStatusMutation.error = undefined;
+  reorderMutation.error = undefined;
+  bulkUpdateMutation.error = undefined;
+  bulkDeleteMutation.error = undefined;
 });
 
 describe('TaskList', () => {
@@ -123,6 +138,43 @@ describe('TaskList', () => {
     useQueryMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
     render(<TaskList />);
     expect(screen.getByLabelText('Loading tasks')).toBeInTheDocument();
+  });
+
+  it('renders fallback when mutation error occurs', () => {
+    setDueMutation.error = new Error('boom');
+    render(
+      <ErrorBoundary fallback={<div>fallback</div>}>
+        <TaskList />
+      </ErrorBoundary>
+    );
+    expect(screen.getByText('fallback')).toBeInTheDocument();
+  });
+
+  it('renders subject badge', () => {
+    render(<TaskList />);
+    expect(screen.getByText('math', { selector: 'span' })).toBeInTheDocument();
+  });
+
+  it('filters tasks based on search query', () => {
+    render(<TaskList />);
+    const input = screen.getByPlaceholderText('Search tasks...');
+    fireEvent.change(input, { target: { value: 'Nope' } });
+    expect(screen.queryByText('Test')).not.toBeInTheDocument();
+    expect(screen.getByText('No tasks.')).toBeInTheDocument();
+  });
+
+  it('filters by title only and ignores subject', () => {
+    useQueryMock.mockReturnValueOnce({
+      data: [
+        { id: '1', title: 'Read book', dueAt: null, subject: 'Math' },
+        { id: '2', title: 'Math homework', dueAt: null, subject: 'English' },
+      ],
+    });
+    render(<TaskList />);
+    const input = screen.getByPlaceholderText('Search tasks...');
+    fireEvent.change(input, { target: { value: 'Read' } });
+    expect(screen.getByText('Read book')).toBeInTheDocument();
+    expect(screen.queryByText('Math homework')).not.toBeInTheDocument();
   });
 
   it('renders archived count', () => {
