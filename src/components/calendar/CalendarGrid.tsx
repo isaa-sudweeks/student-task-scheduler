@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { useDraggable, useDroppable, useDndMonitor } from '@dnd-kit/core';
 
 type ViewMode = 'day' | 'week' | 'month';
 
@@ -239,9 +239,6 @@ function ResizableEventBox({ id, title, style, pxPerMin, onResizeDelta }: { id: 
   }, [id, onResizeDelta, pxPerMin]);
 
   // Using window-level dnd monitor to detect when the specific handle ends dragging
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { useDndMonitor } = require('@dnd-kit/core');
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useDndMonitor({
     onDragEnd: (event: any) => {
       const activeId = String(event.active?.id ?? '');
