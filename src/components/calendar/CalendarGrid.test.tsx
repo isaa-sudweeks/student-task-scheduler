@@ -1,7 +1,10 @@
+// @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import React from 'react';
 import { CalendarGrid } from './CalendarGrid';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as matchers from '@testing-library/jest-dom/matchers';
+expect.extend(matchers);
 
 describe('CalendarGrid month view', () => {
   afterEach(() => {

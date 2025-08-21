@@ -6,15 +6,36 @@ const hoisted = vi.hoisted(() => {
   const findMany = vi.fn().mockResolvedValue([]);
   const update = vi.fn().mockResolvedValue({});
   const create = vi.fn().mockResolvedValue({});
+  const updateMany = vi.fn().mockResolvedValue({ count: 0 });
+  const deleteMany = vi.fn().mockResolvedValue({ count: 0 });
+  const reminderDeleteMany = vi.fn().mockResolvedValue({});
+  const eventDeleteMany = vi.fn().mockResolvedValue({});
   const $transaction = vi.fn(async (ops: any[]) =>
     Promise.all(ops.map((op) => (typeof op === 'function' ? op() : op)))
   );
-  return { findMany, update, create, $transaction };
+  return {
+    findMany,
+    update,
+    create,
+    updateMany,
+    deleteMany,
+    reminderDeleteMany,
+    eventDeleteMany,
+    $transaction,
+  };
 });
 
 vi.mock('@/server/db', () => ({
   db: {
-    task: { findMany: hoisted.findMany, update: hoisted.update, create: hoisted.create },
+    task: {
+      findMany: hoisted.findMany,
+      update: hoisted.update,
+      create: hoisted.create,
+      updateMany: hoisted.updateMany,
+      deleteMany: hoisted.deleteMany,
+    },
+    reminder: { deleteMany: hoisted.reminderDeleteMany },
+    event: { deleteMany: hoisted.eventDeleteMany },
     $transaction: hoisted.$transaction,
   },
 }));
@@ -91,5 +112,36 @@ describe('taskRouter.create', () => {
     expect(hoisted.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ priority: TaskPriority.HIGH, title: 'a', dueAt: null, subject: null, notes: null }),
     });
+  });
+});
+
+describe('taskRouter.bulkUpdate', () => {
+  beforeEach(() => {
+    hoisted.updateMany.mockClear();
+  });
+
+  it('updates status for multiple tasks', async () => {
+    await taskRouter.createCaller({}).bulkUpdate({ ids: ['1', '2'], status: 'DONE' });
+    expect(hoisted.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['1', '2'] } },
+      data: { status: 'DONE' },
+    });
+  });
+});
+
+describe('taskRouter.bulkDelete', () => {
+  beforeEach(() => {
+    hoisted.$transaction.mockClear();
+    hoisted.deleteMany.mockClear();
+    hoisted.reminderDeleteMany.mockClear();
+    hoisted.eventDeleteMany.mockClear();
+  });
+
+  it('deletes tasks and related data', async () => {
+    await taskRouter.createCaller({}).bulkDelete({ ids: ['1', '2'] });
+    expect(hoisted.$transaction).toHaveBeenCalledTimes(1);
+    expect(hoisted.reminderDeleteMany).toHaveBeenCalledWith({ where: { taskId: { in: ['1', '2'] } } });
+    expect(hoisted.eventDeleteMany).toHaveBeenCalledWith({ where: { taskId: { in: ['1', '2'] } } });
+    expect(hoisted.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['1', '2'] } } });
   });
 });
