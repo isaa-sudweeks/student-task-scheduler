@@ -85,12 +85,20 @@ export default function CalendarPage() {
   const elapsedByTaskRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
     if (focusedSince == null) return;
-    intervalRef.current && clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
       setElapsed(Date.now() - (focusedSince as number));
     }, 1000);
-    return () => intervalRef.current && clearInterval(intervalRef.current);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, [focusedSince]);
 
   // On unmount, ensure focus is stopped (pauses session)
