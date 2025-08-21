@@ -18,7 +18,14 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Calendar, Tag, GripVertical } from "lucide-react";
+import {
+  Calendar,
+  Tag,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+} from "lucide-react";
 import { TaskModal } from "@/components/task-modal";
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
 import { Button } from "@/components/ui/button";
@@ -257,9 +264,14 @@ export function TaskList() {
     const done = t.status === "DONE";
     const priority: Priority = t.priority ?? "MEDIUM";
     const priorityStyles: Record<Priority, string> = {
-      HIGH: "bg-red-100 text-red-700 ring-red-200 dark:bg-red-900/30 dark:text-red-200 dark:ring-red-800",
-      MEDIUM: "bg-blue-100 text-blue-700 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:ring-blue-800",
-      LOW: "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700",
+      HIGH: "bg-red-100 text-red-800 ring-red-300 dark:bg-red-950 dark:text-red-200 dark:ring-red-700",
+      MEDIUM: "bg-blue-100 text-blue-800 ring-blue-300 dark:bg-blue-950 dark:text-blue-200 dark:ring-blue-700",
+      LOW: "bg-slate-100 text-slate-800 ring-slate-300 dark:bg-slate-950 dark:text-slate-200 dark:ring-slate-700",
+    };
+    const priorityIcons: Record<Priority, React.ReactNode> = {
+      HIGH: <ArrowUp className="h-3 w-3" aria-hidden="true" />,
+      MEDIUM: <Minus className="h-3 w-3" aria-hidden="true" />,
+      LOW: <ArrowDown className="h-3 w-3" aria-hidden="true" />,
     };
     return (
       <li
@@ -311,6 +323,7 @@ export function TaskList() {
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${priorityStyles[priority]}`}
               >
+                {priorityIcons[priority]}
                 {priority.charAt(0) + priority.slice(1).toLowerCase()}
               </span>
               {t.subject && (

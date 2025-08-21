@@ -50,8 +50,22 @@ const useInfiniteQueryMock = vi.fn();
 
 const defaultQuery = {
   data: [
-    { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math', priority: 'HIGH' },
-    { id: '2', title: 'Test 2', dueAt: null, status: 'TODO', subject: 'science', priority: 'LOW' },
+    {
+      id: '1',
+      title: 'Test 1',
+      dueAt: null,
+      status: 'DONE',
+      subject: 'math',
+      priority: 'HIGH',
+    },
+    {
+      id: '2',
+      title: 'Test 2',
+      dueAt: null,
+      status: 'TODO',
+      subject: 'science',
+      priority: 'LOW',
+    },
   ],
   isLoading: false,
   error: undefined,
@@ -150,9 +164,11 @@ describe('TaskList', () => {
     expect(screen.getByText('fallback')).toBeInTheDocument();
   });
 
-  it('renders subject badge', () => {
+  it('renders subject and priority badges', () => {
     render(<TaskList />);
     expect(screen.getByText('math', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText('High', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText('Low', { selector: 'span' })).toBeInTheDocument();
   });
 
   it('filters tasks based on search query', () => {
