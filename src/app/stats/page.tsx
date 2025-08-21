@@ -3,6 +3,7 @@
 import React from "react";
 import { useTheme } from "next-themes";
 import { api } from "@/server/api/react";
+import type { RouterOutputs } from "@/server/api/root";
 import {
   BarChart,
   Bar,
@@ -14,8 +15,11 @@ import {
   Cell,
 } from "recharts";
 
+type Task = RouterOutputs["task"]["list"][number];
+
 export default function StatsPage() {
-  const { data: tasks = [], isLoading, error } = api.task.list.useQuery();
+  const { data, isLoading, error } = api.task.list.useQuery();
+  const tasks: RouterOutputs["task"]["list"] = data ?? [];
   const { resolvedTheme } = useTheme();
 
   const isDark = resolvedTheme === "dark";
@@ -35,11 +39,11 @@ export default function StatsPage() {
   if (isLoading) return <main>Loading...</main>;
 
   const total = tasks.length;
-  const completed = tasks.filter((t: any) => t.status === "DONE").length;
+  const completed = tasks.filter((t: Task) => t.status === "DONE").length;
   const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
 
   const statusCounts = tasks.reduce(
-    (acc: Record<string, number>, task: any) => {
+    (acc: Record<string, number>, task: Task) => {
       acc[task.status] = (acc[task.status] ?? 0) + 1;
       return acc;
     },
@@ -53,7 +57,7 @@ export default function StatsPage() {
     }));
 
   const subjectCounts = tasks.reduce(
-    (acc: Record<string, number>, task: any) => {
+    (acc: Record<string, number>, task: Task) => {
       const subject = task.subject ?? "Uncategorized";
       acc[subject] = (acc[subject] ?? 0) + 1;
       return acc;
