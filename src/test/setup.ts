@@ -79,6 +79,7 @@ vi.mock('recharts', () => {
     PieChart: Div,
     Pie: Null,
     Cell: Null,
+    ResponsiveContainer: Div,
   } as any;
 });
 

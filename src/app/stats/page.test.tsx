@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { render, screen, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach, beforeAll } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
 vi.mock('@/server/api/react', () => ({
@@ -25,6 +25,28 @@ import StatsPage from './page';
 const useQueryMock = api.task.list.useQuery as ReturnType<typeof vi.fn>;
 
 expect.extend(matchers);
+
+beforeAll(() => {
+  class ResizeObserver {
+    callback: ResizeObserverCallback;
+    constructor(callback: ResizeObserverCallback) {
+      this.callback = callback;
+    }
+    observe() {
+      this.callback(
+        [
+          {
+            contentRect: { width: 800, height: 400 },
+          } as unknown as ResizeObserverEntry,
+        ],
+        this
+      );
+    }
+    unobserve() {}
+    disconnect() {}
+  }
+  (global as any).ResizeObserver = ResizeObserver;
+});
 
 afterEach(() => {
   cleanup();

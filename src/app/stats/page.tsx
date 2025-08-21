@@ -12,6 +12,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  ResponsiveContainer,
 } from "recharts";
 
 export default function StatsPage() {
@@ -85,20 +86,22 @@ export default function StatsPage() {
             </li>
           ))}
         </ul>
-        <BarChart width={400} height={200} data={statusData}>
-          <XAxis
-            dataKey="status"
-            stroke={chartColors.axis}
-            tick={{ fill: chartColors.text }}
-          />
-          <YAxis
-            allowDecimals={false}
-            stroke={chartColors.axis}
-            tick={{ fill: chartColors.text }}
-          />
-          <Tooltip />
-          <Bar dataKey="count" fill={chartColors.bar} />
-        </BarChart>
+        <ResponsiveContainer width="100%" aspect={2}>
+          <BarChart data={statusData}>
+            <XAxis
+              dataKey="status"
+              stroke={chartColors.axis}
+              tick={{ fill: chartColors.text }}
+            />
+            <YAxis
+              allowDecimals={false}
+              stroke={chartColors.axis}
+              tick={{ fill: chartColors.text }}
+            />
+            <Tooltip />
+            <Bar dataKey="count" fill={chartColors.bar} />
+          </BarChart>
+        </ResponsiveContainer>
       </section>
       <section className="space-y-2">
         <h2 className="text-xl font-medium">By Subject</h2>
@@ -109,17 +112,19 @@ export default function StatsPage() {
             </li>
           ))}
         </ul>
-        <PieChart width={400} height={200}>
-          <Pie data={subjectData} dataKey="count" nameKey="subject" outerRadius={80}>
-            {subjectData.map((_, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={chartColors.pie[index % chartColors.pie.length]}
-              />
-            ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
+        <ResponsiveContainer width="100%" aspect={2}>
+          <PieChart>
+            <Pie data={subjectData} dataKey="count" nameKey="subject" outerRadius={80}>
+              {subjectData.map((_, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={chartColors.pie[index % chartColors.pie.length]}
+                />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
       </section>
     </main>
   );
