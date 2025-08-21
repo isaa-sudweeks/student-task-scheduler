@@ -35,34 +35,42 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
   const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
   const [recurrenceType, setRecurrenceType] = useState<'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY'>('NONE');
   const [recurrenceInterval, setRecurrenceInterval] = useState<number>(1);
+  const [recurrenceCount, setRecurrenceCount] = useState<number | ''>('');
+  const [recurrenceUntil, setRecurrenceUntil] = useState<string>('');
 
   useEffect(() => {
     if (!open) return;
-    if (isEdit && task) {
-      setTitle(task.title);
-      setSubject(task.subject ?? "");
-      setNotes(task.notes ?? "");
-      setPriority(task.priority ?? "MEDIUM");
-      setRecurrenceType(task.recurrenceType ?? 'NONE');
-      setRecurrenceInterval(task.recurrenceInterval ?? 1);
-      const hasDue = task.dueAt != null;
-      setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
-      setDueEnabled(hasDue);
-    } else {
-      setTitle(initialTitle ?? "");
-      setSubject("");
-      setNotes("");
-      setPriority("MEDIUM");
-      setRecurrenceType('NONE');
-      setRecurrenceInterval(1);
-      if (initialDueAt) {
-        setDueEnabled(true);
-        setDue(formatLocalDateTime(new Date(initialDueAt)));
+      if (isEdit && task) {
+        setTitle(task.title);
+        setSubject(task.subject ?? "");
+        setNotes(task.notes ?? "");
+        setPriority(task.priority ?? "MEDIUM");
+        setRecurrenceType(task.recurrenceType ?? 'NONE');
+        setRecurrenceInterval(task.recurrenceInterval ?? 1);
+        setRecurrenceCount(task.recurrenceCount ?? '');
+        setRecurrenceUntil(
+          task.recurrenceUntil ? new Date(task.recurrenceUntil).toISOString().slice(0, 10) : ''
+        );
+        const hasDue = task.dueAt != null;
+        setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
+        setDueEnabled(hasDue);
       } else {
-        setDue("");
-        setDueEnabled(false);
+        setTitle(initialTitle ?? "");
+        setSubject("");
+        setNotes("");
+        setPriority("MEDIUM");
+        setRecurrenceType('NONE');
+        setRecurrenceInterval(1);
+        setRecurrenceCount('');
+        setRecurrenceUntil('');
+        if (initialDueAt) {
+          setDueEnabled(true);
+          setDue(formatLocalDateTime(new Date(initialDueAt)));
+        } else {
+          setDue("");
+          setDueEnabled(false);
+        }
       }
-    }
   }, [open, isEdit, task, initialTitle, initialDueAt]);
 
   const create = api.task.create.useMutation({
@@ -114,6 +122,10 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
         disabled={create.isPending || update.isPending}
         onClick={() => {
           const dueAt = dueEnabled && due ? parseLocalDateTime(due) : null;
+          const recurrenceUntilDate =
+            recurrenceUntil ? new Date(`${recurrenceUntil}T23:59:59`) : undefined;
+          const recurrenceCountVal =
+            recurrenceCount === '' ? undefined : recurrenceCount;
           if (isEdit && task) {
             update.mutate({
               id: task.id,
@@ -124,6 +136,8 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
               priority,
               recurrenceType,
               recurrenceInterval,
+              recurrenceCount: recurrenceCountVal,
+              recurrenceUntil: recurrenceUntilDate,
             });
           } else {
             if (!title.trim()) {
@@ -138,6 +152,8 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
               priority,
               recurrenceType,
               recurrenceInterval,
+              recurrenceCount: recurrenceCountVal,
+              recurrenceUntil: recurrenceUntilDate,
             });
           }
         }}
@@ -253,6 +269,32 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
             </label>
           )}
         </div>
+
+        {recurrenceType !== 'NONE' && (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wide opacity-60">End after occurrences</span>
+              <input
+                type="number"
+                min={1}
+                className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+                value={recurrenceCount}
+                onChange={(e) =>
+                  setRecurrenceCount(e.target.value ? parseInt(e.target.value, 10) : '')
+                }
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wide opacity-60">End on date</span>
+              <input
+                type="date"
+                className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+                value={recurrenceUntil}
+                onChange={(e) => setRecurrenceUntil(e.target.value)}
+              />
+            </label>
+          </div>
+        )}
 
         <label className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide opacity-60">Notes</span>

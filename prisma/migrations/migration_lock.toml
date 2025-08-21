@@ -1,0 +1,2 @@
+# This file ensures Prisma Migrate checks the provider on deploy
+provider = "postgresql"

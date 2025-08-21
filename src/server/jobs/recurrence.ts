@@ -12,6 +12,15 @@ export async function generateRecurringTasks(now = new Date()) {
 
   for (const task of templates) {
     if (!task.dueAt) continue;
+    const occurrences = await db.task.count({
+      where: {
+        title: task.title,
+        userId: task.userId ?? undefined,
+        recurrenceType: task.recurrenceType,
+        recurrenceInterval: task.recurrenceInterval,
+      },
+    });
+    if (task.recurrenceCount && occurrences >= task.recurrenceCount) continue;
     let nextDue = task.dueAt;
     while (nextDue <= now) {
       nextDue =
@@ -21,6 +30,7 @@ export async function generateRecurringTasks(now = new Date()) {
           ? addWeeks(nextDue, task.recurrenceInterval)
           : addMonths(nextDue, task.recurrenceInterval);
     }
+    if (task.recurrenceUntil && nextDue > task.recurrenceUntil) continue;
     const existing = await db.task.findFirst({
       where: { title: task.title, dueAt: nextDue },
     });
@@ -37,6 +47,8 @@ export async function generateRecurringTasks(now = new Date()) {
           courseId: task.courseId ?? undefined,
           recurrenceType: task.recurrenceType,
           recurrenceInterval: task.recurrenceInterval,
+          recurrenceCount: task.recurrenceCount ?? undefined,
+          recurrenceUntil: task.recurrenceUntil ?? undefined,
         },
       });
     }
