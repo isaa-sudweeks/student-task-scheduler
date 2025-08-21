@@ -153,7 +153,7 @@ export default function CalendarPage() {
   );
 
   if (focusedTaskId) {
-    const task = tasks.find((t: any) => t.id === focusedTaskId);
+    const task = (tasksData as any[]).find((t: any) => t.id === focusedTaskId);
     return (
       <main className="space-y-4">
         <header className="flex items-center justify-end">
