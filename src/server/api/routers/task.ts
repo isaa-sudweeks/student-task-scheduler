@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { TaskStatus, TaskPriority, Prisma } from '@prisma/client';
+import { TaskStatus, TaskPriority, Prisma, RecurrenceType } from '@prisma/client';
 import { publicProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 export const taskRouter = router({
@@ -89,6 +89,8 @@ export const taskRouter = router({
         subject: z.string().max(100).optional(),
         notes: z.string().max(2000).optional(),
         priority: z.nativeEnum(TaskPriority).optional(),
+        recurrenceType: z.nativeEnum(RecurrenceType).optional(),
+        recurrenceInterval: z.number().int().min(1).optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -102,6 +104,8 @@ export const taskRouter = router({
           subject: input.subject ?? null,
           notes: input.notes ?? null,
           priority: input.priority ?? undefined,
+          recurrenceType: input.recurrenceType ?? undefined,
+          recurrenceInterval: input.recurrenceInterval ?? undefined,
         },
       });
     }),
@@ -114,6 +118,8 @@ export const taskRouter = router({
         notes: z.string().max(2000).nullable().optional(),
         dueAt: z.date().nullable().optional(),
         priority: z.nativeEnum(TaskPriority).optional(),
+        recurrenceType: z.nativeEnum(RecurrenceType).optional(),
+        recurrenceInterval: z.number().int().min(1).optional(),
       })
     )
     .mutation(async ({ input }) => {

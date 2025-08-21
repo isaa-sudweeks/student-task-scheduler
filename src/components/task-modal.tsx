@@ -33,6 +33,8 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
   const [due, setDue] = useState<string>(""); // datetime-local
   const [dueEnabled, setDueEnabled] = useState<boolean>(false);
   const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
+  const [recurrenceType, setRecurrenceType] = useState<'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY'>('NONE');
+  const [recurrenceInterval, setRecurrenceInterval] = useState<number>(1);
 
   useEffect(() => {
     if (!open) return;
@@ -41,6 +43,8 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
       setSubject(task.subject ?? "");
       setNotes(task.notes ?? "");
       setPriority(task.priority ?? "MEDIUM");
+      setRecurrenceType(task.recurrenceType ?? 'NONE');
+      setRecurrenceInterval(task.recurrenceInterval ?? 1);
       const hasDue = task.dueAt != null;
       setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
       setDueEnabled(hasDue);
@@ -49,6 +53,8 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
       setSubject("");
       setNotes("");
       setPriority("MEDIUM");
+      setRecurrenceType('NONE');
+      setRecurrenceInterval(1);
       if (initialDueAt) {
         setDueEnabled(true);
         setDue(formatLocalDateTime(new Date(initialDueAt)));
@@ -116,13 +122,23 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
               notes: notes.trim() || null,
               dueAt,
               priority,
+              recurrenceType,
+              recurrenceInterval,
             });
           } else {
             if (!title.trim()) {
               toast.error("Title is required");
               return;
             }
-            create.mutate({ title: title.trim(), subject: subject || undefined, notes: notes || undefined, dueAt, priority });
+            create.mutate({
+              title: title.trim(),
+              subject: subject || undefined,
+              notes: notes || undefined,
+              dueAt,
+              priority,
+              recurrenceType,
+              recurrenceInterval,
+            });
           }
         }}
       >
@@ -209,6 +225,34 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
             <option value="HIGH">High</option>
           </select>
         </label>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs uppercase tracking-wide opacity-60">Recurrence</span>
+            <select
+              className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+              value={recurrenceType}
+              onChange={(e) => setRecurrenceType(e.target.value as typeof recurrenceType)}
+            >
+              <option value="NONE">None</option>
+              <option value="DAILY">Daily</option>
+              <option value="WEEKLY">Weekly</option>
+              <option value="MONTHLY">Monthly</option>
+            </select>
+          </label>
+          {recurrenceType !== 'NONE' && (
+            <label className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wide opacity-60">Interval</span>
+              <input
+                type="number"
+                min={1}
+                className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+                value={recurrenceInterval}
+                onChange={(e) => setRecurrenceInterval(parseInt(e.target.value, 10) || 1)}
+              />
+            </label>
+          )}
+        </div>
 
         <label className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide opacity-60">Notes</span>

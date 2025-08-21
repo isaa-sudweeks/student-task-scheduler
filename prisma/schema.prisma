@@ -93,6 +93,13 @@ enum TaskPriority {
   HIGH
 }
 
+enum RecurrenceType {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 model Task {
   id            String     @id @default(cuid())
   user          User?      @relation(fields: [userId], references: [id])
@@ -109,6 +116,8 @@ model Task {
   position      Int        @default(0)
   effortMinutes Int?
   dueAt         DateTime?
+  recurrenceType RecurrenceType @default(NONE)
+  recurrenceInterval Int @default(1)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
