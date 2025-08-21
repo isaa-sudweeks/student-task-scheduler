@@ -49,6 +49,9 @@ describe('CalendarPage', () => {
     focusStop.mockReset();
     scheduleMutate.mockReset();
     moveMutate.mockReset();
+    window.localStorage.clear();
+    window.localStorage.setItem('dayWindowStartHour', '6');
+    window.localStorage.setItem('dayWindowEndHour', '20');
   });
 
   it('defaults to Week view and can switch views', () => {
@@ -107,6 +110,8 @@ describe('CalendarPage', () => {
     const arg = scheduleMutate.mock.calls[0][0] as any;
     expect(arg.taskId).toBe('t1');
     expect(arg.durationMinutes).toBe(30);
+    expect(arg.dayWindowStartHour).toBe(6);
+    expect(arg.dayWindowEndHour).toBe(20);
   });
 
   it('reschedules an existing event when moved to a new slot', () => {
@@ -119,6 +124,8 @@ describe('CalendarPage', () => {
     expect(arg.startAt).toBeInstanceOf(Date);
     expect(arg.endAt).toBeInstanceOf(Date);
     expect(arg.endAt.getTime()).toBeGreaterThan(arg.startAt.getTime());
+    expect(arg.dayWindowStartHour).toBe(6);
+    expect(arg.dayWindowEndHour).toBe(20);
   });
 
   it('resizes an existing event when resize handle is dropped to a later slot', () => {
@@ -132,5 +139,7 @@ describe('CalendarPage', () => {
     expect(arg.startAt).toBeInstanceOf(Date);
     expect(arg.endAt).toBeInstanceOf(Date);
     expect(arg.endAt.getTime()).toBeGreaterThan(arg.startAt.getTime());
+    expect(arg.dayWindowStartHour).toBe(6);
+    expect(arg.dayWindowEndHour).toBe(20);
   });
 });

@@ -13,6 +13,16 @@ export default function CalendarPage() {
   const utils = api.useUtils?.() as any;
   const router = useRouter();
 
+  const [dayStart, setDayStart] = useState(8);
+  const [dayEnd, setDayEnd] = useState(18);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const s = window.localStorage.getItem('dayWindowStartHour');
+    const e = window.localStorage.getItem('dayWindowEndHour');
+    if (s) setDayStart(Number(s));
+    if (e) setDayEnd(Number(e));
+  }, []);
+
   // Make dragging/resizing more reliable across mouse/touch
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -79,6 +89,21 @@ export default function CalendarPage() {
       } catch {}
     },
   }) ?? { mutate: () => {} };
+
+  const scheduleMutate = schedule.mutate;
+  const scheduleWithPrefs = React.useCallback(
+    (args: { taskId: string; startAt: Date; durationMinutes: number }) => {
+      scheduleMutate({ ...args, dayWindowStartHour: dayStart, dayWindowEndHour: dayEnd });
+    },
+    [scheduleMutate, dayStart, dayEnd]
+  );
+  const moveMutateFn = move.mutate;
+  const moveWithPrefs = React.useCallback(
+    (args: { eventId: string; startAt: Date; endAt: Date }) => {
+      moveMutateFn({ ...args, dayWindowStartHour: dayStart, dayWindowEndHour: dayEnd });
+    },
+    [moveMutateFn, dayStart, dayEnd]
+  );
 
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [focusedSince, setFocusedSince] = useState<number | null>(null);
@@ -200,7 +225,7 @@ export default function CalendarPage() {
             const taskId = aid.slice('task-'.length);
             const iso = oid.slice('cell-'.length);
             const startAt = new Date(iso);
-            schedule.mutate({ taskId, startAt, durationMinutes: 30 });
+            scheduleWithPrefs({ taskId, startAt, durationMinutes: 30 });
             return;
           }
           if (aid.startsWith('event-') && oid.startsWith('cell-')) {
@@ -213,7 +238,7 @@ export default function CalendarPage() {
             const endAt = new Date(startAt.getTime() + durationMin * 60000);
             // optimistic update
             setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt, endAt } : x));
-            move.mutate({ eventId, startAt, endAt });
+            moveWithPrefs({ eventId, startAt, endAt });
             return;
           }
           if (aid.startsWith('event-resize-start-') && oid.startsWith('cell-')) {
@@ -228,7 +253,7 @@ export default function CalendarPage() {
             startAt = at;
             // optimistic update
             setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt } : x));
-            move.mutate({ eventId, startAt, endAt });
+            moveWithPrefs({ eventId, startAt, endAt });
             return;
           }
           if (aid.startsWith('event-resize-end-') && oid.startsWith('cell-')) {
@@ -243,7 +268,7 @@ export default function CalendarPage() {
             endAt = at;
             // optimistic update
             setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, endAt } : x));
-            move.mutate({ eventId, startAt, endAt });
+            moveWithPrefs({ eventId, startAt, endAt });
             return;
           }
         }}
@@ -267,7 +292,7 @@ export default function CalendarPage() {
             className="hidden"
             onClick={() => {
               const now = new Date();
-              schedule.mutate({ taskId: backlog[0].id, startAt: now, durationMinutes: 30 });
+              scheduleWithPrefs({ taskId: backlog[0].id, startAt: now, durationMinutes: 30 });
             }}
           >Simulate</button>
         )}
@@ -281,7 +306,7 @@ export default function CalendarPage() {
               const newStart = new Date(new Date(ev.startAt).getTime() + 60 * 60000);
               const durationMin = Math.max(1, Math.round((new Date(ev.endAt).getTime() - new Date(ev.startAt).getTime()) / 60000));
               const newEnd = new Date(newStart.getTime() + durationMin * 60000);
-              move.mutate({ eventId: ev.id, startAt: newStart, endAt: newEnd });
+              moveWithPrefs({ eventId: ev.id, startAt: newStart, endAt: newEnd });
             }}
           >Simulate Move</button>
         )}
@@ -292,14 +317,14 @@ export default function CalendarPage() {
             view={view}
             startOfWeek={baseMonday}
             onDropTask={(taskId, startAt) => {
-              schedule.mutate({ taskId, startAt, durationMinutes: 30 });
+              scheduleWithPrefs({ taskId, startAt, durationMinutes: 30 });
             }}
             onMoveEvent={(eventId, startAt) => {
               const ev = (eventsData as any[]).find((e) => e.id === eventId);
               if (!ev) return;
               const durationMin = Math.max(1, Math.round((new Date(ev.endAt).getTime() - new Date(ev.startAt).getTime()) / 60000));
               const endAt = new Date(startAt.getTime() + durationMin * 60000);
-              move.mutate({ eventId, startAt, endAt });
+              moveWithPrefs({ eventId, startAt, endAt });
             }}
             onResizeEvent={(eventId, edge, at) => {
               const ev = (eventsData as any[]).find((e) => e.id === eventId);
@@ -315,7 +340,7 @@ export default function CalendarPage() {
               }
               // optimistic update
               setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt, endAt } : x));
-              move.mutate({ eventId, startAt, endAt });
+              moveWithPrefs({ eventId, startAt, endAt });
             }}
             events={(eventsLocal as any[]).map((e) => {
               const t = (tasksData as any[]).find((x: any) => x.id === e.taskId);
@@ -335,7 +360,7 @@ export default function CalendarPage() {
             const startAt = new Date(ev.startAt);
             const newEnd = new Date(startAt.getTime() + 120 * 60000); // extend to 2h total
             setEventsLocal((prev) => prev.map((x) => x.id === ev.id ? { ...x, endAt: newEnd } : x));
-            move.mutate({ eventId: ev.id, startAt, endAt: newEnd });
+              moveWithPrefs({ eventId: ev.id, startAt, endAt: newEnd });
           }}
         >Simulate Resize</button>
       )}
