@@ -15,13 +15,27 @@ export function CalendarGrid(props: {
   const { view } = props;
   const days = getDays(view, props.startOfWeek);
 
-  // Special handling for month view - show a simple month grid
+  // Special handling for month view - show a simple month grid with events
   if (view === 'month') {
     const first = days[0];
     const startIdx = (first.getDay() + 6) % 7;
     const blanks = Array.from({ length: startIdx }, () => null as null);
     const cells: (Date | null)[] = [...blanks, ...days];
     const weekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const ymd = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    };
+    const eventsByDay = new Map<string, { id: string; title?: string }[]>();
+    for (const ev of props.events) {
+      const s = new Date(ev.startAt as any);
+      const key = ymd(s);
+      const list = eventsByDay.get(key) ?? [];
+      list.push({ id: ev.id, title: ev.title });
+      eventsByDay.set(key, list);
+    }
     return (
       <div className="border rounded overflow-hidden">
         <div className="grid grid-cols-7">
@@ -37,9 +51,22 @@ export function CalendarGrid(props: {
               <div
                 key={d.toDateString()}
                 data-testid="day-cell"
-                className="h-24 border p-2 text-xs"
+                className="h-24 border p-1 text-xs"
+                aria-label={`month-day-${ymd(d)}`}
               >
-                {d.getDate()}
+                <div className="font-medium mb-1 px-1">{d.getDate()}</div>
+                <div className="space-y-0.5">
+                  {(eventsByDay.get(ymd(d)) ?? []).map((ev) => (
+                    <div
+                      key={ev.id}
+                      data-testid="month-event"
+                      className="truncate rounded bg-blue-100 px-1 py-0.5 text-[10px] leading-3 text-blue-900 dark:bg-blue-900/40 dark:text-blue-100"
+                      title={ev.title || 'Event'}
+                    >
+                      {ev.title || 'Event'}
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div key={`blank-${i}`} className="h-24 border p-2 text-xs" />
