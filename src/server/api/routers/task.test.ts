@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TaskPriority } from '@prisma/client';
+import { TaskPriority, RecurrenceType } from '@prisma/client';
 
 // Define hoisted fns for module mock
 const hoisted = vi.hoisted(() => {
@@ -90,6 +90,38 @@ describe('taskRouter.create', () => {
     await taskRouter.createCaller({}).create({ title: 'a', priority: TaskPriority.HIGH });
     expect(hoisted.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ priority: TaskPriority.HIGH, title: 'a', dueAt: null, subject: null, notes: null }),
+    });
+  });
+
+  it('passes recurrence data to the database', async () => {
+    await taskRouter.createCaller({}).create({
+      title: 'a',
+      recurrenceType: RecurrenceType.DAILY,
+      recurrenceInterval: 2,
+    });
+    expect(hoisted.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        recurrenceType: RecurrenceType.DAILY,
+        recurrenceInterval: 2,
+      }),
+    });
+  });
+});
+
+describe('taskRouter.update recurrence', () => {
+  beforeEach(() => {
+    hoisted.update.mockClear();
+  });
+
+  it('updates recurrence fields', async () => {
+    await taskRouter.createCaller({}).update({
+      id: '1',
+      recurrenceType: RecurrenceType.WEEKLY,
+      recurrenceInterval: 3,
+    });
+    expect(hoisted.update).toHaveBeenCalledWith({
+      where: { id: '1' },
+      data: { recurrenceType: RecurrenceType.WEEKLY, recurrenceInterval: 3 },
     });
   });
 });
