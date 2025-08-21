@@ -56,3 +56,8 @@
 - Start with `npm install` and env setup.
 - Validate with `npm run lint` and `npm test` before commits.
 - Keep PRs small and incremental; prefer typed, tRPC-first changes.
+
+## Stats
+- The stats page adapts charts for light and dark themes using `next-themes`.
+- Maintain parallel color palettes for both themes and update tests when modifying visuals.
+- Visual regression snapshots live in `src/app/stats/page.test.tsx` and should cover light and dark modes.
