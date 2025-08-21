@@ -291,11 +291,13 @@ function getDays(view: ViewMode, base?: Date): Date[] {
     }
     return days;
   }
-  const year = baseDate.getFullYear();
-  const month = baseDate.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  // Use UTC year/month to avoid off-by-one when system time is set to UTC midnight
+  const year = baseDate.getUTCFullYear();
+  const month = baseDate.getUTCMonth();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const days: Date[] = [];
   for (let i = 1; i <= daysInMonth; i++) {
+    // Construct dates in local time for rendering but based on UTC Y-M
     days.push(new Date(year, month, i));
   }
   return days;
