@@ -118,6 +118,8 @@ model Task {
   dueAt         DateTime?
   recurrenceType RecurrenceType @default(NONE)
   recurrenceInterval Int @default(1)
+  recurrenceCount Int?
+  recurrenceUntil DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 

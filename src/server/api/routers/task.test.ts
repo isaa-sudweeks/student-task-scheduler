@@ -114,19 +114,24 @@ describe('taskRouter.create', () => {
     });
   });
 
-  it('passes recurrence data to the database', async () => {
-    await taskRouter.createCaller({}).create({
-      title: 'a',
-      recurrenceType: RecurrenceType.DAILY,
-      recurrenceInterval: 2,
-    });
-    expect(hoisted.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
+    it('passes recurrence data to the database', async () => {
+      const until = new Date('2024-01-01');
+      await taskRouter.createCaller({}).create({
+        title: 'a',
         recurrenceType: RecurrenceType.DAILY,
         recurrenceInterval: 2,
-      }),
+        recurrenceCount: 5,
+        recurrenceUntil: until,
+      });
+      expect(hoisted.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          recurrenceType: RecurrenceType.DAILY,
+          recurrenceInterval: 2,
+          recurrenceCount: 5,
+          recurrenceUntil: until,
+        }),
+      });
     });
-  });
 });
 
 describe('taskRouter.update recurrence', () => {
@@ -134,17 +139,25 @@ describe('taskRouter.update recurrence', () => {
     hoisted.update.mockClear();
   });
 
-  it('updates recurrence fields', async () => {
-    await taskRouter.createCaller({}).update({
-      id: '1',
-      recurrenceType: RecurrenceType.WEEKLY,
-      recurrenceInterval: 3,
+    it('updates recurrence fields', async () => {
+      const until = new Date('2024-02-02');
+      await taskRouter.createCaller({}).update({
+        id: '1',
+        recurrenceType: RecurrenceType.WEEKLY,
+        recurrenceInterval: 3,
+        recurrenceCount: 4,
+        recurrenceUntil: until,
+      });
+      expect(hoisted.update).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: {
+          recurrenceType: RecurrenceType.WEEKLY,
+          recurrenceInterval: 3,
+          recurrenceCount: 4,
+          recurrenceUntil: until,
+        },
+      });
     });
-    expect(hoisted.update).toHaveBeenCalledWith({
-      where: { id: '1' },
-      data: { recurrenceType: RecurrenceType.WEEKLY, recurrenceInterval: 3 },
-    });
-  });
 });
 
 describe('taskRouter.bulkUpdate', () => {
