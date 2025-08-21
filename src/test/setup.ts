@@ -53,6 +53,10 @@ vi.mock('@/server/api/react', () => {
         bulkUpdate: { useMutation: fn },
         bulkDelete: { useMutation: fn },
       },
+      user: {
+        get: { useQuery: () => ({ data: null, isLoading: false, error: undefined }) },
+        setTimezone: { useMutation: fn },
+      },
       event: {
         listRange: { useQuery: () => ({ data: [], isLoading: false }) },
         schedule: { useMutation: fn },
@@ -87,6 +91,7 @@ vi.mock('@prisma/client', () => {
   return {
     TaskPriority: { LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH' },
     TaskStatus: { TODO: 'TODO', IN_PROGRESS: 'IN_PROGRESS', DONE: 'DONE', CANCELLED: 'CANCELLED' },
+    RecurrenceType: { NONE: 'NONE', DAILY: 'DAILY', WEEKLY: 'WEEKLY', MONTHLY: 'MONTHLY' },
     Prisma: {},
   } as any;
 });

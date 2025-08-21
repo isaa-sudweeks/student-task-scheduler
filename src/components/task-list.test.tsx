@@ -84,6 +84,9 @@ vi.mock('@/server/api/react', () => ({
       bulkUpdate: { useMutation: () => ({ mutate: bulkUpdateMock, isPending: false, error: undefined }) },
       bulkDelete: { useMutation: () => ({ mutate: bulkDeleteMock, isPending: false, error: undefined }) },
     },
+    user: {
+      get: { useQuery: () => ({ data: null, isLoading: false, error: undefined }) },
+    },
   },
 }));
 

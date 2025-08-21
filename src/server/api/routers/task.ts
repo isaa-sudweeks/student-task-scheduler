@@ -19,18 +19,27 @@ export const taskRouter = router({
         })
         .optional()
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const filter = input?.filter ?? 'all';
       const subject = input?.subject;
       const tzOffsetMinutes = input?.tzOffsetMinutes ?? null;
       const nowUtc = new Date();
 
-      // Prefer explicit bounds from client when provided; otherwise compute from tz offset
+      // Prefer explicit bounds from client when provided; otherwise compute from user tz or offset
       let startUtc: Date;
       let endUtc: Date;
       if (input?.todayStart && input?.todayEnd) {
         startUtc = input.todayStart;
         endUtc = input.todayEnd;
+      } else if (ctx.session?.user?.timezone) {
+        const tz = ctx.session.user.timezone;
+        const nowTz = new Date(nowUtc.toLocaleString('en-US', { timeZone: tz }));
+        const startTz = new Date(nowTz);
+        startTz.setHours(0, 0, 0, 0);
+        const endTz = new Date(nowTz);
+        endTz.setHours(23, 59, 59, 999);
+        startUtc = new Date(startTz.toLocaleString('en-US', { timeZone: 'UTC' }));
+        endUtc = new Date(endTz.toLocaleString('en-US', { timeZone: 'UTC' }));
       } else {
         const nowClient = tzOffsetMinutes != null
           ? new Date(nowUtc.getTime() - tzOffsetMinutes * 60 * 1000)
