@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { render, screen, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
 vi.mock('@/server/api/react', () => ({
@@ -14,6 +14,11 @@ vi.mock('@/server/api/react', () => ({
   },
 }));
 
+let mockTheme = 'light';
+vi.mock('next-themes', () => ({
+  useTheme: () => ({ resolvedTheme: mockTheme }),
+}));
+
 import { api } from '@/server/api/react';
 import StatsPage from './page';
 
@@ -24,6 +29,7 @@ expect.extend(matchers);
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  mockTheme = 'light';
 });
 
 describe('StatsPage', () => {
@@ -55,5 +61,31 @@ describe('StatsPage', () => {
 
     render(<StatsPage />);
     expect(screen.getByText('Error loading tasks')).toBeInTheDocument();
+  });
+
+  describe('visual regression', () => {
+    const tasks = [
+      { id: '1', status: 'TODO', subject: 'Math' },
+      { id: '2', status: 'DONE', subject: 'Science' },
+    ];
+
+    beforeEach(() => {
+      useQueryMock.mockReturnValue({
+        data: tasks,
+        isLoading: false,
+      });
+    });
+
+    it('matches light theme snapshot', () => {
+      mockTheme = 'light';
+      const { container } = render(<StatsPage />);
+      expect(container).toMatchSnapshot();
+    });
+
+    it('matches dark theme snapshot', () => {
+      mockTheme = 'dark';
+      const { container } = render(<StatsPage />);
+      expect(container).toMatchSnapshot();
+    });
   });
 });

@@ -1,0 +1,161 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
+<div>
+  <main
+    class="space-y-6 text-neutral-900 dark:text-neutral-100"
+  >
+    <header>
+      <h1
+        class="text-2xl font-semibold"
+      >
+        Task Statistics
+      </h1>
+    </header>
+    <section
+      class="space-y-2"
+    >
+      <p>
+        Total Tasks: 
+        2
+      </p>
+      <p>
+        Completion Rate: 
+        50
+        %
+      </p>
+    </section>
+    <section
+      class="space-y-2"
+    >
+      <h2
+        class="text-xl font-medium"
+      >
+        By Status
+      </h2>
+      <ul>
+        <li>
+          TODO
+          : 
+          1
+        </li>
+        <li>
+          DONE
+          : 
+          1
+        </li>
+      </ul>
+      <div
+        data="[object Object],[object Object]"
+        height="200"
+        width="400"
+      />
+    </section>
+    <section
+      class="space-y-2"
+    >
+      <h2
+        class="text-xl font-medium"
+      >
+        By Subject
+      </h2>
+      <ul>
+        <li>
+          Math
+          : 
+          1
+        </li>
+        <li>
+          Science
+          : 
+          1
+        </li>
+      </ul>
+      <div
+        height="200"
+        width="400"
+      />
+    </section>
+  </main>
+</div>
+`;
+
+exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
+<div>
+  <main
+    class="space-y-6 text-neutral-900 dark:text-neutral-100"
+  >
+    <header>
+      <h1
+        class="text-2xl font-semibold"
+      >
+        Task Statistics
+      </h1>
+    </header>
+    <section
+      class="space-y-2"
+    >
+      <p>
+        Total Tasks: 
+        2
+      </p>
+      <p>
+        Completion Rate: 
+        50
+        %
+      </p>
+    </section>
+    <section
+      class="space-y-2"
+    >
+      <h2
+        class="text-xl font-medium"
+      >
+        By Status
+      </h2>
+      <ul>
+        <li>
+          TODO
+          : 
+          1
+        </li>
+        <li>
+          DONE
+          : 
+          1
+        </li>
+      </ul>
+      <div
+        data="[object Object],[object Object]"
+        height="200"
+        width="400"
+      />
+    </section>
+    <section
+      class="space-y-2"
+    >
+      <h2
+        class="text-xl font-medium"
+      >
+        By Subject
+      </h2>
+      <ul>
+        <li>
+          Math
+          : 
+          1
+        </li>
+        <li>
+          Science
+          : 
+          1
+        </li>
+      </ul>
+      <div
+        height="200"
+        width="400"
+      />
+    </section>
+  </main>
+</div>
+`;
