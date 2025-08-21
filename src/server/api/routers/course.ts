@@ -10,14 +10,17 @@ export const courseRouter = router({
     .input(
       z.object({
         title: z.string().min(1).max(200),
+        userId: z.string().min(1).optional(),
         term: z.string().max(100).optional(),
         color: z.string().max(50).optional(),
       })
     )
     .mutation(async ({ input }) => {
+      const userId = input.userId ?? process.env.DEFAULT_USER_ID ?? 'anon';
       return db.course.create({
         data: {
           title: input.title,
+          userId,
           term: input.term ?? null,
           color: input.color ?? null,
         },

@@ -25,7 +25,7 @@ describe('projectRouter.create', () => {
   });
   it('creates project with title and description', async () => {
     await projectRouter.createCaller({}).create({ title: 'p', description: 'd' });
-    expect(hoisted.create).toHaveBeenCalledWith({ data: { title: 'p', description: 'd' } });
+    expect(hoisted.create).toHaveBeenCalledWith({ data: { title: 'p', userId: 'anon', description: 'd' } });
   });
 });
 
@@ -38,4 +38,3 @@ describe('projectRouter.update', () => {
     expect(hoisted.update).toHaveBeenCalledWith({ where: { id: '1' }, data: { title: 'np', description: null } });
   });
 });
-

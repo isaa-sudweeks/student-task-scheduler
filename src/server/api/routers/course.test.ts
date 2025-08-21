@@ -25,7 +25,7 @@ describe('courseRouter.create', () => {
   });
   it('creates course with title and optional fields', async () => {
     await courseRouter.createCaller({}).create({ title: 'c', term: 'fall', color: 'red' });
-    expect(hoisted.create).toHaveBeenCalledWith({ data: { title: 'c', term: 'fall', color: 'red' } });
+    expect(hoisted.create).toHaveBeenCalledWith({ data: { title: 'c', userId: 'anon', term: 'fall', color: 'red' } });
   });
 });
 
@@ -38,4 +38,3 @@ describe('courseRouter.update', () => {
     expect(hoisted.update).toHaveBeenCalledWith({ where: { id: '1' }, data: { title: 'nc', term: null, color: null } });
   });
 });
-

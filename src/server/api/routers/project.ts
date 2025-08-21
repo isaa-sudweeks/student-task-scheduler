@@ -10,12 +10,14 @@ export const projectRouter = router({
     .input(
       z.object({
         title: z.string().min(1).max(200),
+        userId: z.string().min(1).optional(),
         description: z.string().max(1000).optional(),
       })
     )
     .mutation(async ({ input }) => {
+      const userId = input.userId ?? process.env.DEFAULT_USER_ID ?? 'anon';
       return db.project.create({
-        data: { title: input.title, description: input.description ?? null },
+        data: { title: input.title, userId, description: input.description ?? null },
       });
     }),
   update: publicProcedure
