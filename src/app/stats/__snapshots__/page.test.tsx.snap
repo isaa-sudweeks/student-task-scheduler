@@ -46,10 +46,13 @@ exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
         </li>
       </ul>
       <div
-        data="[object Object],[object Object]"
-        height="200"
-        width="400"
-      />
+        aspect="2"
+        width="100%"
+      >
+        <div
+          data="[object Object],[object Object]"
+        />
+      </div>
     </section>
     <section
       class="space-y-2"
@@ -72,9 +75,11 @@ exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
         </li>
       </ul>
       <div
-        height="200"
-        width="400"
-      />
+        aspect="2"
+        width="100%"
+      >
+        <div />
+      </div>
     </section>
   </main>
 </div>
@@ -126,10 +131,13 @@ exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
         </li>
       </ul>
       <div
-        data="[object Object],[object Object]"
-        height="200"
-        width="400"
-      />
+        aspect="2"
+        width="100%"
+      >
+        <div
+          data="[object Object],[object Object]"
+        />
+      </div>
     </section>
     <section
       class="space-y-2"
@@ -152,9 +160,11 @@ exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
         </li>
       </ul>
       <div
-        height="200"
-        width="400"
-      />
+        aspect="2"
+        width="100%"
+      >
+        <div />
+      </div>
     </section>
   </main>
 </div>
