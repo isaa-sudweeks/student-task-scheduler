@@ -63,3 +63,29 @@ describe('TaskModal due date editing', () => {
   });
 });
 
+describe('TaskModal accessibility', () => {
+  it('traps focus within the modal and focuses the first element initially', () => {
+    const onClose = vi.fn();
+    render(<TaskModal open mode="create" onClose={onClose} />);
+
+    const titleInput = screen.getByPlaceholderText('Task title');
+    expect(document.activeElement).toBe(titleInput);
+
+    const createButton = screen.getByText('Create');
+    createButton.focus();
+    fireEvent.keyDown(createButton, { key: 'Tab' });
+    expect(document.activeElement).toBe(titleInput);
+
+    fireEvent.keyDown(titleInput, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(createButton);
+  });
+
+  it('invokes onClose when Escape is pressed', () => {
+    const onClose = vi.fn();
+    render(<TaskModal open mode="create" onClose={onClose} />);
+
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
