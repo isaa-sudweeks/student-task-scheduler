@@ -44,5 +44,15 @@ Notes:
 - No postinstall hook (avoids prisma generate before schema copy in Docker).
 - TypeScript 5.7.x + tRPC 11.4.4 + ESLint 8.57 aligned with Next 14.2.x.
 
+## Testing
+
+Run linting and the test suites locally:
+
+```bash
+npm run lint
+CI=true npm test
+npm run e2e
+```
+
 ## Problems
 - Drag reordering does not persist: Dragging tasks to a new order updates the UI briefly, but the order does not stay after refresh.
