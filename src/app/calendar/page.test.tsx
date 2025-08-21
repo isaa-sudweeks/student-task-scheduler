@@ -94,7 +94,7 @@ describe('CalendarPage', () => {
     expect(screen.getByText(/Focusing:/i)).toBeInTheDocument();
 
     // Toggle off
-    fireEvent.keyDown(backlogItem, { key: ' ' });
+    fireEvent.keyDown(window, { key: ' ' });
     expect(focusStop).toHaveBeenCalledWith({ taskId: 't1' });
   });
 

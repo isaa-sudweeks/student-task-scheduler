@@ -22,6 +22,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Calendar, Tag, GripVertical } from "lucide-react";
 import { TaskModal } from "@/components/task-modal";
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
+import { Button } from "@/components/ui/button";
 
 type Task = RouterOutputs["task"]["list"][number];
 type Priority = "LOW" | "MEDIUM" | "HIGH";
@@ -108,6 +109,10 @@ export function TaskList() {
     }
   }, [tasks.data]);
 
+  useEffect(() => {
+    setSelected((prev) => new Set([...prev].filter((id) => items.includes(id))));
+  }, [items]);
+
   const totalTasks = tasks.data?.length ?? 0;
   const archivedCount = archived.data?.length ?? 0;
 
@@ -170,6 +175,32 @@ export function TaskList() {
   );
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const bulkUpdate = api.task.bulkUpdate.useMutation({
+    onSuccess: async () => {
+      setSelected(new Set());
+      await utils.task.list.invalidate();
+    },
+    onError: (e) => toast.error(e.message || "Failed to update tasks"),
+  });
+
+  const bulkDelete = api.task.bulkDelete.useMutation({
+    onSuccess: async () => {
+      setSelected(new Set());
+      await utils.task.list.invalidate();
+    },
+    onError: (e) => toast.error(e.message || "Failed to delete tasks"),
+  });
 
   const parentRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
@@ -214,6 +245,17 @@ export function TaskList() {
         onClick={() => setEditingTask(t)}
       >
         <div className="flex items-start gap-3 flex-1">
+          <input
+            type="checkbox"
+            aria-label="Select task"
+            className="mt-1"
+            checked={selected.has(t.id)}
+            onChange={(e) => {
+              e.stopPropagation();
+              toggleSelected(t.id);
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
           <button
             type="button"
             aria-label="Drag to reorder"
@@ -338,6 +380,29 @@ export function TaskList() {
       )}
       {setDue.error && (
         <p role="alert" className="text-red-500">{setDue.error.message}</p>
+      )}
+
+      {selected.size > 0 && (
+        <div data-testid="bulk-actions" className="flex gap-2">
+          <Button
+            onClick={() =>
+              bulkUpdate.mutate({
+                ids: Array.from(selected),
+                status: "DONE",
+              })
+            }
+          >
+            Mark done
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() =>
+              bulkDelete.mutate({ ids: Array.from(selected) })
+            }
+          >
+            Delete
+          </Button>
+        </div>
       )}
 
       <TaskModal

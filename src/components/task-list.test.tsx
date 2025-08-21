@@ -49,6 +49,8 @@ const defaultQuery = {
 const useQueryMock = vi.fn().mockReturnValue(defaultQuery);
 const setStatusMock = vi.fn();
 const reorderMutate = vi.fn();
+const bulkUpdateMock = vi.fn();
+const bulkDeleteMock = vi.fn();
 const virtualizerMock = vi
   .fn()
   .mockReturnValue({ getTotalSize: () => 0, getVirtualItems: () => [] });
@@ -79,6 +81,8 @@ vi.mock('@/server/api/react', () => ({
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       setStatus: { useMutation: () => ({ mutate: setStatusMock, isPending: false, error: undefined }) },
       reorder: { useMutation: () => ({ mutate: reorderMutate, isPending: false, error: undefined }) },
+      bulkUpdate: { useMutation: () => ({ mutate: bulkUpdateMock, isPending: false, error: undefined }) },
+      bulkDelete: { useMutation: () => ({ mutate: bulkDeleteMock, isPending: false, error: undefined }) },
     },
   },
 }));
@@ -93,6 +97,8 @@ afterEach(() => {
   sortableItemsCalls.length = 0;
   setStatusMock.mockClear();
   reorderMutate.mockClear();
+  bulkUpdateMock.mockClear();
+  bulkDeleteMock.mockClear();
   virtualizerMock.mockReset();
   virtualizerMock.mockReturnValue({ getTotalSize: () => 0, getVirtualItems: () => [] });
   triggerDragEnd = undefined;
@@ -247,5 +253,24 @@ describe('TaskList', () => {
         .map((li) => li.textContent);
       expect(order).toEqual(initialOrder);
     });
+  });
+
+  it('shows bulk actions and performs bulk update', () => {
+    render(<TaskList />);
+    const checkboxes = screen.getAllByRole('checkbox');
+    fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[1]);
+    expect(screen.getByTestId('bulk-actions')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Mark done'));
+    expect(bulkUpdateMock).toHaveBeenCalledWith({ ids: ['1', '2'], status: 'DONE' });
+  });
+
+  it('deletes selected tasks via bulk delete', () => {
+    render(<TaskList />);
+    const checkboxes = screen.getAllByRole('checkbox');
+    fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[1]);
+    fireEvent.click(screen.getByText('Delete'));
+    expect(bulkDeleteMock).toHaveBeenCalledWith({ ids: ['1', '2'] });
   });
 });

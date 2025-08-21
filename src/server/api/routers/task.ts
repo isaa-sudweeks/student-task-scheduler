@@ -161,6 +161,20 @@ export const taskRouter = router({
     .mutation(async ({ input }) => {
       return db.task.update({ where: { id: input.id }, data: { status: input.status } });
     }),
+  bulkUpdate: publicProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string().min(1)),
+        status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]),
+      })
+    )
+    .mutation(async ({ input }) => {
+      await db.task.updateMany({
+        where: { id: { in: input.ids } },
+        data: { status: input.status },
+      });
+      return { success: true };
+    }),
   delete: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input }) => {
@@ -171,6 +185,16 @@ export const taskRouter = router({
         db.task.delete({ where: { id: input.id } }),
       ]);
       return deleted;
+    }),
+  bulkDelete: publicProcedure
+    .input(z.object({ ids: z.array(z.string().min(1)) }))
+    .mutation(async ({ input }) => {
+      await db.$transaction([
+        db.reminder.deleteMany({ where: { taskId: { in: input.ids } } }),
+        db.event.deleteMany({ where: { taskId: { in: input.ids } } }),
+        db.task.deleteMany({ where: { id: { in: input.ids } } }),
+      ]);
+      return { success: true };
     }),
   reorder: publicProcedure
     .input(z.object({ ids: z.array(z.string().min(1)) }))

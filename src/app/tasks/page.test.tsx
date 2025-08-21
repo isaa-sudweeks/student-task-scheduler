@@ -30,6 +30,8 @@ vi.mock('@/server/api/react', () => ({
       updateTitle: { useMutation: () => ({ mutate: vi.fn() }) },
       setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: { message: 'Failed to update status' } }) },
       reorder: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      bulkUpdate: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      bulkDelete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
     },
   },
 }));
