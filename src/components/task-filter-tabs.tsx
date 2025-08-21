@@ -1,6 +1,7 @@
 import React from 'react';
 import { api } from '@/server/api/react';
-import { Tag, ChevronDown } from 'lucide-react';
+import { Tag, ChevronDown, Flag } from 'lucide-react';
+import type { TaskPriority } from '@prisma/client';
 
 export type TaskFilter = 'all' | 'overdue' | 'today' | 'archive';
 
@@ -9,6 +10,8 @@ interface TaskFilterTabsProps {
   onChange: (value: TaskFilter) => void;
   subject?: string | null;
   onSubjectChange?: (value: string | null) => void;
+  priority?: TaskPriority | null;
+  onPriorityChange?: (value: TaskPriority | null) => void;
 }
 
 export function TaskFilterTabs({
@@ -16,6 +19,8 @@ export function TaskFilterTabs({
   onChange,
   subject,
   onSubjectChange,
+  priority,
+  onPriorityChange,
 }: TaskFilterTabsProps) {
   const options: { value: TaskFilter; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -67,6 +72,24 @@ export function TaskFilterTabs({
                 {s}
               </option>
             ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        </div>
+      )}
+      {onPriorityChange && (
+        <div className="relative ml-2">
+          <Flag className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <select
+            aria-label="Priority filter"
+            title="Filter by priority"
+            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            value={priority ?? ''}
+            onChange={(e) => onPriorityChange(e.target.value ? (e.target.value as TaskPriority) : null)}
+          >
+            <option value="">All priorities</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
           </select>
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
         </div>

@@ -11,6 +11,7 @@ export const taskRouter = router({
         .object({
           filter: z.enum(['all', 'overdue', 'today', 'archive']).optional(),
           subject: z.string().optional(),
+          priority: z.nativeEnum(TaskPriority).optional(),
           // Minutes to add to UTC to get client local time offset (Date.getTimezoneOffset style)
           tzOffsetMinutes: z.number().int().optional(),
           // Optional explicit client-local day bounds as absolute instants
@@ -22,6 +23,7 @@ export const taskRouter = router({
     .query(async ({ input }) => {
       const filter = input?.filter ?? 'all';
       const subject = input?.subject;
+      const priority = input?.priority;
       const tzOffsetMinutes = input?.tzOffsetMinutes ?? null;
       const nowUtc = new Date();
 
@@ -62,6 +64,9 @@ export const taskRouter = router({
 
       if (subject) {
         where = { ...where, subject };
+      }
+      if (priority) {
+        where = { ...where, priority };
       }
 
       const dueAtOrder: Prisma.TaskOrderByWithRelationInput = {

@@ -40,8 +40,8 @@ vi.mock('@dnd-kit/sortable', async () => {
 
 const defaultQuery = {
   data: [
-    { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math' },
-    { id: '2', title: 'Test 2', dueAt: null, status: 'TODO', subject: 'science' },
+    { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math', priority: 'HIGH' },
+    { id: '2', title: 'Test 2', dueAt: null, status: 'TODO', subject: 'science', priority: 'LOW' },
   ],
   isLoading: false,
   error: undefined,
@@ -213,6 +213,14 @@ describe('TaskList', () => {
     render(<TaskList />);
     const select = screen.getByLabelText('Subject filter');
     fireEvent.change(select, { target: { value: 'math' } });
+    expect(screen.getByText('Test 1')).toBeInTheDocument();
+    expect(screen.queryByText('Test 2')).not.toBeInTheDocument();
+  });
+
+  it('filters tasks by priority', () => {
+    render(<TaskList />);
+    const select = screen.getByLabelText('Priority filter');
+    fireEvent.change(select, { target: { value: 'HIGH' } });
     expect(screen.getByText('Test 1')).toBeInTheDocument();
     expect(screen.queryByText('Test 2')).not.toBeInTheDocument();
   });
