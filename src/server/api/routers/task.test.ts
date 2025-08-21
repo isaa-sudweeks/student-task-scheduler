@@ -72,6 +72,21 @@ describe('taskRouter.list ordering', () => {
     const arg = hoisted.findMany.mock.calls[0][0];
     expect(arg.where).toEqual({ priority: TaskPriority.HIGH });
   });
+
+  it('uses session timezone for today range when available', async () => {
+    await taskRouter.createCaller({ session: { user: { timezone: 'America/Denver' } } as any }).list({ filter: 'today' });
+    const arg = hoisted.findMany.mock.calls[0][0];
+    const nowUtc = new Date();
+    const tz = 'America/Denver';
+    const nowTz = new Date(nowUtc.toLocaleString('en-US', { timeZone: tz }));
+    const startTz = new Date(nowTz);
+    startTz.setHours(0, 0, 0, 0);
+    const endTz = new Date(nowTz);
+    endTz.setHours(23, 59, 59, 999);
+    const startUtc = new Date(startTz.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const endUtc = new Date(endTz.toLocaleString('en-US', { timeZone: 'UTC' }));
+    expect(arg.where).toEqual({ dueAt: { gte: startUtc, lte: endUtc } });
+  });
 });
 
 describe('taskRouter.reorder', () => {

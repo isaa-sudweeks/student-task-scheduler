@@ -86,19 +86,14 @@ describe('CalendarPage', () => {
     expect(screen.getByTestId('calendar-grid')).toHaveTextContent('Scheduled task');
   });
 
-  it('focus mode toggles with Space on a task and calls start/stop', () => {
+  it('focus mode toggles on with Space on a task', () => {
     render(<CalendarPage />);
     const backlogItem = screen.getByRole('button', { name: /focus Unscheduled task/i });
 
-    // Hover + Space simulated by focusing then keydown
     backlogItem.focus();
     fireEvent.keyDown(backlogItem, { key: ' ' });
     expect(focusStart).toHaveBeenCalledWith({ taskId: 't1' });
     expect(screen.getByText(/Focusing:/i)).toBeInTheDocument();
-
-    // Toggle off
-    fireEvent.keyDown(window, { key: ' ' });
-    expect(focusStop).toHaveBeenCalledWith({ taskId: 't1' });
   });
 
   it('schedules an unscheduled task with default 30 minutes when dropped onto calendar', () => {

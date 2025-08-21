@@ -1,11 +1,13 @@
 "use client";
 import React from "react";
 import ThemeToggle from "@/components/theme-toggle";
+import { api } from "@/server/api/react";
+import { toast } from "react-hot-toast";
 
 export default function SettingsPage() {
+  // Day window (localStorage)
   const [startHour, setStartHour] = React.useState(8);
   const [endHour, setEndHour] = React.useState(18);
-
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const storedStart = window.localStorage.getItem("dayWindowStartHour");
@@ -13,24 +15,41 @@ export default function SettingsPage() {
     if (storedStart) setStartHour(Number(storedStart));
     if (storedEnd) setEndHour(Number(storedEnd));
   }, []);
-
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem("dayWindowStartHour", String(startHour));
   }, [startHour]);
-
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem("dayWindowEndHour", String(endHour));
   }, [endHour]);
 
+  // User timezone (tRPC)
+  const { data: user } = api.user.get.useQuery();
+  const [tz, setTz] = React.useState(
+    user?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  );
+  React.useEffect(() => {
+    if (user?.timezone) setTz(user.timezone);
+  }, [user?.timezone]);
+  const update = api.user.setTimezone.useMutation({
+    onSuccess: () => toast.success("Timezone updated"),
+    onError: (e) => toast.error(e.message || "Failed to update timezone"),
+  });
+  const zones = React.useMemo(
+    () => (Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : [tz]),
+    [tz]
+  );
+
   return (
-    <main className="space-y-6">
+    <main className="space-y-6 p-4">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Settings</h1>
         <ThemeToggle />
       </header>
-      <div className="space-y-4">
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-medium">Day Window</h2>
         <div className="flex items-center gap-2">
           <label htmlFor="day-start" className="w-48">
             Day start hour
@@ -59,7 +78,40 @@ export default function SettingsPage() {
             className="w-20 rounded border px-2 py-1"
           />
         </div>
-      </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Timezone</h2>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            update.mutate({ timezone: tz });
+          }}
+          className="space-y-2 max-w-md"
+        >
+          <label className="block">
+            <span className="text-sm">Timezone</span>
+            <select
+              value={tz}
+              onChange={(e) => setTz(e.target.value)}
+              className="mt-1 block w-full border p-1 rounded"
+            >
+              {zones.map((z) => (
+                <option key={z} value={z}>
+                  {z}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="submit"
+            className="px-3 py-1 border rounded"
+            disabled={update.isPending}
+          >
+            Save
+          </button>
+        </form>
+      </section>
     </main>
   );
 }

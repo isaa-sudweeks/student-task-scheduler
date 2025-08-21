@@ -35,6 +35,9 @@ vi.mock('@/server/api/react', () => ({
     },
     project: { list: { useQuery: () => ({ data: [] }) } },
     course: { list: { useQuery: () => ({ data: [] }) } },
+    user: {
+      get: { useQuery: () => ({ data: null, isLoading: false }) },
+    },
   },
 }));
 

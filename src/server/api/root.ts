@@ -5,6 +5,7 @@ import { eventRouter } from './routers/event';
 import { focusRouter } from './routers/focus';
 import { projectRouter } from './routers/project';
 import { courseRouter } from './routers/course';
+import { userRouter } from './routers/user';
 
 export const appRouter = router({
   task: taskRouter,
@@ -12,6 +13,7 @@ export const appRouter = router({
   focus: focusRouter,
   project: projectRouter,
   course: courseRouter,
+  user: userRouter,
 });
 
 export type AppRouter = typeof appRouter;

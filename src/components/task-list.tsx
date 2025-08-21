@@ -39,24 +39,27 @@ export function TaskList() {
   const [priority, setPriority] = useState<Priority | null>(null);
   const [query, setQuery] = useState("");
   const utils = api.useUtils();
+  const user = api.user.get.useQuery();
 
   const queryInput = React.useMemo(() => {
-    const tzOffsetMinutes = new Date().getTimezoneOffset();
-    const now = new Date();
-    const startLocal = new Date(now);
-    startLocal.setHours(0, 0, 0, 0);
-    const endLocal = new Date(now);
-    endLocal.setHours(23, 59, 59, 999);
-    // Pass both explicit bounds and offset (offset kept for backward compatibility/tests)
-    return {
+    const base: any = {
       filter,
       subject: subject ?? undefined,
       priority: priority ?? undefined,
-      tzOffsetMinutes,
-      todayStart: startLocal,
-      todayEnd: endLocal,
-    } as const;
-  }, [filter, subject, priority]);
+    };
+    if (!user.data?.timezone) {
+      const tzOffsetMinutes = new Date().getTimezoneOffset();
+      const now = new Date();
+      const startLocal = new Date(now);
+      startLocal.setHours(0, 0, 0, 0);
+      const endLocal = new Date(now);
+      endLocal.setHours(23, 59, 59, 999);
+      base.tzOffsetMinutes = tzOffsetMinutes;
+      base.todayStart = startLocal;
+      base.todayEnd = endLocal;
+    }
+    return base;
+  }, [filter, subject, priority, user.data?.timezone]);
 
   const PAGE_SIZE = 20;
   const tasks = api.task.list.useInfiniteQuery(
@@ -69,15 +72,15 @@ export function TaskList() {
     }
   );
   // Query archived count for header stats
-  const archivedQueryInput = React.useMemo(
-    () => ({
-      filter: "archive" as const,
-      tzOffsetMinutes: queryInput.tzOffsetMinutes,
-      todayStart: queryInput.todayStart,
-      todayEnd: queryInput.todayEnd,
-    }),
-    [queryInput]
-  );
+  const archivedQueryInput = React.useMemo(() => {
+    const base: any = { filter: "archive" as const };
+    if (!user.data?.timezone) {
+      base.tzOffsetMinutes = (queryInput as any).tzOffsetMinutes;
+      base.todayStart = (queryInput as any).todayStart;
+      base.todayEnd = (queryInput as any).todayEnd;
+    }
+    return base;
+  }, [queryInput, user.data?.timezone]);
   const archived = api.task.list.useQuery(archivedQueryInput);
   const flatTasks = React.useMemo(
     () => tasks.data?.pages.flat() ?? [],
