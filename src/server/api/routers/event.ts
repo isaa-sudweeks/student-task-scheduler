@@ -19,10 +19,17 @@ export const eventRouter = router({
       return db.event.findMany({ where });
     }),
   schedule: publicProcedure
-    .input(z.object({ taskId: z.string().min(1), startAt: z.date(), durationMinutes: z.number().int().positive() }))
+    .input(
+      z.object({
+        taskId: z.string().min(1),
+        startAt: z.date(),
+        durationMinutes: z.number().int().positive(),
+        dayWindowStartHour: z.number().int().min(0).max(23).default(8),
+        dayWindowEndHour: z.number().int().min(0).max(23).default(18),
+      })
+    )
     .mutation(async ({ input }) => {
-      const duration = input.durationMinutes;
-      const desiredStart = input.startAt;
+      const { durationMinutes: duration, startAt: desiredStart, dayWindowStartHour, dayWindowEndHour } = input;
 
       const sameDayStart = new Date(desiredStart);
       sameDayStart.setHours(0, 0, 0, 0);
@@ -44,8 +51,8 @@ export const eventRouter = router({
       const slot = findNonOverlappingSlot({
         desiredStart,
         durationMinutes: duration,
-        dayWindowStartHour: 8,
-        dayWindowEndHour: 18,
+        dayWindowStartHour,
+        dayWindowEndHour,
         existing: intervals,
         stepMinutes: 15,
       });
@@ -57,7 +64,15 @@ export const eventRouter = router({
       return db.event.create({ data: { taskId: input.taskId, startAt: slot.startAt, endAt: slot.endAt } });
     }),
   move: publicProcedure
-    .input(z.object({ eventId: z.string().min(1), startAt: z.date(), endAt: z.date() }))
+    .input(
+      z.object({
+        eventId: z.string().min(1),
+        startAt: z.date(),
+        endAt: z.date(),
+        dayWindowStartHour: z.number().int().min(0).max(23).default(8),
+        dayWindowEndHour: z.number().int().min(0).max(23).default(18),
+      })
+    )
     .mutation(async ({ input }) => {
       if (input.endAt <= input.startAt) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'End must be after start' });
@@ -86,8 +101,8 @@ export const eventRouter = router({
         const slot = findNonOverlappingSlot({
           desiredStart: input.startAt,
           durationMinutes: durationMin,
-          dayWindowStartHour: 8,
-          dayWindowEndHour: 18,
+          dayWindowStartHour: input.dayWindowStartHour,
+          dayWindowEndHour: input.dayWindowEndHour,
           existing: intervals,
           stepMinutes: 15,
         });

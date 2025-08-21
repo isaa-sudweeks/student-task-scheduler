@@ -9,8 +9,8 @@ let dndDragEnd: ((e: any) => void) | undefined;
 const transforms = new Map<string, (t: any) => void>();
 const monitors: any[] = [];
 
-vi.mock('@dnd-kit/core', () => {
-  const React = require('react');
+vi.mock('@dnd-kit/core', async () => {
+  const React = await import('react');
   return {
     DndContext: ({ children, onDragEnd }: any) => {
       dndDragEnd = onDragEnd;
@@ -131,7 +131,11 @@ describe('CalendarGrid interactions', () => {
       { id: 'a', taskId: 't1', startAt: '2099-01-01T09:00:00.000Z', endAt: '2099-01-01T10:00:00.000Z', title: 'Event A' },
       { id: 'b', taskId: 't2', startAt: '2099-01-01T09:00:00.000Z', endAt: '2099-01-01T10:30:00.000Z', title: 'Event B' },
     ];
-    render(<CalendarGrid view="day" events={events} onDropTask={() => {}} />);
+    render(
+      <DndContext>
+        <CalendarGrid view="day" events={events} onDropTask={() => {}} />
+      </DndContext>
+    );
     const aBox = screen.getByText('Event A');
     const bBox = screen.getByText('Event B');
     expect(aBox).toBeInTheDocument();
