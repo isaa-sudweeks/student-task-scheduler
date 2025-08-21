@@ -84,10 +84,11 @@ vi.mock('recharts', () => {
 });
 
 // Mock Prisma enums to avoid requiring generated client in unit tests
-vi.mock('@prisma/client', () => {
-  return {
-    TaskPriority: { LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH' },
-    TaskStatus: { TODO: 'TODO', IN_PROGRESS: 'IN_PROGRESS', DONE: 'DONE', CANCELLED: 'CANCELLED' },
-    Prisma: {},
-  } as any;
-});
+  vi.mock('@prisma/client', () => {
+    return {
+      TaskPriority: { LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH' },
+      TaskStatus: { TODO: 'TODO', IN_PROGRESS: 'IN_PROGRESS', DONE: 'DONE', CANCELLED: 'CANCELLED' },
+      RecurrenceType: { DAILY: 'DAILY', WEEKLY: 'WEEKLY', MONTHLY: 'MONTHLY' },
+      Prisma: {},
+    } as any;
+  });

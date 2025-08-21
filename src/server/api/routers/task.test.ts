@@ -65,6 +65,13 @@ describe('taskRouter.list ordering', () => {
     const arg = hoisted.findMany.mock.calls[0][0];
     expect(arg.where).toEqual({ subject: 'math' });
   });
+
+  it('filters by priority when provided', async () => {
+    await taskRouter.createCaller({}).list({ filter: 'all', priority: TaskPriority.HIGH });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+    const arg = hoisted.findMany.mock.calls[0][0];
+    expect(arg.where).toEqual({ priority: TaskPriority.HIGH });
+  });
 });
 
 describe('taskRouter.reorder', () => {

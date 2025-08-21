@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { TaskFilterTabs } from './task-filter-tabs';
+import { TaskPriority } from '@prisma/client';
 
 vi.mock('@/server/api/react', () => ({
   api: {
@@ -47,5 +48,20 @@ describe('TaskFilterTabs', () => {
     fireEvent.change(select, { target: { value: 'math' } });
     expect(handleSubject).toHaveBeenCalledWith('math');
     expect(screen.getByRole('option', { name: 'science' })).toBeInTheDocument();
+  });
+
+  it('renders priority options and calls onPriorityChange', () => {
+    const handlePriority = vi.fn();
+    render(
+      <TaskFilterTabs
+        value="all"
+        onChange={() => {}}
+        priority={null}
+        onPriorityChange={handlePriority}
+      />
+    );
+    const select = screen.getByLabelText('Priority filter');
+    fireEvent.change(select, { target: { value: TaskPriority.HIGH } });
+    expect(handlePriority).toHaveBeenCalledWith(TaskPriority.HIGH);
   });
 });

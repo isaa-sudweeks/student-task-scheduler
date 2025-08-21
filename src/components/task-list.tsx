@@ -30,6 +30,7 @@ type Priority = "LOW" | "MEDIUM" | "HIGH";
 export function TaskList() {
   const [filter, setFilter] = useState<"all" | "overdue" | "today" | "archive">("all");
   const [subject, setSubject] = useState<string | null>(null);
+  const [priority, setPriority] = useState<Priority | null>(null);
   const [query, setQuery] = useState("");
   const utils = api.useUtils();
 
@@ -44,11 +45,12 @@ export function TaskList() {
     return {
       filter,
       subject: subject ?? undefined,
+      priority: priority ?? undefined,
       tzOffsetMinutes,
       todayStart: startLocal,
       todayEnd: endLocal,
     } as const;
-  }, [filter, subject]);
+  }, [filter, subject, priority]);
 
   const PAGE_SIZE = 20;
   const tasks = api.task.list.useInfiniteQuery(
@@ -175,9 +177,10 @@ export function TaskList() {
       orderedTasks.filter(
         (t) =>
           t.title.toLowerCase().includes(query.toLowerCase()) &&
-          (!subject || t.subject === subject)
+          (!subject || t.subject === subject) &&
+          (!priority || t.priority === priority)
       ),
-    [orderedTasks, query, subject]
+    [orderedTasks, query, subject, priority]
   );
   // Compute the visible ids in the current order; feed to SortableContext
   const visibleIds = React.useMemo(
@@ -345,6 +348,8 @@ export function TaskList() {
           onChange={setFilter}
           subject={subject}
           onSubjectChange={setSubject}
+          priority={priority}
+          onPriorityChange={setPriority}
         />
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {archivedCount} archived
