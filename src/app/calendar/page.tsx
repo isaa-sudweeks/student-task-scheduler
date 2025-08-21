@@ -26,22 +26,27 @@ export default function CalendarPage() {
   // Tasks and events for the current visible range (simplified for now)
   const tasksQ = api.task.list.useQuery(undefined as any);
   const apiAny = api as any;
-  const eventsQ = apiAny.event?.listRange?.useQuery?.(undefined) ?? { data: [] };
+  const eventsQ = apiAny.event?.listRange?.useQuery?.(undefined);
 
-  const tasks = tasksQ.data ?? [];
+  const tasksData = tasksQ.data ?? [];
+  const eventsData = (eventsQ as any)?.data ?? [];
   const [eventsLocal, setEventsLocal] = useState<any[]>([]);
   const events = (eventsQ as any).data ?? [];
 
   // Keep local, optimistic copy of events for immediate UI updates
   useEffect(() => {
-    setEventsLocal(events as any[]);
-  }, [eventsQ.data]);
+    setEventsLocal((((eventsQ as any)?.data ?? []) as any[]));
+  }, [eventsQ]);
 
-  const scheduledTaskIds = new Set<string>(events.map((e: any) => e.taskId));
-  const backlog = useMemo(() => tasks.filter((t: any) => !scheduledTaskIds.has(t.id)), [tasks, scheduledTaskIds]);
+  const backlog = useMemo(() => {
+    const evs = (((eventsQ as any)?.data ?? []) as any[]);
+    const tsks = ((tasksQ.data ?? []) as any[]);
+    const scheduledTaskIds = new Set<string>(evs.map((e: any) => e.taskId));
+    return tsks.filter((t: any) => !scheduledTaskIds.has(t.id));
+  }, [tasksQ.data, eventsQ]);
 
   // Choose a base week to render: prefer the first event's week for stability in tests
-  const baseDate = (events as any[])?.[0]?.startAt ? new Date((events as any[])[0].startAt) : new Date();
+  const baseDate = (eventsData as any[])?.[0]?.startAt ? new Date((eventsData as any[])[0].startAt) : new Date();
   const baseMonday = new Date(baseDate);
   const day = baseMonday.getDay();
   const diff = (day + 6) % 7;
@@ -51,12 +56,14 @@ export default function CalendarPage() {
     onSuccess: async () => {
       try { await utils?.focus?.status?.invalidate?.(); } catch {}
     },
-  }) ?? { mutate: () => {} };
+  });
   const focusStop = apiAny.focus?.stop?.useMutation?.({
     onSuccess: async () => {
       try { await utils?.focus?.status?.invalidate?.(); } catch {}
     },
-  }) ?? { mutate: () => {} };
+  });
+  const focusStartMutate = React.useMemo(() => focusStart?.mutate ?? (() => {}), [focusStart]);
+  const focusStopMutate = React.useMemo(() => focusStop?.mutate ?? (() => {}), [focusStop]);
   const schedule = apiAny.event?.schedule?.useMutation?.({
     onSuccess: async () => {
       try {
@@ -92,26 +99,26 @@ export default function CalendarPage() {
   useEffect(() => {
     return () => {
       if (focusedTaskId) {
-        try { (focusStop as any).mutate?.({ taskId: focusedTaskId }); } catch {}
+        try { focusStopMutate({ taskId: focusedTaskId }); } catch {}
       }
     };
-  }, [focusedTaskId]);
+  }, [focusedTaskId, focusStopMutate]);
 
-  function toggleFocus(taskId: string) {
+  const toggleFocus = React.useCallback((taskId: string) => {
     if (focusedTaskId === taskId) {
       // store elapsed so resuming continues
       elapsedByTaskRef.current[taskId] = elapsed;
       setFocusedTaskId(null);
       setFocusedSince(null);
-      focusStop.mutate({ taskId });
+      focusStopMutate({ taskId });
     } else {
       setFocusedTaskId(taskId);
       const prev = elapsedByTaskRef.current[taskId] ?? 0;
       setFocusedSince(Date.now() - prev);
       setElapsed(prev);
-      focusStart.mutate({ taskId });
+      focusStartMutate({ taskId });
     }
-  }
+  }, [focusedTaskId, elapsed, focusStartMutate, focusStopMutate]);
 
   // Global key handler to support Space toggling focus on a focused backlog task button
   useEffect(() => {
@@ -127,7 +134,7 @@ export default function CalendarPage() {
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [focusedTaskId, elapsed]);
+  }, [toggleFocus]);
 
   const ViewTabs = (
     <div role="tablist" aria-label="Calendar view" className="flex gap-2">
@@ -264,13 +271,13 @@ export default function CalendarPage() {
             }}
           >Simulate</button>
         )}
-        {(events as any[])?.[0] && (
+        {(eventsData as any[])?.[0] && (
           <button
             type="button"
             aria-label="simulate-move-event"
             className="hidden"
             onClick={() => {
-              const ev = (events as any[])[0];
+              const ev = (eventsData as any[])[0];
               const newStart = new Date(new Date(ev.startAt).getTime() + 60 * 60000);
               const durationMin = Math.max(1, Math.round((new Date(ev.endAt).getTime() - new Date(ev.startAt).getTime()) / 60000));
               const newEnd = new Date(newStart.getTime() + durationMin * 60000);
@@ -288,14 +295,14 @@ export default function CalendarPage() {
               schedule.mutate({ taskId, startAt, durationMinutes: 30 });
             }}
             onMoveEvent={(eventId, startAt) => {
-              const ev = (events as any[]).find((e) => e.id === eventId);
+              const ev = (eventsData as any[]).find((e) => e.id === eventId);
               if (!ev) return;
               const durationMin = Math.max(1, Math.round((new Date(ev.endAt).getTime() - new Date(ev.startAt).getTime()) / 60000));
               const endAt = new Date(startAt.getTime() + durationMin * 60000);
               move.mutate({ eventId, startAt, endAt });
             }}
             onResizeEvent={(eventId, edge, at) => {
-              const ev = (events as any[]).find((e) => e.id === eventId);
+              const ev = (eventsData as any[]).find((e) => e.id === eventId);
               if (!ev) return;
               let startAt = new Date(ev.startAt);
               let endAt = new Date(ev.endAt);
@@ -311,7 +318,7 @@ export default function CalendarPage() {
               move.mutate({ eventId, startAt, endAt });
             }}
             events={(eventsLocal as any[]).map((e) => {
-              const t = tasks.find((x: any) => x.id === e.taskId);
+              const t = (tasksData as any[]).find((x: any) => x.id === e.taskId);
               return { ...e, title: t?.title };
             })}
           />

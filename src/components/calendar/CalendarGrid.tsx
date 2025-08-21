@@ -19,8 +19,8 @@ export function CalendarGrid(props: {
   if (view === 'month') {
     const first = days[0];
     const startIdx = (first.getDay() + 6) % 7;
-    const blanks = Array.from({ length: startIdx });
-    const cells = [...blanks, ...days];
+    const blanks = Array.from({ length: startIdx }, () => null as null);
+    const cells: (Date | null)[] = [...blanks, ...days];
     const weekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return (
       <div className="border rounded overflow-hidden">
