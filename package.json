@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint",
+    "clean": "rm -rf .next node_modules/.cache",
     "prisma:sync": "prisma generate && prisma db push",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",

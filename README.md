@@ -56,3 +56,17 @@ npm run e2e
 
 ## Problems
 - Drag reordering does not persist: Dragging tasks to a new order updates the UI briefly, but the order does not stay after refresh.
+
+## Troubleshooting
+
+Missing Next.js chunk (e.g., Error: Cannot find module './948.js')
+- Cause: A stale or partially-synced `.next` directory can leave the dev server referencing a chunk that no longer exists. This is common when the repo is under iCloud/Dropbox/OneDrive or when switching between dev modes.
+- Quick fix (local):
+  - Stop the dev server.
+  - Run `npm run clean` to remove `.next` and caches.
+  - Start again with `npm run dev`.
+- Docker dev fix:
+  - Prefer `make dev` (Compose file sync) which ignores `.next`.
+  - If things get wedged, run `make dev-clean` and then `make dev`.
+- Cloud-synced folders:
+  - Avoid bind mounts when the repo lives under iCloud/Dropbox/OneDrive. Use the provided file-sync compose (`docker-compose.dev.yml`) so `.next` stays inside the container and isn’t synced.
