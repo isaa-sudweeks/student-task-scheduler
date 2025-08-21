@@ -1,0 +1,41 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const hoisted = vi.hoisted(() => {
+  const create = vi.fn().mockResolvedValue({});
+  const update = vi.fn().mockResolvedValue({});
+  return { create, update };
+});
+
+vi.mock('@/server/db', () => ({
+  db: {
+    project: {
+      findMany: vi.fn().mockResolvedValue([]),
+      create: hoisted.create,
+      update: hoisted.update,
+      delete: vi.fn().mockResolvedValue({}),
+    },
+  },
+}));
+
+import { projectRouter } from './project';
+
+describe('projectRouter.create', () => {
+  beforeEach(() => {
+    hoisted.create.mockClear();
+  });
+  it('creates project with title and description', async () => {
+    await projectRouter.createCaller({}).create({ title: 'p', description: 'd' });
+    expect(hoisted.create).toHaveBeenCalledWith({ data: { title: 'p', description: 'd' } });
+  });
+});
+
+describe('projectRouter.update', () => {
+  beforeEach(() => {
+    hoisted.update.mockClear();
+  });
+  it('updates project fields', async () => {
+    await projectRouter.createCaller({}).update({ id: '1', title: 'np', description: null });
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: '1' }, data: { title: 'np', description: null } });
+  });
+});
+

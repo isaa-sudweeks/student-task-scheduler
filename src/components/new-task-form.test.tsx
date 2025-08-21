@@ -32,6 +32,8 @@ vi.mock('@/server/api/react', () => ({
       updateTitle: { useMutation: () => ({ mutate: vi.fn() }) },
       setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: { message: 'Failed to update status' } }) },
     },
+    project: { list: { useQuery: () => ({ data: [] }) } },
+    course: { list: { useQuery: () => ({ data: [] }) } },
   },
 }));
 

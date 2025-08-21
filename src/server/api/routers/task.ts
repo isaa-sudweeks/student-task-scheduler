@@ -91,6 +91,8 @@ export const taskRouter = router({
         priority: z.nativeEnum(TaskPriority).optional(),
         recurrenceType: z.nativeEnum(RecurrenceType).optional(),
         recurrenceInterval: z.number().int().min(1).optional(),
+        projectId: z.string().min(1).optional(),
+        courseId: z.string().min(1).optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -106,6 +108,8 @@ export const taskRouter = router({
           priority: input.priority ?? undefined,
           recurrenceType: input.recurrenceType ?? undefined,
           recurrenceInterval: input.recurrenceInterval ?? undefined,
+          projectId: input.projectId ?? undefined,
+          courseId: input.courseId ?? undefined,
         },
       });
     }),
@@ -120,6 +124,8 @@ export const taskRouter = router({
         priority: z.nativeEnum(TaskPriority).optional(),
         recurrenceType: z.nativeEnum(RecurrenceType).optional(),
         recurrenceInterval: z.number().int().min(1).optional(),
+        projectId: z.string().nullable().optional(),
+        courseId: z.string().nullable().optional(),
       })
     )
     .mutation(async ({ input }) => {
