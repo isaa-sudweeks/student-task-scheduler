@@ -14,8 +14,9 @@ import {
 } from "recharts";
 
 export default function StatsPage() {
-  const { data: tasks = [], isLoading } = api.task.list.useQuery();
+  const { data: tasks = [], isLoading, error } = api.task.list.useQuery();
 
+  if (error) return <main>Error loading tasks</main>;
   if (isLoading) return <main>Loading...</main>;
 
   const total = tasks.length;
