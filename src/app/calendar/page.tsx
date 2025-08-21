@@ -1,16 +1,18 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { api } from '@/server/api/react';
-import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
 import { DndContext, type DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
+import { api } from '@/server/api/react';
+import type { RouterOutputs } from '@/server/api/root';
+import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
 
 type ViewMode = 'day' | 'week' | 'month';
+type Task = RouterOutputs['task']['list'][number];
+type Event = RouterOutputs['event']['listRange'][number];
 
 export default function CalendarPage() {
   const [view, setView] = useState<ViewMode>('week');
-  const utils = api.useUtils?.() as any;
+  const utils = api.useUtils();
   const router = useRouter();
 
   // Make dragging/resizing more reliable across mouse/touch
@@ -24,65 +26,61 @@ export default function CalendarPage() {
   );
 
   // Tasks and events for the current visible range (simplified for now)
-  const tasksQ = api.task.list.useQuery(undefined as any);
-  const apiAny = api as any;
-  const eventsQ = apiAny.event?.listRange?.useQuery?.(undefined);
+  const tasksQ = api.task.list.useQuery();
+  const eventsQ = api.event.listRange.useQuery();
 
-  const tasksData = tasksQ.data ?? [];
-  const eventsData = (eventsQ as any)?.data ?? [];
-  const [eventsLocal, setEventsLocal] = useState<any[]>([]);
-  const events = (eventsQ as any).data ?? [];
+  const tasksData = useMemo(() => tasksQ.data ?? [], [tasksQ.data]);
+  const eventsData = useMemo(() => eventsQ.data ?? [], [eventsQ.data]);
+  const [eventsLocal, setEventsLocal] = useState<Event[]>([]);
 
   // Keep local, optimistic copy of events for immediate UI updates
   useEffect(() => {
-    setEventsLocal((((eventsQ as any)?.data ?? []) as any[]));
-  }, [eventsQ]);
+    setEventsLocal(eventsQ.data ?? []);
+  }, [eventsQ.data]);
 
   const backlog = useMemo(() => {
-    const evs = (((eventsQ as any)?.data ?? []) as any[]);
-    const tsks = ((tasksQ.data ?? []) as any[]);
-    const scheduledTaskIds = new Set<string>(evs.map((e: any) => e.taskId));
-    return tsks.filter((t: any) => !scheduledTaskIds.has(t.id));
-  }, [tasksQ.data, eventsQ]);
+    const scheduledTaskIds = new Set(eventsData.map((e) => e.taskId));
+    return tasksData.filter((t) => !scheduledTaskIds.has(t.id));
+  }, [tasksData, eventsData]);
 
   // Choose a base week to render: prefer the first event's week for stability in tests
-  const baseDate = (eventsData as any[])?.[0]?.startAt ? new Date((eventsData as any[])[0].startAt) : new Date();
+  const baseDate = eventsData?.[0]?.startAt ? new Date(eventsData[0].startAt) : new Date();
   const baseMonday = new Date(baseDate);
   const day = baseMonday.getDay();
   const diff = (day + 6) % 7;
   baseMonday.setDate(baseMonday.getDate() - diff);
 
-  const focusStart = apiAny.focus?.start?.useMutation?.({
+  const focusStart = api.focus.start.useMutation({
     onSuccess: async () => {
-      try { await utils?.focus?.status?.invalidate?.(); } catch {}
+      try { await utils.focus.status.invalidate(); } catch {}
     },
   });
-  const focusStop = apiAny.focus?.stop?.useMutation?.({
+  const focusStop = api.focus.stop.useMutation({
     onSuccess: async () => {
-      try { await utils?.focus?.status?.invalidate?.(); } catch {}
+      try { await utils.focus.status.invalidate(); } catch {}
     },
   });
-  const focusStartMutate = React.useMemo(() => focusStart?.mutate ?? (() => {}), [focusStart]);
-  const focusStopMutate = React.useMemo(() => focusStop?.mutate ?? (() => {}), [focusStop]);
-  const schedule = apiAny.event?.schedule?.useMutation?.({
+  const focusStartMutate = React.useMemo(() => focusStart.mutate, [focusStart]);
+  const focusStopMutate = React.useMemo(() => focusStop.mutate, [focusStop]);
+  const schedule = api.event.schedule.useMutation({
     onSuccess: async () => {
       try {
-        await utils?.event?.listRange?.invalidate?.();
-        await utils?.task?.list?.invalidate?.();
+        await utils.event.listRange.invalidate();
+        await utils.task.list.invalidate();
       } catch {}
     },
-  }) ?? { mutate: () => {} };
-  const move = apiAny.event?.move?.useMutation?.({
+  });
+  const move = api.event.move.useMutation({
     onSuccess: async () => {
       try {
-        await utils?.event?.listRange?.invalidate?.();
+        await utils.event.listRange.invalidate();
       } catch {}
     },
-  }) ?? { mutate: () => {} };
+  });
 
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [focusedSince, setFocusedSince] = useState<number | null>(null);
-  const intervalRef = useRef<any>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [elapsed, setElapsed] = useState<number>(0);
   const elapsedByTaskRef = useRef<Record<string, number>>({});
 
@@ -153,7 +151,7 @@ export default function CalendarPage() {
   );
 
   if (focusedTaskId) {
-    const task = (tasksData as any[]).find((t: any) => t.id === focusedTaskId);
+    const task = tasksData.find((t) => t.id === focusedTaskId);
     return (
       <main className="space-y-4">
         <header className="flex items-center justify-end">
@@ -207,7 +205,7 @@ export default function CalendarPage() {
             const eventId = aid.slice('event-'.length);
             const iso = oid.slice('cell-'.length);
             const startAt = new Date(iso);
-            const ev = (eventsLocal as any[]).find((e) => e.id === eventId);
+            const ev = eventsLocal.find((e) => e.id === eventId);
             if (!ev) return;
             const durationMin = Math.max(1, Math.round((new Date(ev.endAt).getTime() - new Date(ev.startAt).getTime()) / 60000));
             const endAt = new Date(startAt.getTime() + durationMin * 60000);
@@ -220,7 +218,7 @@ export default function CalendarPage() {
             const eventId = aid.slice('event-resize-start-'.length);
             const iso = oid.slice('cell-'.length);
             let at = new Date(iso);
-            const ev = (eventsLocal as any[]).find((e) => e.id === eventId);
+            const ev = eventsLocal.find((e) => e.id === eventId);
             if (!ev) return;
             let startAt = new Date(ev.startAt);
             const endAt = new Date(ev.endAt);
@@ -235,7 +233,7 @@ export default function CalendarPage() {
             const eventId = aid.slice('event-resize-end-'.length);
             const iso = oid.slice('cell-'.length);
             let at = new Date(iso);
-            const ev = (eventsLocal as any[]).find((e) => e.id === eventId);
+            const ev = eventsLocal.find((e) => e.id === eventId);
             if (!ev) return;
             const startAt = new Date(ev.startAt);
             let endAt = new Date(ev.endAt);
@@ -252,9 +250,9 @@ export default function CalendarPage() {
         {ViewTabs}
         <h2 className="font-semibold">Backlog</h2>
         <ul className="space-y-2">
-          {backlog.map((t: any) => (
+          {backlog.map((t) => (
             <li key={t.id}>
-            <DraggableTask id={t.id} title={t.title} onSpaceKey={() => toggleFocus(t.id)} />
+              <DraggableTask id={t.id} title={t.title} onSpaceKey={() => toggleFocus(t.id)} />
             </li>
           ))}
         </ul>
@@ -271,13 +269,13 @@ export default function CalendarPage() {
             }}
           >Simulate</button>
         )}
-        {(eventsData as any[])?.[0] && (
+        {eventsData?.[0] && (
           <button
             type="button"
             aria-label="simulate-move-event"
             className="hidden"
             onClick={() => {
-              const ev = (eventsData as any[])[0];
+              const ev = eventsData[0];
               const newStart = new Date(new Date(ev.startAt).getTime() + 60 * 60000);
               const durationMin = Math.max(1, Math.round((new Date(ev.endAt).getTime() - new Date(ev.startAt).getTime()) / 60000));
               const newEnd = new Date(newStart.getTime() + durationMin * 60000);
@@ -295,14 +293,14 @@ export default function CalendarPage() {
               schedule.mutate({ taskId, startAt, durationMinutes: 30 });
             }}
             onMoveEvent={(eventId, startAt) => {
-              const ev = (eventsData as any[]).find((e) => e.id === eventId);
+              const ev = eventsData.find((e) => e.id === eventId);
               if (!ev) return;
               const durationMin = Math.max(1, Math.round((new Date(ev.endAt).getTime() - new Date(ev.startAt).getTime()) / 60000));
               const endAt = new Date(startAt.getTime() + durationMin * 60000);
               move.mutate({ eventId, startAt, endAt });
             }}
             onResizeEvent={(eventId, edge, at) => {
-              const ev = (eventsData as any[]).find((e) => e.id === eventId);
+              const ev = eventsData.find((e) => e.id === eventId);
               if (!ev) return;
               let startAt = new Date(ev.startAt);
               let endAt = new Date(ev.endAt);
@@ -317,21 +315,21 @@ export default function CalendarPage() {
               setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt, endAt } : x));
               move.mutate({ eventId, startAt, endAt });
             }}
-            events={(eventsLocal as any[]).map((e) => {
-              const t = (tasksData as any[]).find((x: any) => x.id === e.taskId);
+            events={eventsLocal.map((e) => {
+              const t = tasksData.find((x) => x.id === e.taskId);
               return { ...e, title: t?.title };
             })}
           />
         </div>
       </div>
       {/* Test-only helper to simulate resize */}
-      {(events as any[])?.[0] && (
+      {eventsData?.[0] && (
         <button
           type="button"
           aria-label="simulate-resize-event"
           className="hidden"
           onClick={() => {
-            const ev = (eventsLocal as any[])[0];
+            const ev = eventsLocal[0];
             const startAt = new Date(ev.startAt);
             const newEnd = new Date(startAt.getTime() + 120 * 60000); // extend to 2h total
             setEventsLocal((prev) => prev.map((x) => x.id === ev.id ? { ...x, endAt: newEnd } : x));
