@@ -3,7 +3,7 @@ import React from 'react';
 
 export function TaskListSkeleton(){
   return (
-    <li className="flex justify-center p-2" aria-label="Loading tasks">
+    <div className="flex justify-center p-2" aria-label="Loading tasks">
       <svg
         className="h-5 w-5 animate-spin text-gray-500"
         xmlns="http://www.w3.org/2000/svg"
@@ -26,6 +26,6 @@ export function TaskListSkeleton(){
           d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
         />
       </svg>
-    </li>
+    </div>
   );
 }
