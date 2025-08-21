@@ -52,12 +52,12 @@ export default function CalendarPage() {
 
   const focusStart = api.focus.start.useMutation({
     onSuccess: async () => {
-      try { await utils.focus.status.invalidate(); } catch {}
+      // no-op: focus router has no status query to invalidate
     },
   });
   const focusStop = api.focus.stop.useMutation({
     onSuccess: async () => {
-      try { await utils.focus.status.invalidate(); } catch {}
+      // no-op: focus router has no status query to invalidate
     },
   });
   const focusStartMutate = React.useMemo(() => focusStart.mutate, [focusStart]);
