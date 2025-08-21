@@ -50,7 +50,16 @@ export function TaskList() {
     } as const;
   }, [filter, subject]);
 
-  const tasks = api.task.list.useQuery(queryInput);
+  const PAGE_SIZE = 20;
+  const tasks = api.task.list.useInfiniteQuery(
+    { ...queryInput, limit: PAGE_SIZE },
+    {
+      getNextPageParam: (lastPage) =>
+        lastPage.length === PAGE_SIZE
+          ? lastPage[lastPage.length - 1]?.id
+          : undefined,
+    }
+  );
   // Query archived count for header stats
   const archivedQueryInput = React.useMemo(
     () => ({
@@ -62,30 +71,34 @@ export function TaskList() {
     [queryInput]
   );
   const archived = api.task.list.useQuery(archivedQueryInput);
+  const flatTasks = React.useMemo(
+    () => tasks.data?.pages.flat() ?? [],
+    [tasks.data]
+  );
   // Keep a stable snapshot of the fetched tasks for the current filter
-  const [taskDataSnapshot, setTaskDataSnapshot] = useState<typeof tasks.data>();
+  const [taskDataSnapshot, setTaskDataSnapshot] = useState<Task[]>();
   const prevFilterRef = React.useRef(filter);
   useEffect(() => {
-    if (!tasks.data) return;
+    if (flatTasks.length === 0) return;
     // On first data load or when filter changes, capture snapshot
     if (taskDataSnapshot === undefined || prevFilterRef.current !== filter) {
-      setTaskDataSnapshot(tasks.data);
+      setTaskDataSnapshot(flatTasks);
       prevFilterRef.current = filter;
       return;
     }
     // If the set of task IDs has changed, refresh snapshot (create/delete)
-    const snapIds = new Set((taskDataSnapshot as Task[]).map((t: Task) => t.id));
-    const dataIds = new Set((tasks.data as Task[]).map((t: Task) => t.id));
+    const snapIds = new Set(taskDataSnapshot.map((t) => t.id));
+    const dataIds = new Set(flatTasks.map((t) => t.id));
     const idsDiffer =
       snapIds.size !== dataIds.size ||
       [...dataIds].some((id) => !snapIds.has(id));
     if (idsDiffer) {
-      setTaskDataSnapshot(tasks.data);
+      setTaskDataSnapshot(flatTasks);
       return;
     }
     // If content changed for existing IDs, refresh snapshot when updatedAt differs
-    const snapById = new Map((taskDataSnapshot as Task[]).map((t: Task) => [t.id, t]));
-    const contentChanged = (tasks.data as Task[]).some((t: Task) => {
+    const snapById = new Map(taskDataSnapshot.map((t) => [t.id, t]));
+    const contentChanged = flatTasks.some((t) => {
       const prev = snapById.get(t.id);
       if (!(t && prev)) return false;
       // Detect edits via updatedAt change only to avoid noisy re-snapshots in tests
@@ -97,23 +110,21 @@ export function TaskList() {
       return false;
     });
     if (contentChanged) {
-      setTaskDataSnapshot(tasks.data);
+      setTaskDataSnapshot(flatTasks);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, tasks.data, taskDataSnapshot]);
+  }, [filter, flatTasks, taskDataSnapshot]);
   const [items, setItems] = useState<string[]>([]);
 
   useEffect(() => {
-    if (tasks.data) {
-      setItems((tasks.data as Task[]).map((t: Task) => t.id));
-    }
-  }, [tasks.data]);
+    setItems(flatTasks.map((t) => t.id));
+  }, [flatTasks]);
 
   useEffect(() => {
     setSelected((prev) => new Set([...prev].filter((id) => items.includes(id))));
   }, [items]);
 
-  const totalTasks = tasks.data?.length ?? 0;
+  const totalTasks = flatTasks.length;
   const archivedCount = archived.data?.length ?? 0;
 
   const setDue = api.task.setDueDate.useMutation({
@@ -151,7 +162,7 @@ export function TaskList() {
     });
   };
 
-  const taskData = taskDataSnapshot ?? tasks.data;
+  const taskData = taskDataSnapshot ?? flatTasks;
   const orderedTasks = React.useMemo(() => {
     const list = taskData ?? [];
     if (items.length === 0) return list;
@@ -209,6 +220,19 @@ export function TaskList() {
     estimateSize: () => 64,
   });
   const useVirtual = filteredOrderedTasks.length >= 20;
+
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      if (!tasks.hasNextPage || tasks.isFetchingNextPage) return;
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+        void tasks.fetchNextPage();
+      }
+    };
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [tasks]);
 
   const TaskItem = ({
     t,
@@ -329,7 +353,11 @@ export function TaskList() {
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={visibleIds}>
           {useVirtual ? (
-            <div ref={parentRef} className="overflow-auto max-h-[600px]">
+            <div
+              ref={parentRef}
+              className="overflow-auto max-h-[600px]"
+              data-testid="task-scroll"
+            >
               <div
                 style={{
                   height: rowVirtualizer!.getTotalSize(),
@@ -360,17 +388,22 @@ export function TaskList() {
               {filteredOrderedTasks.map((t) => (
                 <TaskItem key={t.id} t={t} />
               ))}
-              {tasks.isLoading && <TaskListSkeleton />}
-              {!tasks.isLoading && filteredOrderedTasks.length === 0 && (
-                <li className="opacity-60">No tasks.</li>
-              )}
+              {(tasks.isLoading || tasks.isFetchingNextPage) && <TaskListSkeleton />}
+              {!tasks.isLoading && !tasks.isFetchingNextPage &&
+                filteredOrderedTasks.length === 0 && (
+                  <li className="opacity-60">No tasks.</li>
+                )}
             </ul>
           )}
         </SortableContext>
-        {useVirtual && !tasks.isLoading && filteredOrderedTasks.length === 0 && (
+        {useVirtual &&
+          !tasks.isLoading &&
+          !tasks.isFetchingNextPage &&
+          filteredOrderedTasks.length === 0 && (
           <div className="opacity-60">No tasks.</div>
         )}
-        {useVirtual && tasks.isLoading && <TaskListSkeleton />}
+        {useVirtual &&
+          (tasks.isLoading || tasks.isFetchingNextPage) && <TaskListSkeleton />}
       </DndContext>
 
       {tasks.error && (

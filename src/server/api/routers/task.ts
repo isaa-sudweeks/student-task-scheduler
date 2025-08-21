@@ -16,6 +16,8 @@ export const taskRouter = router({
           // Optional explicit client-local day bounds as absolute instants
           todayStart: z.date().optional(),
           todayEnd: z.date().optional(),
+          cursor: z.string().optional(),
+          limit: z.number().int().min(1).max(100).optional(),
         })
         .optional()
     )
@@ -64,6 +66,8 @@ export const taskRouter = router({
         where = { ...where, subject };
       }
 
+      const limit = input?.limit;
+      const cursor = input?.cursor;
       const dueAtOrder: Prisma.TaskOrderByWithRelationInput = {
         dueAt: { sort: 'asc', nulls: 'last' },
       };
@@ -79,6 +83,9 @@ export const taskRouter = router({
           // Finally, newest first as a tiebreaker
           { createdAt: 'desc' },
         ],
+        take: limit,
+        skip: cursor ? 1 : undefined,
+        cursor: cursor ? { id: cursor } : undefined,
       });
     }),
   create: publicProcedure
