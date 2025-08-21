@@ -121,7 +121,7 @@ describe('taskRouter.create', () => {
     });
   });
 
-    it('passes recurrence data to the database', async () => {
+  it('passes recurrence data to the database', async () => {
       const until = new Date('2024-01-01');
       await taskRouter.createCaller({}).create({
         title: 'a',
@@ -138,7 +138,14 @@ describe('taskRouter.create', () => {
           recurrenceUntil: until,
         }),
       });
+  });
+
+  it('passes project and course ids to the database', async () => {
+    await taskRouter.createCaller({}).create({ title: 'a', projectId: 'p1', courseId: 'c1' });
+    expect(hoisted.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ projectId: 'p1', courseId: 'c1', title: 'a', dueAt: null, subject: null, notes: null }),
     });
+  });
 });
 
 describe('taskRouter.update recurrence', () => {
@@ -165,6 +172,20 @@ describe('taskRouter.update recurrence', () => {
         },
       });
     });
+});
+
+describe('taskRouter.update project/course', () => {
+  beforeEach(() => {
+    hoisted.update.mockClear();
+  });
+
+  it('updates project and course ids', async () => {
+    await taskRouter.createCaller({}).update({ id: '1', projectId: 'p1', courseId: null });
+    expect(hoisted.update).toHaveBeenCalledWith({
+      where: { id: '1' },
+      data: { projectId: 'p1', courseId: null },
+    });
+  });
 });
 
 describe('taskRouter.bulkUpdate', () => {

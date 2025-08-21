@@ -22,6 +22,8 @@ vi.mock('@/server/api/react', () => ({
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
+    project: { list: { useQuery: () => ({ data: [{ id: 'p1', title: 'Project 1' }] }) } },
+    course: { list: { useQuery: () => ({ data: [{ id: 'c1', title: 'Course 1' }] }) } },
   },
 }));
 
@@ -60,6 +62,22 @@ describe('TaskModal due date editing', () => {
     expect(d.getDate()).toBe(31);
     expect(d.getHours()).toBe(23);
     expect(d.getMinutes()).toBe(59);
+  });
+});
+
+describe('TaskModal project and course selection', () => {
+  beforeEach(() => {
+    mutateCreate.mockReset();
+  });
+  it('sends selected project and course when creating', () => {
+    render(<TaskModal open mode="create" onClose={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText('Task title'), { target: { value: 'T' } });
+    fireEvent.change(screen.getByLabelText('Project'), { target: { value: 'p1' } });
+    fireEvent.change(screen.getByLabelText('Course'), { target: { value: 'c1' } });
+    fireEvent.click(screen.getByText('Create'));
+    expect(mutateCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'T', projectId: 'p1', courseId: 'c1' })
+    );
   });
 });
 

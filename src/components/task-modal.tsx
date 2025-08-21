@@ -37,40 +37,48 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
   const [recurrenceInterval, setRecurrenceInterval] = useState<number>(1);
   const [recurrenceCount, setRecurrenceCount] = useState<number | ''>('');
   const [recurrenceUntil, setRecurrenceUntil] = useState<string>('');
+  const { data: projects = [] } = api.project.list.useQuery();
+  const { data: courses = [] } = api.course.list.useQuery();
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [courseId, setCourseId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
-      if (isEdit && task) {
-        setTitle(task.title);
-        setSubject(task.subject ?? "");
-        setNotes(task.notes ?? "");
-        setPriority(task.priority ?? "MEDIUM");
-        setRecurrenceType(task.recurrenceType ?? 'NONE');
-        setRecurrenceInterval(task.recurrenceInterval ?? 1);
-        setRecurrenceCount(task.recurrenceCount ?? '');
-        setRecurrenceUntil(
-          task.recurrenceUntil ? new Date(task.recurrenceUntil).toISOString().slice(0, 10) : ''
-        );
-        const hasDue = task.dueAt != null;
-        setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
-        setDueEnabled(hasDue);
+    if (isEdit && task) {
+      setTitle(task.title);
+      setSubject(task.subject ?? "");
+      setNotes(task.notes ?? "");
+      setPriority(task.priority ?? "MEDIUM");
+      setRecurrenceType(task.recurrenceType ?? 'NONE');
+      setRecurrenceInterval(task.recurrenceInterval ?? 1);
+      setRecurrenceCount((task as any).recurrenceCount ?? '');
+      setRecurrenceUntil(
+        (task as any).recurrenceUntil ? new Date((task as any).recurrenceUntil).toISOString().slice(0, 10) : ''
+      );
+      setProjectId((task as any).projectId ?? null);
+      setCourseId((task as any).courseId ?? null);
+      const hasDue = task.dueAt != null;
+      setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
+      setDueEnabled(hasDue);
+    } else {
+      setTitle(initialTitle ?? "");
+      setSubject("");
+      setNotes("");
+      setPriority("MEDIUM");
+      setRecurrenceType('NONE');
+      setRecurrenceInterval(1);
+      setRecurrenceCount('');
+      setRecurrenceUntil('');
+      setProjectId(null);
+      setCourseId(null);
+      if (initialDueAt) {
+        setDueEnabled(true);
+        setDue(formatLocalDateTime(new Date(initialDueAt)));
       } else {
-        setTitle(initialTitle ?? "");
-        setSubject("");
-        setNotes("");
-        setPriority("MEDIUM");
-        setRecurrenceType('NONE');
-        setRecurrenceInterval(1);
-        setRecurrenceCount('');
-        setRecurrenceUntil('');
-        if (initialDueAt) {
-          setDueEnabled(true);
-          setDue(formatLocalDateTime(new Date(initialDueAt)));
-        } else {
-          setDue("");
-          setDueEnabled(false);
-        }
+        setDue("");
+        setDueEnabled(false);
       }
+    }
   }, [open, isEdit, task, initialTitle, initialDueAt]);
 
   const create = api.task.create.useMutation({
@@ -138,6 +146,8 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
               recurrenceInterval,
               recurrenceCount: recurrenceCountVal,
               recurrenceUntil: recurrenceUntilDate,
+              projectId,
+              courseId,
             });
           } else {
             if (!title.trim()) {
@@ -154,6 +164,8 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
               recurrenceInterval,
               recurrenceCount: recurrenceCountVal,
               recurrenceUntil: recurrenceUntilDate,
+              projectId: projectId || undefined,
+              courseId: courseId || undefined,
             });
           }
         }}
@@ -228,6 +240,38 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
               disabled={!dueEnabled}
             />
           </div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs uppercase tracking-wide opacity-60">Project</span>
+            <select
+              className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+              value={projectId ?? ""}
+              onChange={(e) => setProjectId(e.target.value || null)}
+            >
+              <option value="">None</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs uppercase tracking-wide opacity-60">Course</span>
+            <select
+              className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+              value={courseId ?? ""}
+              onChange={(e) => setCourseId(e.target.value || null)}
+            >
+              <option value="">None</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <label className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide opacity-60">Priority</span>

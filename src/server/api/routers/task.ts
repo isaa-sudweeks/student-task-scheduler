@@ -105,6 +105,8 @@ export const taskRouter = router({
         recurrenceInterval: z.number().int().min(1).optional(),
         recurrenceCount: z.number().int().min(1).optional(),
         recurrenceUntil: z.date().optional(),
+        projectId: z.string().min(1).optional(),
+        courseId: z.string().min(1).optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -122,6 +124,8 @@ export const taskRouter = router({
           recurrenceInterval: input.recurrenceInterval ?? undefined,
           recurrenceCount: input.recurrenceCount ?? undefined,
           recurrenceUntil: input.recurrenceUntil ?? undefined,
+          projectId: input.projectId ?? undefined,
+          courseId: input.courseId ?? undefined,
         },
       });
     }),
@@ -138,6 +142,8 @@ export const taskRouter = router({
         recurrenceInterval: z.number().int().min(1).optional(),
         recurrenceCount: z.number().int().min(1).nullable().optional(),
         recurrenceUntil: z.date().nullable().optional(),
+        projectId: z.string().nullable().optional(),
+        courseId: z.string().nullable().optional(),
       })
     )
     .mutation(async ({ input }) => {

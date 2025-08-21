@@ -24,6 +24,7 @@ vi.mock('@dnd-kit/core', () => ({
     return <div>{children}</div>;
   },
   closestCenter: vi.fn(),
+  useDndMonitor: vi.fn(),
 }));
 vi.mock('@dnd-kit/sortable', async () => {
   return {
@@ -87,6 +88,8 @@ vi.mock('@/server/api/react', () => ({
       bulkUpdate: { useMutation: () => ({ mutate: bulkUpdateMock, isPending: false, error: undefined }) },
       bulkDelete: { useMutation: () => ({ mutate: bulkDeleteMock, isPending: false, error: undefined }) },
     },
+    project: { list: { useQuery: () => ({ data: [] }) } },
+    course: { list: { useQuery: () => ({ data: [] }) } },
   },
 }));
 

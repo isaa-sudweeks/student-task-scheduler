@@ -1,0 +1,47 @@
+import { z } from 'zod';
+import { publicProcedure, router } from '../trpc';
+import { db } from '@/server/db';
+
+export const projectRouter = router({
+  list: publicProcedure.query(async () => {
+    return db.project.findMany();
+  }),
+  create: publicProcedure
+    .input(
+      z.object({
+        title: z.string().min(1).max(200),
+        description: z.string().max(1000).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return db.project.create({
+        data: { title: input.title, description: input.description ?? null },
+      });
+    }),
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.string().min(1),
+        title: z.string().min(1).max(200).optional(),
+        description: z.string().max(1000).nullable().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { id, ...rest } = input;
+      const data: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(rest)) {
+        if (typeof value !== 'undefined') data[key] = value;
+      }
+      if (Object.keys(data).length === 0) {
+        return db.project.findUniqueOrThrow({ where: { id } });
+      }
+      return db.project.update({ where: { id }, data });
+    }),
+  delete: publicProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      return db.project.delete({ where: { id: input.id } });
+    }),
+});
+
+export default projectRouter;
