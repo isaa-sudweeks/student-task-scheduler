@@ -86,6 +86,13 @@ describe('CalendarPage', () => {
     expect(screen.getByTestId('calendar-grid')).toHaveTextContent('Scheduled task');
   });
 
+  it('applies responsive grid layout classes', () => {
+    render(<CalendarPage />);
+    const main = screen.getByRole('main');
+    expect(main).toHaveClass('grid-cols-1');
+    expect(main).toHaveClass('md:grid-cols-4');
+  });
+
   it('focus mode toggles on with Space on a task', () => {
     render(<CalendarPage />);
     const backlogItem = screen.getByRole('button', { name: /focus Unscheduled task/i });

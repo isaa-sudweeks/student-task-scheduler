@@ -353,7 +353,7 @@ export function TaskList() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="w-full space-y-3 md:w-auto">
       <input
         type="text"
         value={query}
@@ -379,7 +379,7 @@ export function TaskList() {
           {useVirtual ? (
             <div
               ref={parentRef}
-              className="overflow-auto max-h-[600px]"
+              className="overflow-auto max-h-[50vh] md:max-h-[600px]"
               data-testid="task-scroll"
             >
               <div
