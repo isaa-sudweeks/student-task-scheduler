@@ -116,6 +116,15 @@ describe('CalendarPage', () => {
     expect(arg.dayWindowEndHour).toBe(20);
   });
 
+  it('uses stored default duration when scheduling a task', () => {
+    window.localStorage.setItem('defaultDurationMinutes', '45');
+    render(<CalendarPage />);
+    const simulateDrop = screen.getByRole('button', { name: /simulate-drop-unscheduled/i });
+    fireEvent.click(simulateDrop);
+    const arg = scheduleMutate.mock.calls[0][0] as any;
+    expect(arg.durationMinutes).toBe(45);
+  });
+
   it('reschedules an existing event when moved to a new slot', () => {
     render(<CalendarPage />);
     const simulateMove = screen.getByRole('button', { name: /simulate-move-event/i });

@@ -78,6 +78,40 @@ test.describe('calendar', () => {
     expect(Math.abs(persistedBox.height - resizedBox.height)).toBeLessThan(5);
   });
 
+  test('schedules task using custom default duration', async ({ page }) => {
+    // set default duration to 60 minutes via settings
+    await page.goto('/settings');
+    const durationInput = page.getByLabel(/default duration/i);
+    await durationInput.fill('60');
+
+    const title = `Custom Duration Task ${Date.now()}`;
+
+    await page.goto('/');
+    const input = page.getByPlaceholder('Add a task…');
+    await input.fill(title);
+    await page.keyboard.press('Enter');
+    await expect(page.getByText(title)).toBeVisible();
+
+    await page.goto('/calendar');
+    const task = page.getByRole('button', { name: new RegExp(`focus ${title}`, 'i') });
+    const targetCell = page.locator('[id^="cell-"]').first();
+
+    const taskBox = await task.boundingBox();
+    const cellBox = await targetCell.boundingBox();
+    if (!taskBox || !cellBox) throw new Error('missing boxes');
+
+    await page.mouse.move(taskBox.x + taskBox.width / 2, taskBox.y + taskBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(cellBox.x + 10, cellBox.y + 10);
+    await page.mouse.up();
+
+    const event = page.locator('[data-testid="calendar-grid"]').locator(`text=${title}`).first();
+    await expect(event).toBeVisible();
+    const box = await event.boundingBox();
+    if (!box) throw new Error('missing event box');
+    expect(box.height).toBeGreaterThan(40); // 60min ~48px
+  });
+
   test('toggles focus with keyboard and updates timer', async ({ page }) => {
     const title = `Focus Task ${Date.now()}`;
 
