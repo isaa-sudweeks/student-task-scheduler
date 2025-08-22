@@ -3,6 +3,15 @@ import { TRPCError } from '@trpc/server';
 import { TaskStatus, TaskPriority, Prisma, RecurrenceType } from '@prisma/client';
 import { publicProcedure, router } from '../trpc';
 import { db } from '@/server/db';
+import { cache } from '@/server/cache';
+import type { Task } from '@prisma/client';
+
+const TASK_LIST_CACHE_PREFIX = 'task:list:';
+
+const buildListCacheKey = (input: unknown) =>
+  `${TASK_LIST_CACHE_PREFIX}${JSON.stringify(input ?? {})}`;
+
+const invalidateTaskListCache = () => cache.clear();
 export const taskRouter = router({
   // No authentication: list all tasks
   list: publicProcedure
@@ -85,7 +94,12 @@ export const taskRouter = router({
       const dueAtOrder: Prisma.TaskOrderByWithRelationInput = {
         dueAt: { sort: 'asc', nulls: 'last' },
       };
-      return db.task.findMany({
+
+      const cacheKey = buildListCacheKey(input);
+      const cached = await cache.get<Task[]>(cacheKey);
+      if (cached) return cached;
+
+      const tasks = await db.task.findMany({
         where,
         orderBy: [
           // Highest priority first
@@ -101,6 +115,8 @@ export const taskRouter = router({
         skip: cursor ? 1 : undefined,
         cursor: cursor ? { id: cursor } : undefined,
       });
+      await cache.set(cacheKey, tasks, 60);
+      return tasks;
     }),
   create: publicProcedure
     .input(
@@ -122,7 +138,7 @@ export const taskRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
-      return db.task.create({
+      const created = await db.task.create({
         data: {
           title: input.title,
           dueAt: input.dueAt ?? null,
@@ -137,6 +153,8 @@ export const taskRouter = router({
           courseId: input.courseId ?? undefined,
         },
       });
+      await invalidateTaskListCache();
+      return created;
     }),
   update: publicProcedure
     .input(
@@ -164,8 +182,14 @@ export const taskRouter = router({
       for (const [key, value] of Object.entries(rest)) {
         if (typeof value !== 'undefined') data[key] = value;
       }
-      if (Object.keys(data).length === 0) return db.task.findUniqueOrThrow({ where: { id } });
-      return db.task.update({ where: { id }, data: data as Prisma.TaskUpdateInput });
+      let result: Task;
+      if (Object.keys(data).length === 0) {
+        result = await db.task.findUniqueOrThrow({ where: { id } });
+      } else {
+        result = await db.task.update({ where: { id }, data: data as Prisma.TaskUpdateInput });
+      }
+      await invalidateTaskListCache();
+      return result;
     }),
   setDueDate: publicProcedure
     .input(
@@ -175,14 +199,18 @@ export const taskRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
-      return db.task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
+      const updated = await db.task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
+      await invalidateTaskListCache();
+      return updated;
     }),
   updateTitle: publicProcedure
     .input(
       z.object({ id: z.string().min(1), title: z.string().min(1).max(200) })
     )
     .mutation(async ({ input }) => {
-      return db.task.update({ where: { id: input.id }, data: { title: input.title } });
+      const updated = await db.task.update({ where: { id: input.id }, data: { title: input.title } });
+      await invalidateTaskListCache();
+      return updated;
     }),
   setStatus: publicProcedure
     .input(
@@ -192,7 +220,9 @@ export const taskRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      return db.task.update({ where: { id: input.id }, data: { status: input.status } });
+      const updated = await db.task.update({ where: { id: input.id }, data: { status: input.status } });
+      await invalidateTaskListCache();
+      return updated;
     }),
   bulkUpdate: publicProcedure
     .input(
@@ -206,6 +236,7 @@ export const taskRouter = router({
         where: { id: { in: input.ids } },
         data: { status: input.status },
       });
+      await invalidateTaskListCache();
       return { success: true };
     }),
   delete: publicProcedure
@@ -217,6 +248,7 @@ export const taskRouter = router({
         db.event.deleteMany({ where: { taskId: input.id } }),
         db.task.delete({ where: { id: input.id } }),
       ]);
+      await invalidateTaskListCache();
       return deleted;
     }),
   bulkDelete: publicProcedure
@@ -227,6 +259,7 @@ export const taskRouter = router({
         db.event.deleteMany({ where: { taskId: { in: input.ids } } }),
         db.task.deleteMany({ where: { id: { in: input.ids } } }),
       ]);
+      await invalidateTaskListCache();
       return { success: true };
     }),
   reorder: publicProcedure
@@ -237,6 +270,7 @@ export const taskRouter = router({
           db.task.update({ where: { id }, data: { position: index } })
         )
       );
+      await invalidateTaskListCache();
       return { success: true };
     }),
 });
