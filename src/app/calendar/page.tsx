@@ -18,12 +18,15 @@ export default function CalendarPage() {
 
   const [dayStart, setDayStart] = useState(8);
   const [dayEnd, setDayEnd] = useState(18);
+  const [defaultDuration, setDefaultDuration] = useState(30);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const s = window.localStorage.getItem('dayWindowStartHour');
     const e = window.localStorage.getItem('dayWindowEndHour');
+    const d = window.localStorage.getItem('defaultDurationMinutes');
     if (s) setDayStart(Number(s));
     if (e) setDayEnd(Number(e));
+    if (d) setDefaultDuration(Number(d));
   }, []);
 
   // Make dragging/resizing more reliable across mouse/touch
@@ -233,7 +236,7 @@ export default function CalendarPage() {
             const taskId = aid.slice('task-'.length);
             const iso = oid.slice('cell-'.length);
             const startAt = new Date(iso);
-            scheduleWithPrefs({ taskId, startAt, durationMinutes: 30 });
+            scheduleWithPrefs({ taskId, startAt, durationMinutes: defaultDuration });
             return;
           }
           if (aid.startsWith('event-') && oid.startsWith('cell-')) {
@@ -300,7 +303,7 @@ export default function CalendarPage() {
             className="hidden"
             onClick={() => {
               const now = new Date();
-              scheduleWithPrefs({ taskId: backlog[0].id, startAt: now, durationMinutes: 30 });
+              scheduleWithPrefs({ taskId: backlog[0].id, startAt: now, durationMinutes: defaultDuration });
             }}
           >Simulate</button>
         )}
@@ -325,7 +328,7 @@ export default function CalendarPage() {
             view={view}
             startOfWeek={baseMonday}
             onDropTask={(taskId, startAt) => {
-              scheduleWithPrefs({ taskId, startAt, durationMinutes: 30 });
+              scheduleWithPrefs({ taskId, startAt, durationMinutes: defaultDuration });
             }}
             onMoveEvent={(eventId, startAt) => {
               const ev = eventsData.find((e) => e.id === eventId);

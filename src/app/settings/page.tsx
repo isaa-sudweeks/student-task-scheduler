@@ -8,12 +8,15 @@ export default function SettingsPage() {
   // Day window (localStorage)
   const [startHour, setStartHour] = React.useState(8);
   const [endHour, setEndHour] = React.useState(18);
+  const [defaultDuration, setDefaultDuration] = React.useState(30);
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const storedStart = window.localStorage.getItem("dayWindowStartHour");
     const storedEnd = window.localStorage.getItem("dayWindowEndHour");
+    const storedDuration = window.localStorage.getItem("defaultDurationMinutes");
     if (storedStart) setStartHour(Number(storedStart));
     if (storedEnd) setEndHour(Number(storedEnd));
+    if (storedDuration) setDefaultDuration(Number(storedDuration));
   }, []);
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -23,6 +26,10 @@ export default function SettingsPage() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem("dayWindowEndHour", String(endHour));
   }, [endHour]);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("defaultDurationMinutes", String(defaultDuration));
+  }, [defaultDuration]);
 
   // User timezone (tRPC)
   const { data: user } = api.user.get.useQuery();
@@ -49,7 +56,7 @@ export default function SettingsPage() {
       </header>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-medium">Day Window</h2>
+        <h2 className="text-lg font-medium">Scheduling Preferences</h2>
         <div className="flex items-center gap-2">
           <label htmlFor="day-start" className="w-48">
             Day start hour
@@ -75,6 +82,19 @@ export default function SettingsPage() {
             max={23}
             value={endHour}
             onChange={(e) => setEndHour(Number(e.target.value))}
+            className="w-20 rounded border px-2 py-1"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="default-duration" className="w-48">
+            Default duration (minutes)
+          </label>
+          <input
+            id="default-duration"
+            type="number"
+            min={1}
+            value={defaultDuration}
+            onChange={(e) => setDefaultDuration(Number(e.target.value))}
             className="w-20 rounded border px-2 py-1"
           />
         </div>
