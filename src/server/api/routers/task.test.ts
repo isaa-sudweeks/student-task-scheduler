@@ -41,10 +41,12 @@ vi.mock('@/server/db', () => ({
 }));
 
 import { taskRouter } from './task';
+import { cache } from '@/server/cache';
 
 describe('taskRouter.list ordering', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     hoisted.findMany.mockClear();
+    await cache.clear();
   });
 
   it('orders by priority, then position, dueAt, then createdAt', async () => {
@@ -86,6 +88,25 @@ describe('taskRouter.list ordering', () => {
     const startUtc = new Date(startTz.toLocaleString('en-US', { timeZone: 'UTC' }));
     const endUtc = new Date(endTz.toLocaleString('en-US', { timeZone: 'UTC' }));
     expect(arg.where).toEqual({ dueAt: { gte: startUtc, lte: endUtc } });
+  });
+});
+
+describe('taskRouter.list caching', () => {
+  beforeEach(async () => {
+    hoisted.findMany.mockClear();
+    await cache.clear();
+  });
+
+  it('caches results and invalidates on create', async () => {
+    await taskRouter.createCaller({}).list({ filter: 'all' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+
+    await taskRouter.createCaller({}).list({ filter: 'all' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+
+    await taskRouter.createCaller({}).create({ title: 'a' });
+    await taskRouter.createCaller({}).list({ filter: 'all' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(2);
   });
 });
 
