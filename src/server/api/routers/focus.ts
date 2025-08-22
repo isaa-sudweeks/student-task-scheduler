@@ -22,5 +22,19 @@ export const focusRouter = router({
       await db.taskTimeLog.update({ where: { id: open.id }, data: { endedAt: new Date() } });
       return { ok: true };
     }),
+  aggregate: publicProcedure.query(async () => {
+    const logs = await db.taskTimeLog.findMany();
+    const now = new Date();
+    const totals: Record<string, number> = {};
+    for (const log of logs) {
+      const end = log.endedAt ?? now;
+      totals[log.taskId] =
+        (totals[log.taskId] ?? 0) + (end.getTime() - log.startedAt.getTime());
+    }
+    return Object.entries(totals).map(([taskId, durationMs]) => ({
+      taskId,
+      durationMs,
+    }));
+  }),
 });
 
