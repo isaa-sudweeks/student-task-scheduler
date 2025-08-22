@@ -55,6 +55,17 @@ export async function generateRecurringTasks(now = new Date()) {
   }
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function scheduleRecurringTasks() {
+  const run = () =>
+    generateRecurringTasks().catch((err) =>
+      console.error('recurrence job failed', err)
+    );
+  run();
+  setInterval(run, DAY_MS);
+}
+
 if (require.main === module) {
-  generateRecurringTasks().finally(() => process.exit(0));
+  scheduleRecurringTasks();
 }
