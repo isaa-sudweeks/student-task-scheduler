@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 import { TaskList } from './task-list';
@@ -142,6 +142,18 @@ afterEach(() => {
   bulkDeleteMutation.error = undefined;
 });
 
+beforeEach(() => {
+  useInfiniteQueryMock.mockReturnValue({
+    data: { pages: [defaultTasks] },
+    isLoading: false,
+    error: undefined,
+    fetchNextPage: fetchNextPageMock,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+  });
+  useQueryMock.mockReturnValue(defaultQuery);
+});
+
 describe('TaskList', () => {
   it('shows loading skeleton when tasks are loading', () => {
     useInfiniteQueryMock.mockReturnValue({
@@ -180,6 +192,15 @@ describe('TaskList', () => {
     fireEvent.change(input, { target: { value: 'Nope' } });
     expect(screen.queryByText('Test')).not.toBeInTheDocument();
     expect(screen.getByText('No tasks.')).toBeInTheDocument();
+  });
+
+  it('returns fuzzy matches and highlights them', () => {
+    render(<TaskList />);
+    const input = screen.getByPlaceholderText('Search tasks...');
+    fireEvent.change(input, { target: { value: 'Tst 1' } });
+    const items = screen.getAllByRole('listitem');
+    expect(items[0]?.textContent).toContain('Test 1');
+    expect(items[0]?.querySelector('mark')).toBeInTheDocument();
   });
 
   it('filters by title only and ignores subject', () => {
