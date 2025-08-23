@@ -44,6 +44,21 @@ Notes:
 - No postinstall hook (avoids prisma generate before schema copy in Docker).
 - TypeScript 5.7.x + tRPC 11.4.4 + ESLint 8.57 aligned with Next 14.2.x.
 
+## Google Authentication & Calendar Sync
+
+1. Create a Google Cloud project and enable the Calendar API.
+2. Create OAuth credentials for a Web application and set the authorized redirect URI to `http://localhost:3000/api/auth/callback/google`.
+3. Copy the credentials into `.env`:
+
+   ```bash
+   GOOGLE_CLIENT_ID=your_client_id
+   GOOGLE_CLIENT_SECRET=your_client_secret
+   ```
+
+4. Start the app and sign in with Google.
+5. Open **Settings** and toggle **Google Calendar Sync** to enable or disable synchronization.
+6. An iCal feed of scheduled events is available at `/api/trpc/event.ical` and can be consumed by other calendar clients.
+
 ## Testing
 
 Run linting and the test suites locally:

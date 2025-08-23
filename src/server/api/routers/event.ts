@@ -4,6 +4,7 @@ import { publicProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 import { findNonOverlappingSlot, Interval } from '@/lib/scheduling';
 import type { Event as EventModel, Prisma } from '@prisma/client';
+import { google } from 'googleapis';
 
 export const eventRouter = router({
   listRange: publicProcedure
@@ -113,6 +114,53 @@ export const eventRouter = router({
       }
 
       return db.event.update({ where: { id: input.eventId }, data: { startAt: input.startAt, endAt: input.endAt } });
+    }),
+  ical: publicProcedure
+    .input(z.object({ start: z.date().optional(), end: z.date().optional() }).optional())
+    .query(async ({ input }) => {
+      const where: Prisma.EventWhereInput = {};
+      if (input?.start && input?.end) {
+        where.OR = [
+          { startAt: { gte: input.start, lt: input.end } },
+          { endAt: { gt: input.start, lte: input.end } },
+        ];
+      }
+      const events = await db.event.findMany({ where, include: { task: true } });
+      const formatDate = (d: Date) => {
+        const pad = (n: number) => `${n}`.padStart(2, '0');
+        return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+      };
+      const lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//student-task-scheduler//EN',
+      ];
+      for (const e of events) {
+        lines.push('BEGIN:VEVENT');
+        lines.push(`UID:${e.id}`);
+        lines.push(`DTSTAMP:${formatDate(new Date())}`);
+        lines.push(`DTSTART:${formatDate(new Date(e.startAt))}`);
+        lines.push(`DTEND:${formatDate(new Date(e.endAt))}`);
+        if (e.task?.title) lines.push(`SUMMARY:${e.task.title}`);
+        if (e.location) lines.push(`LOCATION:${e.location}`);
+        lines.push('END:VEVENT');
+      }
+      lines.push('END:VCALENDAR');
+      return lines.join('\r\n');
+    }),
+  syncGoogle: publicProcedure
+    .input(
+      z.object({ accessToken: z.string(), refreshToken: z.string().optional() })
+    )
+    .mutation(async ({ input }) => {
+      const auth = new google.auth.OAuth2();
+      auth.setCredentials({
+        access_token: input.accessToken,
+        refresh_token: input.refreshToken,
+      });
+      const calendar = google.calendar({ version: 'v3', auth });
+      const res = await calendar.events.list({ calendarId: 'primary', maxResults: 10 });
+      return res.data.items ?? [];
     }),
 });
 

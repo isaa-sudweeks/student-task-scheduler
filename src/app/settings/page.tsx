@@ -31,6 +31,17 @@ export default function SettingsPage() {
     window.localStorage.setItem("defaultDurationMinutes", String(defaultDuration));
   }, [defaultDuration]);
 
+  // Google Calendar sync toggle (localStorage)
+  const [syncEnabled, setSyncEnabled] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    setSyncEnabled(window.localStorage.getItem("googleSyncEnabled") === "true");
+  }, []);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("googleSyncEnabled", String(syncEnabled));
+  }, [syncEnabled]);
+
   // User timezone (tRPC)
   const { data: user } = api.user.get.useQuery();
   const [tz, setTz] = React.useState(
@@ -98,6 +109,18 @@ export default function SettingsPage() {
             className="w-20 rounded border px-2 py-1"
           />
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Integrations</h2>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={syncEnabled}
+            onChange={(e) => setSyncEnabled(e.target.checked)}
+          />
+          Enable Google Calendar sync
+        </label>
       </section>
 
       <section className="space-y-3">
