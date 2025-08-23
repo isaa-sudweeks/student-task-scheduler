@@ -4,7 +4,8 @@ const hoisted = vi.hoisted(() => {
   const findMany = vi.fn();
   const findFirst = vi.fn();
   const create = vi.fn();
-  return { findMany, findFirst, create };
+  const count = vi.fn();
+  return { findMany, findFirst, create, count };
 });
 
 vi.mock('@prisma/client', async () => {
@@ -20,6 +21,7 @@ vi.mock('@/server/db', () => ({
       findMany: hoisted.findMany,
       findFirst: hoisted.findFirst,
       create: hoisted.create,
+      count: hoisted.count,
     },
   },
 }));
@@ -42,6 +44,7 @@ describe('generateRecurringTasks', () => {
     hoisted.findMany.mockReset();
     hoisted.findFirst.mockReset();
     hoisted.create.mockReset();
+    hoisted.count.mockReset();
   });
 
   it('creates next daily task', async () => {
@@ -55,6 +58,7 @@ describe('generateRecurringTasks', () => {
     ]);
     hoisted.findFirst.mockResolvedValue(null);
     hoisted.create.mockResolvedValue({});
+    hoisted.count.mockResolvedValue(1);
 
     await generateRecurringTasks(now);
 
@@ -74,6 +78,7 @@ describe('generateRecurringTasks', () => {
     ]);
     hoisted.findFirst.mockResolvedValue(null);
     hoisted.create.mockResolvedValue({});
+    hoisted.count.mockResolvedValue(1);
 
     await generateRecurringTasks(now);
 
@@ -93,6 +98,7 @@ describe('generateRecurringTasks', () => {
     ]);
     hoisted.findFirst.mockResolvedValue(null);
     hoisted.create.mockResolvedValue({});
+    hoisted.count.mockResolvedValue(1);
 
     await generateRecurringTasks(now);
 
@@ -111,9 +117,46 @@ describe('generateRecurringTasks', () => {
       },
     ]);
     hoisted.findFirst.mockResolvedValue({ id: 'existing' });
+    hoisted.count.mockResolvedValue(1);
 
     await generateRecurringTasks(now);
     
+    expect(hoisted.create).not.toHaveBeenCalled();
+  });
+
+  it('respects recurrenceCount limit', async () => {
+    const now = new Date('2023-01-02T00:00:00Z');
+    hoisted.findMany.mockResolvedValue([
+      {
+        ...baseTemplate,
+        dueAt: new Date('2023-01-01T00:00:00Z'),
+        recurrenceType: 'DAILY' as any,
+        recurrenceCount: 1,
+      },
+    ]);
+    hoisted.count.mockResolvedValue(1);
+    hoisted.findFirst.mockResolvedValue(null);
+
+    await generateRecurringTasks(now);
+
+    expect(hoisted.create).not.toHaveBeenCalled();
+  });
+
+  it('respects recurrenceUntil date', async () => {
+    const now = new Date('2023-01-05T00:00:00Z');
+    hoisted.findMany.mockResolvedValue([
+      {
+        ...baseTemplate,
+        dueAt: new Date('2023-01-01T00:00:00Z'),
+        recurrenceType: 'DAILY' as any,
+        recurrenceUntil: new Date('2023-01-03T00:00:00Z'),
+      },
+    ]);
+    hoisted.count.mockResolvedValue(1);
+    hoisted.findFirst.mockResolvedValue(null);
+
+    await generateRecurringTasks(now);
+
     expect(hoisted.create).not.toHaveBeenCalled();
   });
 });

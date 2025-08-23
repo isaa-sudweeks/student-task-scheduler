@@ -1,11 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { api } from "@/server/api/react";
-import type { RouterOutputs } from "@/server/api/root";
-
-import { TaskListSkeleton } from "./task-list-skeleton";
-import { TaskFilterTabs } from "./task-filter-tabs";
+import Fuse from "fuse.js";
 import {
   DndContext,
   closestCenter,
@@ -26,6 +22,12 @@ import {
   ArrowDown,
   Minus,
 } from "lucide-react";
+
+import { api } from "@/server/api/react";
+import type { RouterOutputs } from "@/server/api/root";
+
+import { TaskListSkeleton } from "./task-list-skeleton";
+import { TaskFilterTabs } from "./task-filter-tabs";
 import { TaskModal } from "@/components/task-modal";
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
 import { Button } from "@/components/ui/button";
@@ -178,15 +180,35 @@ export function TaskList() {
     return items.map((id) => map.get(id)).filter(Boolean) as Task[];
   }, [taskData, items]);
 
+  const fuseResults = React.useMemo(() => {
+    if (!query) return orderedTasks.map((t) => ({ item: t }));
+    const fuse = new Fuse(orderedTasks, {
+      keys: ["title"],
+      includeMatches: true,
+      threshold: 0.4,
+      ignoreLocation: true,
+    });
+    return fuse.search(query);
+  }, [orderedTasks, query]);
+
+  const matchesById = React.useMemo(
+    () =>
+      new Map<string, readonly Fuse.FuseResultMatch[]>(
+        fuseResults.map((r) => [r.item.id, r.matches ?? []])
+      ),
+    [fuseResults]
+  );
+
   const filteredOrderedTasks = React.useMemo(
     () =>
-      orderedTasks.filter(
-        (t) =>
-          t.title.toLowerCase().includes(query.toLowerCase()) &&
-          (!subject || t.subject === subject) &&
-          (!priority || t.priority === priority)
-      ),
-    [orderedTasks, query, subject, priority]
+      fuseResults
+        .map((r) => r.item)
+        .filter(
+          (t) =>
+            (!subject || t.subject === subject) &&
+            (!priority || t.priority === priority)
+        ),
+    [fuseResults, subject, priority]
   );
   // Compute the visible ids in the current order; feed to SortableContext
   const visibleIds = React.useMemo(
@@ -250,6 +272,21 @@ export function TaskList() {
   if (bulkUpdate.error) throw bulkUpdate.error;
   if (bulkDelete.error) throw bulkDelete.error;
 
+  const highlightMatches = (
+    text: string,
+    indices: readonly [number, number][]
+  ) => {
+    let last = 0;
+    const res: React.ReactNode[] = [];
+    indices.forEach(([start, end], i) => {
+      if (start > last) res.push(text.slice(last, start));
+      res.push(<mark key={i}>{text.slice(start, end + 1)}</mark>);
+      last = end + 1;
+    });
+    if (last < text.length) res.push(text.slice(last));
+    return res;
+  };
+
   const TaskItem = ({
     t,
     virtualStyle,
@@ -276,6 +313,11 @@ export function TaskList() {
       MEDIUM: <Minus className="h-3 w-3" aria-hidden="true" />,
       LOW: <ArrowDown className="h-3 w-3" aria-hidden="true" />,
     };
+    const match = matchesById.get(t.id)?.find((m) => m.key === "title");
+    const titleNode = match && match.indices
+      ? highlightMatches(t.title, match.indices as any)
+      : t.title;
+
     return (
       <li
         ref={setNodeRef}
@@ -321,7 +363,7 @@ export function TaskList() {
           <div className="flex flex-col gap-1 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className={`font-medium ${done ? "line-through opacity-60" : ""}`}>
-                {t.title}
+                {titleNode}
               </span>
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${priorityStyles[priority]}`}
@@ -353,7 +395,7 @@ export function TaskList() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="w-full space-y-3 md:w-auto">
       <input
         type="text"
         value={query}
@@ -379,7 +421,7 @@ export function TaskList() {
           {useVirtual ? (
             <div
               ref={parentRef}
-              className="overflow-auto max-h-[600px]"
+              className="overflow-auto max-h-[50vh] md:max-h-[600px]"
               data-testid="task-scroll"
             >
               <div

@@ -86,6 +86,13 @@ describe('CalendarPage', () => {
     expect(screen.getByTestId('calendar-grid')).toHaveTextContent('Scheduled task');
   });
 
+  it('applies responsive grid layout classes', () => {
+    render(<CalendarPage />);
+    const main = screen.getByRole('main');
+    expect(main).toHaveClass('grid-cols-1');
+    expect(main).toHaveClass('md:grid-cols-4');
+  });
+
   it('focus mode toggles on with Space on a task', () => {
     render(<CalendarPage />);
     const backlogItem = screen.getByRole('button', { name: /focus Unscheduled task/i });
@@ -107,6 +114,15 @@ describe('CalendarPage', () => {
     expect(arg.durationMinutes).toBe(30);
     expect(arg.dayWindowStartHour).toBe(6);
     expect(arg.dayWindowEndHour).toBe(20);
+  });
+
+  it('uses stored default duration when scheduling a task', () => {
+    window.localStorage.setItem('defaultDurationMinutes', '45');
+    render(<CalendarPage />);
+    const simulateDrop = screen.getByRole('button', { name: /simulate-drop-unscheduled/i });
+    fireEvent.click(simulateDrop);
+    const arg = scheduleMutate.mock.calls[0][0] as any;
+    expect(arg.durationMinutes).toBe(45);
   });
 
   it('reschedules an existing event when moved to a new slot', () => {

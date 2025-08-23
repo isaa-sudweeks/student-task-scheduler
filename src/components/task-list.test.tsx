@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 import { TaskList } from './task-list';
@@ -142,7 +142,30 @@ afterEach(() => {
   bulkDeleteMutation.error = undefined;
 });
 
+beforeEach(() => {
+  useInfiniteQueryMock.mockReturnValue({
+    data: { pages: [defaultTasks] },
+    isLoading: false,
+    error: undefined,
+    fetchNextPage: fetchNextPageMock,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+  });
+  useQueryMock.mockReturnValue(defaultQuery);
+});
+
 describe('TaskList', () => {
+  beforeEach(() => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: { pages: [defaultTasks] },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    useQueryMock.mockReturnValue(defaultQuery);
+  });
   it('shows loading skeleton when tasks are loading', () => {
     useInfiniteQueryMock.mockReturnValue({
       data: { pages: [] },
@@ -180,6 +203,15 @@ describe('TaskList', () => {
     fireEvent.change(input, { target: { value: 'Nope' } });
     expect(screen.queryByText('Test')).not.toBeInTheDocument();
     expect(screen.getByText('No tasks.')).toBeInTheDocument();
+  });
+
+  it('returns fuzzy matches and highlights them', () => {
+    render(<TaskList />);
+    const input = screen.getByPlaceholderText('Search tasks...');
+    fireEvent.change(input, { target: { value: 'Tst 1' } });
+    const items = screen.getAllByRole('listitem');
+    expect(items[0]?.textContent).toContain('Test 1');
+    expect(items[0]?.querySelector('mark')).toBeInTheDocument();
   });
 
   it('filters by title only and ignores subject', () => {
@@ -320,5 +352,33 @@ describe('TaskList', () => {
     fireEvent.click(checkboxes[1]);
     fireEvent.click(screen.getByText('Delete'));
     expect(bulkDeleteMock).toHaveBeenCalledWith({ ids: ['1', '2'] });
+  });
+
+  it('applies responsive max height for long lists', () => {
+    const origWidth = window.innerWidth;
+    Object.assign(window, { innerWidth: 375 });
+    window.dispatchEvent(new Event('resize'));
+    const manyTasks = Array.from({ length: 20 }, (_, i) => ({
+      id: String(i + 1),
+      title: `Task ${i + 1}`,
+      dueAt: null,
+      status: 'TODO',
+    })) as any;
+    useInfiniteQueryMock.mockReturnValue({
+      data: { pages: [manyTasks] },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+    const { container } = render(<TaskList />);
+    const scroll = screen.getByTestId('task-scroll');
+    expect(scroll).toHaveClass('max-h-[50vh]');
+    expect(scroll).toHaveClass('md:max-h-[600px]');
+    expect(container).toMatchSnapshot();
+    Object.assign(window, { innerWidth: origWidth });
+    window.dispatchEvent(new Event('resize'));
   });
 });

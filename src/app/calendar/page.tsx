@@ -18,12 +18,15 @@ export default function CalendarPage() {
 
   const [dayStart, setDayStart] = useState(8);
   const [dayEnd, setDayEnd] = useState(18);
+  const [defaultDuration, setDefaultDuration] = useState(30);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const s = window.localStorage.getItem('dayWindowStartHour');
     const e = window.localStorage.getItem('dayWindowEndHour');
+    const d = window.localStorage.getItem('defaultDurationMinutes');
     if (s) setDayStart(Number(s));
     if (e) setDayEnd(Number(e));
+    if (d) setDefaultDuration(Number(d));
   }, []);
 
   // Make dragging/resizing more reliable across mouse/touch
@@ -210,8 +213,8 @@ export default function CalendarPage() {
 
   return (
     <ErrorBoundary fallback={<main>Failed to load calendar</main>}>
-    <main className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div className="md:col-span-4 flex items-center justify-end">
+    <main className="grid w-full grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="flex items-center justify-end md:col-span-4">
         <a
           href="/"
           className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
@@ -233,7 +236,7 @@ export default function CalendarPage() {
             const taskId = aid.slice('task-'.length);
             const iso = oid.slice('cell-'.length);
             const startAt = new Date(iso);
-            scheduleWithPrefs({ taskId, startAt, durationMinutes: 30 });
+            scheduleWithPrefs({ taskId, startAt, durationMinutes: defaultDuration });
             return;
           }
           if (aid.startsWith('event-') && oid.startsWith('cell-')) {
@@ -281,7 +284,7 @@ export default function CalendarPage() {
           }
         }}
       >
-      <div className="md:col-span-1 space-y-3">
+      <div className="w-full space-y-3 md:col-span-1">
         {ViewTabs}
         <h2 className="font-semibold">Backlog</h2>
         <ul className="space-y-2">
@@ -300,7 +303,7 @@ export default function CalendarPage() {
             className="hidden"
             onClick={() => {
               const now = new Date();
-              scheduleWithPrefs({ taskId: backlog[0].id, startAt: now, durationMinutes: 30 });
+              scheduleWithPrefs({ taskId: backlog[0].id, startAt: now, durationMinutes: defaultDuration });
             }}
           >Simulate</button>
         )}
@@ -319,13 +322,13 @@ export default function CalendarPage() {
           >Simulate Move</button>
         )}
       </div>
-      <div className="md:col-span-3">
+      <div className="w-full md:col-span-3">
         <div data-testid="calendar-grid">
           <CalendarGrid
             view={view}
             startOfWeek={baseMonday}
             onDropTask={(taskId, startAt) => {
-              scheduleWithPrefs({ taskId, startAt, durationMinutes: 30 });
+              scheduleWithPrefs({ taskId, startAt, durationMinutes: defaultDuration });
             }}
             onMoveEvent={(eventId, startAt) => {
               const ev = eventsData.find((e) => e.id === eventId);

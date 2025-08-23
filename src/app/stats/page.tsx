@@ -22,6 +22,21 @@ type Task = RouterOutputs["task"]["list"][number];
 export default function StatsPage() {
   const { data, isLoading, error } = api.task.list.useQuery();
   const tasks: RouterOutputs["task"]["list"] = data ?? [];
+  const { data: focusData } = api.focus.aggregate.useQuery();
+  const focusMap = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    const totals = focusData ?? [];
+    for (const f of totals) {
+      map[f.taskId] = f.durationMs;
+    }
+    return map;
+  }, [focusData]);
+  const focusByTask = tasks
+    .map((t) => ({
+      title: t.title,
+      minutes: Math.round((focusMap[t.id] ?? 0) / 60000),
+    }))
+    .filter((f) => f.minutes > 0);
   const { resolvedTheme } = useTheme();
 
   const isDark = resolvedTheme === "dark";
@@ -127,6 +142,30 @@ export default function StatsPage() {
             </Pie>
             <Tooltip />
           </PieChart>
+        </section>
+        <section className="space-y-2">
+          <h2 className="text-xl font-medium">Focus Time by Task</h2>
+          <ul>
+            {focusByTask.map((f) => (
+              <li key={f.title}>
+                {f.title}: {f.minutes}m
+              </li>
+            ))}
+          </ul>
+          <BarChart width={400} height={200} data={focusByTask}>
+            <XAxis
+              dataKey="title"
+              stroke={chartColors.axis}
+              tick={{ fill: chartColors.text }}
+            />
+            <YAxis
+              allowDecimals={false}
+              stroke={chartColors.axis}
+              tick={{ fill: chartColors.text }}
+            />
+            <Tooltip />
+            <Bar dataKey="minutes" fill={chartColors.bar} />
+          </BarChart>
         </section>
       </main>
     </ErrorBoundary>
