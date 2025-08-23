@@ -7,10 +7,15 @@ const rateLimiter = new RateLimiterMemory({
   duration: 10,
 });
 
-export const t = initTRPC.create({ transformer: superjson });
+export type Context = {
+  session?: { user?: { id?: string; timezone?: string | null } | null } | null;
+  ip?: string | null;
+};
+
+export const t = initTRPC.context<Context>().create({ transformer: superjson });
 
 const rateLimit = t.middleware(async ({ ctx, next }) => {
-  const ip = ctx.ip as string | undefined;
+  const ip = (ctx.ip ?? undefined) as string | undefined;
   if (!ip) return next();
   try {
     await rateLimiter.consume(ip);

@@ -180,7 +180,8 @@ export function TaskList() {
     return items.map((id) => map.get(id)).filter(Boolean) as Task[];
   }, [taskData, items]);
 
-  const fuseResults = React.useMemo(() => {
+  type SearchResult = Pick<Fuse.FuseResult<Task>, "item" | "matches">;
+  const fuseResults = React.useMemo<SearchResult[]>(() => {
     if (!query) return orderedTasks.map((t) => ({ item: t }));
     const fuse = new Fuse(orderedTasks, {
       keys: ["title"],
@@ -188,7 +189,8 @@ export function TaskList() {
       threshold: 0.4,
       ignoreLocation: true,
     });
-    return fuse.search(query);
+    // Normalize results to only include the fields we use
+    return fuse.search(query).map((r) => ({ item: r.item, matches: r.matches }));
   }, [orderedTasks, query]);
 
   const matchesById = React.useMemo(
