@@ -93,3 +93,7 @@ Missing Next.js chunk (e.g., Error: Cannot find module './948.js')
   - If things get wedged, run `make dev-clean` and then `make dev`.
 - Cloud-synced folders:
   - Avoid bind mounts when the repo lives under iCloud/Dropbox/OneDrive. Use the provided file-sync compose (`docker-compose.dev.yml`) so `.next` stays inside the container and isn’t synced.
+
+Login loop after Google sign-in
+- Cause: Using database sessions with `next-auth/middleware` prevents the middleware from reading the session, causing a redirect loop back to sign-in.
+- Fix: We use JWT sessions in NextAuth. Ensure your `.env` has `NEXTAUTH_SECRET` set and `NEXTAUTH_URL` matches how you access the app (e.g., `http://localhost:3000`).
