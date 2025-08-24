@@ -2,6 +2,9 @@ services:
   web:
     # Reuse the same image but run in dev mode with live-reload
     command: ["sh", "-c", "chmod +x docker-entrypoint.sh && ./docker-entrypoint.sh dev"]
+    # Load local env vars for providers and secrets
+    env_file:
+      - .env
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://postgres:postgres@db:5432/scheduler

@@ -14,6 +14,9 @@ services:
     build: .
     depends_on:
       - db
+    # Load environment variables from local .env (GOOGLE_CLIENT_ID/SECRET, NEXTAUTH vars, etc.)
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/scheduler
     ports:

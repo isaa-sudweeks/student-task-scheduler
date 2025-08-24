@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import ThemeToggle from "@/components/theme-toggle";
+import { AccountMenu } from "@/components/account-menu";
 import { api } from "@/server/api/react";
 import { toast } from "react-hot-toast";
 
@@ -63,7 +64,10 @@ export default function SettingsPage() {
     <main className="space-y-6 p-4">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Settings</h1>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <AccountMenu />
+        </div>
       </header>
 
       <section className="space-y-4">

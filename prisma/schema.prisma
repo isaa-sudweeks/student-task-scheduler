@@ -13,6 +13,8 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
+  // For NextAuth compatibility
+  emailVerified DateTime?
   timezone  String   @default("America/Denver")
   image     String?
   createdAt DateTime @default(now())
@@ -37,6 +39,8 @@ model Account {
   token_type        String?
   scope             String?
   id_token          String? @db.Text
+  // For NextAuth provider compatibility (e.g., Google)
+  refresh_token_expires_in Int?
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
