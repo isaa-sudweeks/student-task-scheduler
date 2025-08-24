@@ -1,17 +1,12 @@
 import React from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "./api/auth/[...nextauth]/route";
 import { TaskList } from "@/components/task-list";
 import { NewTaskForm } from "@/components/new-task-form";
 import ThemeToggle from "@/components/theme-toggle";
+import { AccountMenu } from "@/components/account-menu";
 
-export default async function HomePage() {
-  const session = await getServerSession(authOptions as any);
-  if (!session) {
-    redirect("/api/auth/signin");
-  }
+export default function HomePage() {
+  // Auth gating is enforced by next-auth middleware for '/'
   return (
     <main className="space-y-8">
       <header className="flex items-center justify-between">
@@ -26,6 +21,7 @@ export default async function HomePage() {
           >
             Calendar View
           </Link>
+          {/* Settings link removed; accessible via AccountMenu */}
           <Link
             href="/stats"
             className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
@@ -34,6 +30,7 @@ export default async function HomePage() {
             Statistics
           </Link>
           <ThemeToggle />
+          <AccountMenu />
         </div>
       </header>
       <NewTaskForm />

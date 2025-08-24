@@ -6,6 +6,7 @@ import { api } from '@/server/api/react';
 import type { RouterOutputs } from '@/server/api/root';
 import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { AccountMenu } from "@/components/account-menu";
 
 type ViewMode = 'day' | 'week' | 'month';
 type Task = RouterOutputs['task']['list'][number];
@@ -191,7 +192,7 @@ export default function CalendarPage() {
     const task = tasksData.find((t) => t.id === focusedTaskId);
     return (
       <main className="space-y-4">
-        <header className="flex items-center justify-end">
+        <header className="flex items-center justify-end gap-2">
           <a
             href="/"
             className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
@@ -200,6 +201,8 @@ export default function CalendarPage() {
           >
             Home
           </a>
+          {/* Settings link removed; accessible via AccountMenu */}
+          <AccountMenu />
         </header>
         {ViewTabs}
         <section className="p-4 rounded border">
@@ -214,7 +217,7 @@ export default function CalendarPage() {
   return (
     <ErrorBoundary fallback={<main>Failed to load calendar</main>}>
     <main className="grid w-full grid-cols-1 gap-4 md:grid-cols-4">
-      <div className="flex items-center justify-end md:col-span-4">
+      <div className="flex items-center justify-end gap-2 md:col-span-4">
         <a
           href="/"
           className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
@@ -223,6 +226,8 @@ export default function CalendarPage() {
         >
           Home
         </a>
+        {/* Settings link removed; accessible via AccountMenu */}
+        <AccountMenu />
       </div>
       <DndContext
         sensors={sensors}
