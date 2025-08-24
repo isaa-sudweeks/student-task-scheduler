@@ -28,6 +28,22 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async session({ session }) {
+      // Enrich session with user id and timezone for server routes
+      if (session.user?.email) {
+        try {
+          const user = await db.user.findUnique({
+            where: { email: session.user.email },
+            select: { id: true, timezone: true },
+          });
+          (session.user as any).id = user?.id;
+          (session.user as any).timezone = user?.timezone ?? null;
+        } catch {
+          // Best-effort enrichment; leave defaults if lookup fails
+        }
+      }
+      return session;
+    },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
       try {
         const safeUrl = new URL(url, baseUrl);
