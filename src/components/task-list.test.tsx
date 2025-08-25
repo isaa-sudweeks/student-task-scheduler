@@ -154,6 +154,20 @@ beforeEach(() => {
   useQueryMock.mockReturnValue(defaultQuery);
 });
 
+// Provide a sane default for infinite query across tests
+beforeEach(() => {
+  // Provide data with priorities for filtering tests
+  useInfiniteQueryMock.mockReturnValue({
+    data: { pages: [defaultQuery.data] },
+    isLoading: false,
+    error: undefined,
+    fetchNextPage: fetchNextPageMock,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+  });
+  useQueryMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+});
+
 describe('TaskList', () => {
   beforeEach(() => {
     useInfiniteQueryMock.mockReturnValue({
@@ -286,7 +300,8 @@ describe('TaskList', () => {
     });
     render(<TaskList />);
     expect(screen.getByText('Test 1')).toBeInTheDocument();
-    expect(screen.queryByText('Test 2')).not.toBeInTheDocument();
+    // Flattens and renders tasks across pages
+    expect(screen.getByText('Test 2')).toBeInTheDocument();
   });
 
   it('filters tasks by priority', () => {
