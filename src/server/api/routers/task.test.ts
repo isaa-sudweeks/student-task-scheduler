@@ -111,16 +111,26 @@ describe('taskRouter.list caching', () => {
     await cache.clear();
   });
 
-  it('caches results and invalidates on create', async () => {
-    await taskRouter.createCaller({}).list({ filter: 'all' });
+  it('caches per user and invalidates on create', async () => {
+    const ctx1 = { session: { user: { id: 'u1' } } } as any;
+    const ctx2 = { session: { user: { id: 'u2' } } } as any;
+
+    await taskRouter.createCaller(ctx1).list({ filter: 'all' });
     expect(hoisted.findMany).toHaveBeenCalledTimes(1);
 
-    await taskRouter.createCaller({}).list({ filter: 'all' });
+    await taskRouter.createCaller(ctx1).list({ filter: 'all' });
     expect(hoisted.findMany).toHaveBeenCalledTimes(1);
 
-    await taskRouter.createCaller({}).create({ title: 'a' });
-    await taskRouter.createCaller({}).list({ filter: 'all' });
+    await taskRouter.createCaller(ctx2).list({ filter: 'all' });
     expect(hoisted.findMany).toHaveBeenCalledTimes(2);
+
+    await taskRouter.createCaller(ctx1).create({ title: 'a' });
+
+    await taskRouter.createCaller(ctx1).list({ filter: 'all' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(3);
+
+    await taskRouter.createCaller(ctx2).list({ filter: 'all' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(4);
   });
 });
 
