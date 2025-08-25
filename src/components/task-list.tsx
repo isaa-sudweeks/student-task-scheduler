@@ -39,6 +39,8 @@ export function TaskList() {
   const [filter, setFilter] = useState<"all" | "overdue" | "today" | "archive">("all");
   const [subject, setSubject] = useState<string | null>(null);
   const [priority, setPriority] = useState<Priority | null>(null);
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const utils = api.useUtils();
   const user = api.user.get.useQuery();
@@ -48,6 +50,8 @@ export function TaskList() {
       filter,
       subject: subject ?? undefined,
       priority: priority ?? undefined,
+      courseId: courseId ?? undefined,
+      projectId: projectId ?? undefined,
     };
     if (!user.data?.timezone) {
       const tzOffsetMinutes = new Date().getTimezoneOffset();
@@ -61,7 +65,7 @@ export function TaskList() {
       base.todayEnd = endLocal;
     }
     return base;
-  }, [filter, subject, priority, user.data?.timezone]);
+  }, [filter, subject, priority, courseId, projectId, user.data?.timezone]);
 
   const PAGE_SIZE = 20;
   const tasks = api.task.list.useInfiniteQuery(
@@ -193,6 +197,7 @@ export function TaskList() {
     return fuse.search(query).map((r) => ({ item: r.item, matches: r.matches }));
   }, [orderedTasks, query]);
 
+  // Build map of match data for highlighting (preserves fuzzy search behavior)
   const matchesById = React.useMemo(
     () =>
       new Map<string, readonly Fuse.FuseResultMatch[]>(
@@ -201,6 +206,7 @@ export function TaskList() {
     [fuseResults]
   );
 
+  // Apply structured filters (subject/priority/courseId/projectId) on top of search results
   const filteredOrderedTasks = React.useMemo(
     () =>
       fuseResults
@@ -208,10 +214,13 @@ export function TaskList() {
         .filter(
           (t) =>
             (!subject || t.subject === subject) &&
-            (!priority || t.priority === priority)
+            (!priority || t.priority === priority) &&
+            (!courseId || t.courseId === courseId) &&
+            (!projectId || t.projectId === projectId)
         ),
-    [fuseResults, subject, priority]
+    [fuseResults, subject, priority, courseId, projectId]
   );
+
   // Compute the visible ids in the current order; feed to SortableContext
   const visibleIds = React.useMemo(
     () => filteredOrderedTasks.map((t) => t.id),
@@ -285,7 +294,7 @@ export function TaskList() {
       res.push(<mark key={i}>{text.slice(start, end + 1)}</mark>);
       last = end + 1;
     });
-    if (last < text.length) res.push(text.slice(last));
+    if (last < text.length) res.push(text.slice[last]);
     return res;
   };
 
@@ -326,7 +335,7 @@ export function TaskList() {
         style={style}
         {...attributes}
         key={t.id}
-        className={`flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${
+        className={`flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg_black/5 dark:hover:bg-white/5 ${
           overdue
             ? "border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
             : ""
@@ -420,6 +429,10 @@ export function TaskList() {
           onSubjectChange={setSubject}
           priority={priority}
           onPriorityChange={setPriority}
+          courseId={courseId}
+          onCourseChange={setCourseId}
+          projectId={projectId}
+          onProjectChange={setProjectId}
         />
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {archivedCount} archived

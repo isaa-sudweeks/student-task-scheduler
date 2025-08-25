@@ -106,6 +106,9 @@ const reorderMutation = { mutate: reorderMutate, isPending: false, error: undefi
 const bulkUpdateMutation = { mutate: bulkUpdateMock, isPending: false, error: undefined as any };
 const bulkDeleteMutation = { mutate: bulkDeleteMock, isPending: false, error: undefined as any };
 
+const projectListMock = vi.fn().mockReturnValue({ data: [] });
+const courseListMock = vi.fn().mockReturnValue({ data: [] });
+
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ task: { list: { invalidate: vi.fn() } } }),
@@ -124,8 +127,8 @@ vi.mock('@/server/api/react', () => ({
       bulkUpdate: { useMutation: () => bulkUpdateMutation },
       bulkDelete: { useMutation: () => bulkDeleteMutation },
     },
-    project: { list: { useQuery: () => ({ data: [] }) } },
-    course: { list: { useQuery: () => ({ data: [] }) } },
+    project: { list: { useQuery: (...args: any[]) => projectListMock(...args) } },
+    course: { list: { useQuery: (...args: any[]) => courseListMock(...args) } },
     user: {
       get: { useQuery: () => ({ data: null, isLoading: false, error: undefined }) },
     },
@@ -156,6 +159,22 @@ afterEach(() => {
   reorderMutation.error = undefined;
   bulkUpdateMutation.error = undefined;
   bulkDeleteMutation.error = undefined;
+  projectListMock.mockReset();
+  courseListMock.mockReset();
+});
+
+beforeEach(() => {
+  useInfiniteQueryMock.mockReturnValue({
+    data: { pages: [defaultQuery.data] },
+    isLoading: false,
+    error: undefined,
+    fetchNextPage: fetchNextPageMock,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+  });
+  useQueryMock.mockReturnValue(defaultQuery);
+  projectListMock.mockReturnValue({ data: [] });
+  courseListMock.mockReturnValue({ data: [] });
 });
 
 beforeEach(() => {
@@ -327,6 +346,50 @@ describe('TaskList', () => {
     fireEvent.change(select, { target: { value: 'HIGH' } });
     expect(screen.getByText('Test 1')).toBeInTheDocument();
     expect(screen.queryByText('Test 2')).not.toBeInTheDocument();
+  });
+
+  it('filters tasks by course', () => {
+    const tasks = [
+      { id: '1', title: 'Course 1 Task', dueAt: null, courseId: 'c1' } as any,
+      { id: '2', title: 'Course 2 Task', dueAt: null, courseId: 'c2' } as any,
+    ];
+    useInfiniteQueryMock.mockReturnValue({
+      data: { pages: [tasks] },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    useQueryMock.mockReturnValue({ data: tasks, isLoading: false, error: undefined });
+    courseListMock.mockReturnValue({ data: [{ id: 'c1', title: 'Course 1' }, { id: 'c2', title: 'Course 2' }] });
+    render(<TaskList />);
+    const select = screen.getByLabelText('Course filter');
+    fireEvent.change(select, { target: { value: 'c1' } });
+    expect(screen.getByText('Course 1 Task')).toBeInTheDocument();
+    expect(screen.queryByText('Course 2 Task')).not.toBeInTheDocument();
+  });
+
+  it('filters tasks by project', () => {
+    const tasks = [
+      { id: '1', title: 'Project 1 Task', dueAt: null, projectId: 'p1' } as any,
+      { id: '2', title: 'Project 2 Task', dueAt: null, projectId: 'p2' } as any,
+    ];
+    useInfiniteQueryMock.mockReturnValue({
+      data: { pages: [tasks] },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    useQueryMock.mockReturnValue({ data: tasks, isLoading: false, error: undefined });
+    projectListMock.mockReturnValue({ data: [{ id: 'p1', title: 'Project 1' }, { id: 'p2', title: 'Project 2' }] });
+    render(<TaskList />);
+    const select = screen.getByLabelText('Project filter');
+    fireEvent.change(select, { target: { value: 'p1' } });
+    expect(screen.getByText('Project 1 Task')).toBeInTheDocument();
+    expect(screen.queryByText('Project 2 Task')).not.toBeInTheDocument();
   });
 
   it('renders all items normally for small lists', () => {

@@ -21,6 +21,8 @@ export const taskRouter = router({
           filter: z.enum(['all', 'overdue', 'today', 'archive']).optional(),
           subject: z.string().optional(),
           priority: z.nativeEnum(TaskPriority).optional(),
+          courseId: z.string().optional(),
+          projectId: z.string().optional(),
           // Minutes to add to UTC to get client local time offset (Date.getTimezoneOffset style)
           tzOffsetMinutes: z.number().int().optional(),
           // Optional explicit client-local day bounds as absolute instants
@@ -35,6 +37,8 @@ export const taskRouter = router({
       const filter = input?.filter ?? 'all';
       const subject = input?.subject;
       const priority = input?.priority;
+      const courseId = input?.courseId;
+      const projectId = input?.projectId;
       const tzOffsetMinutes = input?.tzOffsetMinutes ?? null;
       const nowUtc = new Date();
 
@@ -87,6 +91,12 @@ export const taskRouter = router({
       }
       if (priority) {
         where = { ...where, priority };
+      }
+      if (courseId) {
+        where = { ...where, courseId };
+      }
+      if (projectId) {
+        where = { ...where, projectId };
       }
 
       const limit = input?.limit;

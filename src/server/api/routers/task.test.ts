@@ -75,6 +75,20 @@ describe('taskRouter.list ordering', () => {
     expect(arg.where).toEqual({ priority: TaskPriority.HIGH });
   });
 
+  it('filters by courseId when provided', async () => {
+    await taskRouter.createCaller({}).list({ filter: 'all', courseId: 'c1' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+    const arg = hoisted.findMany.mock.calls[0][0];
+    expect(arg.where).toEqual({ courseId: 'c1' });
+  });
+
+  it('filters by projectId when provided', async () => {
+    await taskRouter.createCaller({}).list({ filter: 'all', projectId: 'p1' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+    const arg = hoisted.findMany.mock.calls[0][0];
+    expect(arg.where).toEqual({ projectId: 'p1' });
+  });
+
   it('uses session timezone for today range when available', async () => {
     await taskRouter.createCaller({ session: { user: { timezone: 'America/Denver' } } as any }).list({ filter: 'today' });
     const arg = hoisted.findMany.mock.calls[0][0];

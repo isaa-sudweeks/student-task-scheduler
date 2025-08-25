@@ -21,6 +21,8 @@ vi.mock('@/server/api/react', () => ({
         }),
       },
     },
+    course: { list: { useQuery: () => ({ data: [{ id: 'c1', title: 'Course 1' }] }) } },
+    project: { list: { useQuery: () => ({ data: [{ id: 'p1', title: 'Project 1' }] }) } },
   },
 }));
 
@@ -63,5 +65,37 @@ describe('TaskFilterTabs', () => {
     const select = screen.getByLabelText('Priority filter');
     fireEvent.change(select, { target: { value: TaskPriority.HIGH } });
     expect(handlePriority).toHaveBeenCalledWith(TaskPriority.HIGH);
+  });
+
+  it('renders course options and calls onCourseChange', () => {
+    const handleCourse = vi.fn();
+    render(
+      <TaskFilterTabs
+        value="all"
+        onChange={() => {}}
+        courseId={null}
+        onCourseChange={handleCourse}
+      />
+    );
+    const select = screen.getByLabelText('Course filter');
+    fireEvent.change(select, { target: { value: 'c1' } });
+    expect(handleCourse).toHaveBeenCalledWith('c1');
+    expect(screen.getByRole('option', { name: 'Course 1' })).toBeInTheDocument();
+  });
+
+  it('renders project options and calls onProjectChange', () => {
+    const handleProject = vi.fn();
+    render(
+      <TaskFilterTabs
+        value="all"
+        onChange={() => {}}
+        projectId={null}
+        onProjectChange={handleProject}
+      />
+    );
+    const select = screen.getByLabelText('Project filter');
+    fireEvent.change(select, { target: { value: 'p1' } });
+    expect(handleProject).toHaveBeenCalledWith('p1');
+    expect(screen.getByRole('option', { name: 'Project 1' })).toBeInTheDocument();
   });
 });
