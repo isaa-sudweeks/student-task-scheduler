@@ -35,6 +35,37 @@ vi.mock('googleapis', () => ({
 
 import { eventRouter } from './event';
 
+describe('eventRouter.listRange', () => {
+  beforeEach(() => {
+    hoisted.findMany.mockReset();
+  });
+
+  it('returns events spanning the range', async () => {
+    const events = [
+      {
+        id: 'e1',
+        startAt: new Date('2023-01-01T08:00:00.000Z'),
+        endAt: new Date('2023-01-01T12:00:00.000Z'),
+      },
+    ];
+    hoisted.findMany.mockResolvedValueOnce(events);
+
+    const start = new Date('2023-01-01T09:00:00.000Z');
+    const end = new Date('2023-01-01T11:00:00.000Z');
+    const res = await eventRouter.createCaller({}).listRange({ start, end });
+
+    expect(hoisted.findMany).toHaveBeenCalledWith({
+      where: {
+        AND: [
+          { startAt: { lt: end } },
+          { endAt: { gt: start } },
+        ],
+      },
+    });
+    expect(res).toEqual(events);
+  });
+});
+
 describe('eventRouter.schedule', () => {
   beforeEach(() => {
     hoisted.findMany.mockReset();
