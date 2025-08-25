@@ -16,11 +16,11 @@ export function findNonOverlappingSlot(opts: {
   const stepMinutes = opts.stepMinutes ?? 15;
 
   const start = new Date(desiredStart);
-  // Constrain start to at/after day window start (use UTC for determinism)
+  // Constrain start to at/after day window start using local time
   const dayStart = new Date(start);
-  dayStart.setUTCHours(dayWindowStartHour, 0, 0, 0);
+  dayStart.setHours(dayWindowStartHour, 0, 0, 0);
   const dayEnd = new Date(start);
-  dayEnd.setUTCHours(dayWindowEndHour, 0, 0, 0);
+  dayEnd.setHours(dayWindowEndHour, 0, 0, 0);
 
   let candidateStart = start < dayStart ? dayStart : start;
   // Round candidate to nearest step increment
