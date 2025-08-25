@@ -37,6 +37,8 @@ export function TaskList() {
   const [filter, setFilter] = useState<"all" | "overdue" | "today" | "archive">("all");
   const [subject, setSubject] = useState<string | null>(null);
   const [priority, setPriority] = useState<Priority | null>(null);
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const utils = api.useUtils();
   const user = api.user.get.useQuery();
@@ -46,6 +48,8 @@ export function TaskList() {
       filter,
       subject: subject ?? undefined,
       priority: priority ?? undefined,
+      courseId: courseId ?? undefined,
+      projectId: projectId ?? undefined,
     };
     if (!user.data?.timezone) {
       const tzOffsetMinutes = new Date().getTimezoneOffset();
@@ -59,7 +63,7 @@ export function TaskList() {
       base.todayEnd = endLocal;
     }
     return base;
-  }, [filter, subject, priority, user.data?.timezone]);
+  }, [filter, subject, priority, courseId, projectId, user.data?.timezone]);
 
   const PAGE_SIZE = 20;
   const tasks = api.task.list.useInfiniteQuery(
@@ -184,9 +188,11 @@ export function TaskList() {
         (t) =>
           t.title.toLowerCase().includes(query.toLowerCase()) &&
           (!subject || t.subject === subject) &&
-          (!priority || t.priority === priority)
+          (!priority || t.priority === priority) &&
+          (!courseId || t.courseId === courseId) &&
+          (!projectId || t.projectId === projectId)
       ),
-    [orderedTasks, query, subject, priority]
+    [orderedTasks, query, subject, priority, courseId, projectId]
   );
   // Compute the visible ids in the current order; feed to SortableContext
   const visibleIds = React.useMemo(
@@ -369,6 +375,10 @@ export function TaskList() {
           onSubjectChange={setSubject}
           priority={priority}
           onPriorityChange={setPriority}
+          courseId={courseId}
+          onCourseChange={setCourseId}
+          projectId={projectId}
+          onProjectChange={setProjectId}
         />
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {archivedCount} archived

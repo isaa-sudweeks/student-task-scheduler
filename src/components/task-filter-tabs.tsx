@@ -1,6 +1,6 @@
 import React from 'react';
 import { api } from '@/server/api/react';
-import { Tag, ChevronDown, Flag } from 'lucide-react';
+import { Tag, ChevronDown, Flag, BookOpen, Folder } from 'lucide-react';
 import type { TaskPriority } from '@prisma/client';
 
 export type TaskFilter = 'all' | 'overdue' | 'today' | 'archive';
@@ -12,6 +12,10 @@ interface TaskFilterTabsProps {
   onSubjectChange?: (value: string | null) => void;
   priority?: TaskPriority | null;
   onPriorityChange?: (value: TaskPriority | null) => void;
+  courseId?: string | null;
+  onCourseChange?: (value: string | null) => void;
+  projectId?: string | null;
+  onProjectChange?: (value: string | null) => void;
 }
 
 export function TaskFilterTabs({
@@ -21,6 +25,10 @@ export function TaskFilterTabs({
   onSubjectChange,
   priority,
   onPriorityChange,
+  courseId,
+  onCourseChange,
+  projectId,
+  onProjectChange,
 }: TaskFilterTabsProps) {
   const options: { value: TaskFilter; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -30,6 +38,8 @@ export function TaskFilterTabs({
   ];
 
   const subjectsQuery = api.task.list.useQuery({ filter: 'all' });
+  const { data: courses = [] } = api.course.list.useQuery();
+  const { data: projects = [] } = api.project.list.useQuery();
   const subjects = React.useMemo(() => {
     const set = new Set<string>();
     subjectsQuery.data?.forEach((t: any) => {
@@ -90,6 +100,46 @@ export function TaskFilterTabs({
             <option value="HIGH">High</option>
             <option value="MEDIUM">Medium</option>
             <option value="LOW">Low</option>
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        </div>
+      )}
+      {onCourseChange && (
+        <div className="relative ml-2">
+          <BookOpen className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <select
+            aria-label="Course filter"
+            title="Filter by course"
+            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            value={courseId ?? ''}
+            onChange={(e) => onCourseChange(e.target.value || null)}
+          >
+            <option value="">All courses</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        </div>
+      )}
+      {onProjectChange && (
+        <div className="relative ml-2">
+          <Folder className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <select
+            aria-label="Project filter"
+            title="Filter by project"
+            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            value={projectId ?? ''}
+            onChange={(e) => onProjectChange(e.target.value || null)}
+          >
+            <option value="">All projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
           </select>
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
         </div>
