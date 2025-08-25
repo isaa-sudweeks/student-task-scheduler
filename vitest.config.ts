@@ -10,6 +10,7 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
       // Stub heavy browser-only libs in unit tests
       'recharts': resolve(__dirname, 'src/test/recharts.mock.ts'),
+      'fuse.js': resolve(__dirname, 'src/test/fuse.mock.ts'),
     },
   },
   test: {

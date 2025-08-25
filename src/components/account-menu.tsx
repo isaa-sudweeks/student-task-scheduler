@@ -20,12 +20,29 @@ export function AccountMenu() {
     return parts.slice(0, 2).map(p => p[0]?.toUpperCase()).join("");
   }, [user?.name]);
 
+  const [open, setOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
   return (
-    <div className="flex items-center gap-2">
-      <Link
-        href={`/settings?returnTo=${encodeURIComponent(current || "/")}`}
+    <div className="relative" ref={menuRef}>
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-2 rounded border px-2 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-        title="Account settings"
+        title="Account menu"
       >
         {user?.image ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -36,15 +53,37 @@ export function AccountMenu() {
           </span>
         )}
         <span className="hidden sm:inline">Settings</span>
-      </Link>
-      <button
-        type="button"
-        onClick={() => signOut({ callbackUrl: "/api/auth/signin" })}
-        className="rounded border px-2 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-        title="Sign out"
-      >
-        Sign out
       </button>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label="Account menu"
+          className="absolute right-0 z-10 mt-2 w-48 rounded border bg-white p-1 text-sm shadow-lg dark:border-white/10 dark:bg-zinc-900"
+        >
+          <Link
+            role="menuitem"
+            href={`/settings?returnTo=${encodeURIComponent(current || "/")}`}
+            onClick={() => setOpen(false)}
+            className="block w-full rounded px-3 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10"
+            title="Account settings"
+          >
+            Account Settings
+          </Link>
+          <button
+            role="menuitem"
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              signOut({ callbackUrl: "/api/auth/signin" });
+            }}
+            className="block w-full rounded px-3 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10"
+            title="Sign out"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
     </div>
   );
 }
