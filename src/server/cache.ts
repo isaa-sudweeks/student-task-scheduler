@@ -23,7 +23,7 @@ if (url && token) {
       await redis.set(key, value, ttlSeconds ? { ex: ttlSeconds } : undefined);
     },
     async clear() {
-      const keys = await redis.keys<string>(`${CACHE_PREFIX}*`);
+      const keys: string[] = await redis.keys(`${CACHE_PREFIX}*`);
       if (keys.length) {
         await redis.del(...keys);
       }
