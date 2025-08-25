@@ -32,7 +32,15 @@ export async function generateRecurringTasks(now = new Date()) {
     }
     if (task.recurrenceUntil && nextDue > task.recurrenceUntil) continue;
     const existing = await db.task.findFirst({
-      where: { title: task.title, dueAt: nextDue },
+      where: {
+        title: task.title,
+        userId: task.userId ?? undefined,
+        dueAt: nextDue,
+        recurrenceType: task.recurrenceType,
+        recurrenceInterval: task.recurrenceInterval,
+        recurrenceCount: task.recurrenceCount ?? undefined,
+        recurrenceUntil: task.recurrenceUntil ?? undefined,
+      },
     });
     if (!existing) {
       await db.task.create({
