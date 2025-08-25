@@ -159,4 +159,37 @@ describe('generateRecurringTasks', () => {
 
     expect(hoisted.create).not.toHaveBeenCalled();
   });
+
+  it('creates tasks independently for each user', async () => {
+    const now = new Date('2023-01-02T00:00:00Z');
+    hoisted.findMany.mockResolvedValue([
+      {
+        ...baseTemplate,
+        userId: 'u1',
+        dueAt: new Date('2023-01-01T00:00:00Z'),
+        recurrenceType: 'DAILY' as any,
+      },
+      {
+        ...baseTemplate,
+        userId: 'u2',
+        dueAt: new Date('2023-01-01T00:00:00Z'),
+        recurrenceType: 'DAILY' as any,
+      },
+    ]);
+    hoisted.count.mockResolvedValue(1);
+    hoisted.findFirst.mockImplementation(({ where }) =>
+      where.userId === 'u1' &&
+      where.recurrenceType === 'DAILY' &&
+      where.recurrenceInterval === 1
+        ? { id: 'existing' }
+        : null
+    );
+    hoisted.create.mockResolvedValue({});
+
+    await generateRecurringTasks(now);
+
+    expect(hoisted.create).toHaveBeenCalledTimes(1);
+    const call = hoisted.create.mock.calls[0][0];
+    expect(call.data.userId).toBe('u2');
+  });
 });
