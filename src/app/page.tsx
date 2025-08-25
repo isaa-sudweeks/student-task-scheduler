@@ -1,43 +1,73 @@
-import React from "react";
-import Link from "next/link";
+"use client";
+import React, { useState, Suspense } from "react";
 import { TaskList } from "@/components/task-list";
-import { NewTaskForm } from "@/components/new-task-form";
+import { TaskFilterTabs } from "@/components/task-filter-tabs";
+import { TaskModal } from "@/components/task-modal";
+import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/theme-toggle";
-import { Suspense } from "react";
 import { AccountMenu } from "@/components/account-menu";
 
+type Priority = "LOW" | "MEDIUM" | "HIGH";
+
 export default function HomePage() {
-  // Auth gating is enforced by next-auth middleware for '/'
+  const [filter, setFilter] = useState<"all" | "overdue" | "today" | "archive">("all");
+  const [subject, setSubject] = useState<string | null>(null);
+  const [priority, setPriority] = useState<Priority | null>(null);
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [showModal, setShowModal] = useState(false);
+
   return (
-    <main className="space-y-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Your Tasks</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/calendar"
-            className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-            title="Open Calendar"
-          >
-            Calendar View
-          </Link>
-          {/* Settings link removed; accessible via AccountMenu */}
-          <Link
-            href="/stats"
-            className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-            title="Open Statistics"
-          >
-            Statistics
-          </Link>
-          <ThemeToggle />
-          <Suspense fallback={null}>
-            <AccountMenu />
-          </Suspense>
+    <>
+      <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur dark:bg-slate-950/80">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold">Tasks</h1>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setShowModal(true)}>New task</Button>
+              <ThemeToggle />
+              <Suspense fallback={null}>
+                <AccountMenu />
+              </Suspense>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.currentTarget.value)}
+              placeholder="Search tasks..."
+              className="flex-1 bg-transparent border-0 p-0 outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+          <TaskFilterTabs
+            value={filter}
+            onChange={setFilter}
+            subject={subject}
+            onSubjectChange={setSubject}
+            priority={priority}
+            onPriorityChange={setPriority}
+            courseId={courseId}
+            onCourseChange={setCourseId}
+            projectId={projectId}
+            onProjectChange={setProjectId}
+          />
         </div>
       </header>
-      <NewTaskForm />
-      <TaskList />
-    </main>
+      <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6">
+        <div className="rounded-xl border bg-white shadow-sm p-4">
+          <TaskList
+            filter={filter}
+            subject={subject}
+            priority={priority}
+            courseId={courseId}
+            projectId={projectId}
+            query={query}
+          />
+        </div>
+      </main>
+      <TaskModal open={showModal} mode="create" onClose={() => setShowModal(false)} />
+    </>
   );
 }
