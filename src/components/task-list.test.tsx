@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 import { TaskList } from './task-list';
@@ -11,8 +11,22 @@ import { ErrorBoundary } from './error-boundary';
 type Task = RouterOutputs['task']['list'][number];
 
 const defaultTasks: Task[] = [
-  { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math' } as any,
-  { id: '2', title: 'Test 2', dueAt: null, status: 'TODO', subject: 'science' } as any,
+  {
+    id: '1',
+    title: 'Test 1',
+    dueAt: null,
+    status: 'DONE',
+    subject: 'math',
+    course: { id: 'c1', title: 'Course 1', term: null, color: 'red' },
+  } as any,
+  {
+    id: '2',
+    title: 'Test 2',
+    dueAt: null,
+    status: 'TODO',
+    subject: 'science',
+    course: null,
+  } as any,
 ];
 
 // DnD mocks to support reorder tests
@@ -57,6 +71,7 @@ const defaultQuery = {
       status: 'DONE',
       subject: 'math',
       priority: 'HIGH',
+      course: { id: 'c1', title: 'Course 1', term: null, color: 'red' },
     },
     {
       id: '2',
@@ -65,6 +80,7 @@ const defaultQuery = {
       status: 'TODO',
       subject: 'science',
       priority: 'LOW',
+      course: null,
     },
   ],
   isLoading: false,
@@ -143,6 +159,21 @@ afterEach(() => {
 });
 
 describe('TaskList', () => {
+  beforeEach(() => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: { pages: [defaultTasks] },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    useQueryMock.mockReturnValue({
+      data: defaultTasks.filter((t) => t.status === 'DONE'),
+      isLoading: false,
+      error: undefined,
+    });
+  });
   it('shows loading skeleton when tasks are loading', () => {
     useInfiniteQueryMock.mockReturnValue({
       data: { pages: [] },
@@ -320,5 +351,30 @@ describe('TaskList', () => {
     fireEvent.click(checkboxes[1]);
     fireEvent.click(screen.getByText('Delete'));
     expect(bulkDeleteMock).toHaveBeenCalledWith({ ids: ['1', '2'] });
+  });
+
+  it('renders course color badge when course color is provided', () => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: {
+        pages: [[
+          {
+            id: '1',
+            title: 'Color Task',
+            dueAt: null,
+            status: 'TODO',
+            course: { id: 'c1', title: 'Course 1', term: null, color: 'blue' },
+          },
+        ]],
+      },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+    render(<TaskList />);
+    const badge = screen.getByTestId('course-color');
+    expect(badge).toHaveStyle({ backgroundColor: 'rgb(0, 0, 255)' });
   });
 });

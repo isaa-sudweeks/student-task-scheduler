@@ -87,6 +87,7 @@ export const taskRouter = router({
       };
       return db.task.findMany({
         where,
+        include: { course: true },
         orderBy: [
           // Highest priority first
           { priority: 'desc' },
