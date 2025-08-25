@@ -13,9 +13,9 @@ export const eventRouter = router({
       const userId = ctx.session.user.id;
       const where: Prisma.EventWhereInput = { task: { userId } };
       if (input?.start && input?.end) {
-        where.OR = [
-          { startAt: { gte: input.start, lt: input.end } },
-          { endAt: { gt: input.start, lte: input.end } },
+        where.AND = [
+          { startAt: { lt: input.end } },
+          { endAt: { gt: input.start } },
         ];
       }
       return db.event.findMany({ where });

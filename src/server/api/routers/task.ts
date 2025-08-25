@@ -8,8 +8,8 @@ import type { Task } from '@prisma/client';
 
 const TASK_LIST_CACHE_PREFIX = 'task:list:';
 
-const buildListCacheKey = (input: unknown) =>
-  `${TASK_LIST_CACHE_PREFIX}${JSON.stringify(input ?? {})}`;
+const buildListCacheKey = (input: unknown, userId: string | null) =>
+  `${TASK_LIST_CACHE_PREFIX}${userId ?? 'null'}:${JSON.stringify(input ?? {})}`;
 
 const invalidateTaskListCache = () => cache.clear();
 export const taskRouter = router({
@@ -107,7 +107,7 @@ export const taskRouter = router({
       };
 
       type TaskWithCourse = Prisma.TaskGetPayload<{ include: { course: true } }>;
-      const cacheKey = buildListCacheKey(input);
+      const cacheKey = buildListCacheKey(input, ctx.session?.user?.id ?? null);
       const cached = await cache.get<TaskWithCourse[]>(cacheKey);
       if (cached) return cached;
 
@@ -300,7 +300,7 @@ export const taskRouter = router({
       if (tasks.length !== input.ids.length) throw new TRPCError({ code: 'NOT_FOUND' });
       await db.$transaction(
         input.ids.map((id, index) =>
-          db.task.update({ where: { id }, data: { position: index } })
+          db.task.update({ where: { id }, data: { position: index + 1 } })
         )
       );
       await invalidateTaskListCache();

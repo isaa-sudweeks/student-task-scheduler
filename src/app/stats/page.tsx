@@ -37,6 +37,7 @@ export default function StatsPage() {
   }, [focusData]);
   const focusByTask = tasks
     .map((t) => ({
+      id: t.id,
       title: t.title,
       minutes: Math.round((focusMap[t.id] ?? 0) / 60000),
     }))
@@ -151,7 +152,7 @@ export default function StatsPage() {
           <h2 className="text-xl font-medium">Focus Time by Task</h2>
           <ul>
             {focusByTask.map((f) => (
-              <li key={f.title}>
+              <li key={f.id}>
                 {f.title}: {f.minutes}m
               </li>
             ))}

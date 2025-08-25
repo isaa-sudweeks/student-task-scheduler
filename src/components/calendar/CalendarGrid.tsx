@@ -31,10 +31,18 @@ export function CalendarGrid(props: {
     const eventsByDay = new Map<string, { id: string; title?: string }[]>();
     for (const ev of props.events) {
       const s = new Date(ev.startAt as any);
-      const key = ymd(s);
-      const list = eventsByDay.get(key) ?? [];
-      list.push({ id: ev.id, title: ev.title });
-      eventsByDay.set(key, list);
+      const e = new Date(ev.endAt as any);
+      const cur = new Date(s);
+      cur.setHours(0, 0, 0, 0);
+      const end = new Date(e);
+      end.setHours(0, 0, 0, 0);
+      while (cur <= end) {
+        const key = ymd(cur);
+        const list = eventsByDay.get(key) ?? [];
+        list.push({ id: ev.id, title: ev.title });
+        eventsByDay.set(key, list);
+        cur.setDate(cur.getDate() + 1);
+      }
     }
     return (
       <div className="border rounded overflow-hidden">

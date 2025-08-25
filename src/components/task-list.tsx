@@ -159,9 +159,7 @@ export function TaskList() {
     onSuccess: async () => utils.task.list.invalidate(),
   });
 
-  const reorder = api.task.reorder.useMutation({
-    onSuccess: async () => utils.task.list.invalidate(),
-  });
+  const reorder = api.task.reorder.useMutation();
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -170,10 +168,11 @@ export function TaskList() {
       const oldIndex = prev.indexOf(active.id as string);
       const newIndex = prev.indexOf(over.id as string);
       const newItems = arrayMove(prev, oldIndex, newIndex);
-      const snapshot = prev;
+      const snapshot = [...prev];
       reorder.mutate(
         { ids: newItems },
         {
+          onSuccess: async () => utils.task.list.invalidate(),
           onError: () => setItems(snapshot),
         }
       );
@@ -340,7 +339,7 @@ export function TaskList() {
         style={style}
         {...attributes}
         key={t.id}
-        className={`flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg_black/5 dark:hover:bg-white/5 ${
+        className={`flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${
           overdue
             ? "border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
             : ""

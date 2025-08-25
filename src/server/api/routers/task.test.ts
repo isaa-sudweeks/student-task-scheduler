@@ -12,7 +12,7 @@ const hoisted = vi.hoisted(() => {
   const eventDeleteMany = vi.fn().mockResolvedValue({});
   const findFirst = vi.fn().mockResolvedValue({});
   const $transaction = vi.fn(async (ops: any[]) =>
-    Promise.all(ops.map((op) => (typeof op === 'function' ? op() : op)))
+    Promise.all(ops.map((op) => (typeof op === 'function' ? op() : op))),
   );
   return {
     findMany,
@@ -22,7 +22,7 @@ const hoisted = vi.hoisted(() => {
     deleteMany,
     reminderDeleteMany,
     eventDeleteMany,
-     findFirst,
+    findFirst,
     $transaction,
   };
 });
@@ -119,16 +119,26 @@ describe('taskRouter.list caching', () => {
     await cache.clear();
   });
 
-  it('caches results and invalidates on create', async () => {
-    await taskRouter.createCaller(ctx).list({ filter: 'all' });
+  it('caches per user and invalidates on create', async () => {
+    const ctx1 = { session: { user: { id: 'u1' } } } as any;
+    const ctx2 = { session: { user: { id: 'u2' } } } as any;
+
+    await taskRouter.createCaller(ctx1).list({ filter: 'all' });
     expect(hoisted.findMany).toHaveBeenCalledTimes(1);
 
-    await taskRouter.createCaller(ctx).list({ filter: 'all' });
+    await taskRouter.createCaller(ctx1).list({ filter: 'all' });
     expect(hoisted.findMany).toHaveBeenCalledTimes(1);
 
-    await taskRouter.createCaller(ctx).create({ title: 'a' });
-    await taskRouter.createCaller(ctx).list({ filter: 'all' });
+    await taskRouter.createCaller(ctx2).list({ filter: 'all' });
     expect(hoisted.findMany).toHaveBeenCalledTimes(2);
+
+    await taskRouter.createCaller(ctx1).create({ title: 'a' });
+
+    await taskRouter.createCaller(ctx1).list({ filter: 'all' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(3);
+
+    await taskRouter.createCaller(ctx2).list({ filter: 'all' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(4);
   });
 });
 
@@ -140,17 +150,12 @@ describe('taskRouter.reorder', () => {
   });
 
   it('updates positions based on provided ids order', async () => {
-    hoisted.findMany.mockResolvedValueOnce([
-      { id: 'a' },
-      { id: 'b' },
-      { id: 'c' },
-    ]);
+    hoisted.findMany.mockResolvedValueOnce([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
     await taskRouter.createCaller(ctx).reorder({ ids: ['a', 'b', 'c'] });
     expect(hoisted.$transaction).toHaveBeenCalledTimes(1);
-    // Ensure update is called for each id with the correct index
-    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'a' }, data: { position: 0 } });
-    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'b' }, data: { position: 1 } });
-    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'c' }, data: { position: 2 } });
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'a' }, data: { position: 1 } });
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'b' }, data: { position: 2 } });
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'c' }, data: { position: 3 } });
   });
 });
 
@@ -160,18 +165,16 @@ describe('taskRouter.setStatus', () => {
     hoisted.findFirst.mockResolvedValue({ id: '1' });
   });
 
-  it.each([
-    'TODO',
-    'IN_PROGRESS',
-    'DONE',
-    'CANCELLED',
-  ] as const)('updates status to %s', async (status) => {
-    await taskRouter.createCaller(ctx).setStatus({ id: '1', status });
-    expect(hoisted.update).toHaveBeenCalledWith({
-      where: { id: '1' },
-      data: { status },
-    });
-  });
+  it.each(['TODO', 'IN_PROGRESS', 'DONE', 'CANCELLED'] as const)(
+    'updates status to %s',
+    async (status) => {
+      await taskRouter.createCaller(ctx).setStatus({ id: '1', status });
+      expect(hoisted.update).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: { status },
+      });
+    },
+  );
 });
 
 describe('taskRouter.create', () => {
@@ -182,34 +185,49 @@ describe('taskRouter.create', () => {
   it('passes priority to the database', async () => {
     await taskRouter.createCaller(ctx).create({ title: 'a', priority: TaskPriority.HIGH });
     expect(hoisted.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ userId: 'user1', priority: TaskPriority.HIGH, title: 'a', dueAt: null, subject: null, notes: null }),
+      data: expect.objectContaining({
+        userId: 'user1',
+        priority: TaskPriority.HIGH,
+        title: 'a',
+        dueAt: null,
+        subject: null,
+        notes: null,
+      }),
     });
   });
 
   it('passes recurrence data to the database', async () => {
-      const until = new Date('2024-01-01');
-      await taskRouter.createCaller(ctx).create({
-        title: 'a',
+    const until = new Date('2024-01-01');
+    await taskRouter.createCaller(ctx).create({
+      title: 'a',
+      recurrenceType: RecurrenceType.DAILY,
+      recurrenceInterval: 2,
+      recurrenceCount: 5,
+      recurrenceUntil: until,
+    });
+    expect(hoisted.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user1',
         recurrenceType: RecurrenceType.DAILY,
         recurrenceInterval: 2,
         recurrenceCount: 5,
         recurrenceUntil: until,
-      });
-      expect(hoisted.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          userId: 'user1',
-          recurrenceType: RecurrenceType.DAILY,
-          recurrenceInterval: 2,
-          recurrenceCount: 5,
-          recurrenceUntil: until,
-        }),
-      });
+      }),
+    });
   });
 
   it('passes project and course ids to the database', async () => {
     await taskRouter.createCaller(ctx).create({ title: 'a', projectId: 'p1', courseId: 'c1' });
     expect(hoisted.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ userId: 'user1', projectId: 'p1', courseId: 'c1', title: 'a', dueAt: null, subject: null, notes: null }),
+      data: expect.objectContaining({
+        userId: 'user1',
+        projectId: 'p1',
+        courseId: 'c1',
+        title: 'a',
+        dueAt: null,
+        subject: null,
+        notes: null,
+      }),
     });
   });
 });
@@ -219,25 +237,25 @@ describe('taskRouter.update recurrence', () => {
     hoisted.update.mockClear();
   });
 
-    it('updates recurrence fields', async () => {
-      const until = new Date('2024-02-02');
-      await taskRouter.createCaller(ctx).update({
-        id: '1',
+  it('updates recurrence fields', async () => {
+    const until = new Date('2024-02-02');
+    await taskRouter.createCaller(ctx).update({
+      id: '1',
+      recurrenceType: RecurrenceType.WEEKLY,
+      recurrenceInterval: 3,
+      recurrenceCount: 4,
+      recurrenceUntil: until,
+    });
+    expect(hoisted.update).toHaveBeenCalledWith({
+      where: { id: '1' },
+      data: {
         recurrenceType: RecurrenceType.WEEKLY,
         recurrenceInterval: 3,
         recurrenceCount: 4,
         recurrenceUntil: until,
-      });
-      expect(hoisted.update).toHaveBeenCalledWith({
-        where: { id: '1' },
-        data: {
-          recurrenceType: RecurrenceType.WEEKLY,
-          recurrenceInterval: 3,
-          recurrenceCount: 4,
-          recurrenceUntil: until,
-        },
-      });
+      },
     });
+  });
 });
 
 describe('taskRouter.update project/course', () => {
@@ -279,8 +297,14 @@ describe('taskRouter.bulkDelete', () => {
   it('deletes tasks and related data', async () => {
     await taskRouter.createCaller(ctx).bulkDelete({ ids: ['1', '2'] });
     expect(hoisted.$transaction).toHaveBeenCalledTimes(1);
-    expect(hoisted.reminderDeleteMany).toHaveBeenCalledWith({ where: { taskId: { in: ['1', '2'] }, task: { userId: 'user1' } } });
-    expect(hoisted.eventDeleteMany).toHaveBeenCalledWith({ where: { taskId: { in: ['1', '2'] }, task: { userId: 'user1' } } });
-    expect(hoisted.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['1', '2'] }, userId: 'user1' } });
+    expect(hoisted.reminderDeleteMany).toHaveBeenCalledWith({
+      where: { taskId: { in: ['1', '2'] }, task: { userId: 'user1' } },
+    });
+    expect(hoisted.eventDeleteMany).toHaveBeenCalledWith({
+      where: { taskId: { in: ['1', '2'] }, task: { userId: 'user1' } },
+    });
+    expect(hoisted.deleteMany).toHaveBeenCalledWith({
+      where: { id: { in: ['1', '2'] }, userId: 'user1' },
+    });
   });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -71,6 +71,25 @@ describe('CalendarGrid month view', () => {
     const may12Cell = screen.getByLabelText('month-day-2024-05-12');
     expect(may10Cell.querySelectorAll('[data-testid="month-event"]').length).toBe(2);
     expect(may12Cell.querySelectorAll('[data-testid="month-event"]').length).toBe(1);
+  });
+
+  it('renders multi-day events across days', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-05-05T12:00:00Z'));
+    const events = [
+      {
+        id: 'm1',
+        taskId: 't1',
+        title: 'Retreat',
+        startAt: '2024-05-10T09:00:00.000Z',
+        endAt: '2024-05-12T10:00:00.000Z',
+      },
+    ];
+    render(<CalendarGrid view="month" events={events} onDropTask={() => {}} />);
+    ['2024-05-10', '2024-05-11', '2024-05-12'].forEach((d) => {
+      const cell = screen.getByLabelText(`month-day-${d}`);
+      expect(within(cell).getByText('Retreat')).toBeInTheDocument();
+    });
   });
 });
 
