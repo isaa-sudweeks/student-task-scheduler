@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ThemeToggle from "@/components/theme-toggle";
 import { AccountMenu } from "@/components/account-menu";
 import { api } from "@/server/api/react";
+// Define expected shape of user settings returned by API
 import { toast } from "react-hot-toast";
 
 function SettingsContent() {
@@ -48,7 +49,14 @@ function SettingsContent() {
   }, [syncEnabled]);
 
   // User settings (tRPC)
-  const { data: settings } = api.user.getSettings.useQuery();
+  type UserSettings = {
+    timezone: string;
+    dayWindowStartHour: number;
+    dayWindowEndHour: number;
+    defaultDurationMinutes: number;
+    googleSyncEnabled: boolean;
+  };
+  const settings = api.user.getSettings.useQuery().data as UserSettings | undefined;
   const [tz, setTz] = React.useState(
     settings?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
   );

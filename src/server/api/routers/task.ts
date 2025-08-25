@@ -95,8 +95,9 @@ export const taskRouter = router({
         dueAt: { sort: 'asc', nulls: 'last' },
       };
 
+      type TaskWithCourse = Prisma.TaskGetPayload<{ include: { course: true } }>;
       const cacheKey = buildListCacheKey(input);
-      const cached = await cache.get<Task[]>(cacheKey);
+      const cached = await cache.get<TaskWithCourse[]>(cacheKey);
       if (cached) return cached;
 
       const tasks = await db.task.findMany({
