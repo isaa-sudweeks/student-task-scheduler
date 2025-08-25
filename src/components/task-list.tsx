@@ -335,7 +335,7 @@ export function TaskList() {
         style={style}
         {...attributes}
         key={t.id}
-        className={`flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg_black/5 dark:hover:bg-white/5 ${
+        className={`flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${
           overdue
             ? "border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
             : ""
