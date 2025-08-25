@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -32,6 +32,10 @@ const defaultTasks: Task[] = [
 // DnD mocks to support reorder tests
 let triggerDragEnd: any;
 const sortableItemsCalls: unknown[][] = [];
+const hoistedMocks = vi.hoisted(() => ({
+  arrayMoveMock: vi.fn((arr: unknown[]) => arr),
+}));
+const arrayMoveMock = hoistedMocks.arrayMoveMock;
 
 vi.mock('@dnd-kit/core', () => ({
   DndContext: ({ children, onDragEnd }: any) => {
@@ -41,7 +45,8 @@ vi.mock('@dnd-kit/core', () => ({
   closestCenter: vi.fn(),
   useDndMonitor: vi.fn(),
 }));
-vi.mock('@dnd-kit/sortable', async () => {
+vi.mock('@dnd-kit/sortable', () => {
+  const { arrayMoveMock } = hoistedMocks;
   return {
     // Record each items prop received to verify it matches filtered list
     SortableContext: ({ items, children }: { items: unknown; children: React.ReactNode }) => {
@@ -55,7 +60,7 @@ vi.mock('@dnd-kit/sortable', async () => {
       transform: null,
       transition: null,
     }),
-    arrayMove: (arr: unknown[]) => arr,
+    arrayMove: (...args: unknown[]) => arrayMoveMock(...args as any),
   } as any;
 });
 
@@ -148,6 +153,7 @@ afterEach(() => {
   bulkDeleteMock.mockReset();
   setStatusMock.mockReset();
   reorderMutate.mockReset();
+  arrayMoveMock.mockReset();
   virtualizerMock.mockReset();
   virtualizerMock.mockReturnValue({ getTotalSize: () => 0, getVirtualItems: () => [] });
   triggerDragEnd = undefined;
@@ -428,6 +434,38 @@ describe('TaskList', () => {
         .map((li) => li.textContent);
       expect(order).toEqual(initialOrder);
     });
+  });
+
+  it('persists reordered positions after reload', async () => {
+    arrayMoveMock.mockImplementationOnce((arr: unknown[], from: number, to: number) => {
+      const clone = [...arr];
+      const [item] = clone.splice(from, 1);
+      clone.splice(to, 0, item);
+      return clone;
+    });
+    reorderMutate.mockImplementation((_vars, opts) => {
+      opts?.onSuccess?.({ success: true } as any, undefined as any, undefined as any);
+    });
+    const { rerender } = render(<TaskList />);
+    expect(triggerDragEnd).toBeDefined();
+    act(() => {
+      triggerDragEnd({ active: { id: '1' }, over: { id: '2' } });
+    });
+
+    const reordered = [defaultTasks[1], defaultTasks[0]];
+    useInfiniteQueryMock.mockReturnValue({
+      data: { pages: [reordered] },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    rerender(<TaskList />);
+    const items = screen.getAllByRole('listitem');
+    expect(reorderMutate.mock.calls[0]?.[0]).toEqual({ ids: ['2', '1'] });
+    expect(items[0]?.textContent).toContain('Test 2');
+    expect(items[1]?.textContent).toContain('Test 1');
   });
 
   it('shows bulk actions and performs bulk update', () => {

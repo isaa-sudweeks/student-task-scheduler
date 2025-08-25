@@ -279,7 +279,7 @@ export const taskRouter = router({
     .mutation(async ({ input }) => {
       await db.$transaction(
         input.ids.map((id, index) =>
-          db.task.update({ where: { id }, data: { position: index } })
+          db.task.update({ where: { id }, data: { position: index + 1 } })
         )
       );
       await invalidateTaskListCache();
