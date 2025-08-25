@@ -36,6 +36,7 @@
 
 ## Testing Guidelines
 - Frameworks: Vitest for unit, Playwright for E2E.
+- Compiling: Compile everything as a test to see if there are any errors.
 - Naming: `*.test.ts`/`*.test.tsx` for unit; `*.spec.ts` for E2E.
 - Scope: Test tRPC procedures, Prisma logic, and critical UI flows.
 - Running: Use `npm test` locally and in CI; add/adjust tests with any code change.
