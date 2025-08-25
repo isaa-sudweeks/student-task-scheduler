@@ -134,9 +134,9 @@ describe('taskRouter.reorder', () => {
     await taskRouter.createCaller({}).reorder({ ids: ['a', 'b', 'c'] });
     expect(hoisted.$transaction).toHaveBeenCalledTimes(1);
     // Ensure update is called for each id with the correct index
-    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'a' }, data: { position: 0 } });
-    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'b' }, data: { position: 1 } });
-    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'c' }, data: { position: 2 } });
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'a' }, data: { position: 1 } });
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'b' }, data: { position: 2 } });
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: 'c' }, data: { position: 3 } });
   });
 });
 
