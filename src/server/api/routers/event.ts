@@ -12,9 +12,9 @@ export const eventRouter = router({
     .query(async ({ input }) => {
       const where: Prisma.EventWhereInput = {};
       if (input?.start && input?.end) {
-        where.OR = [
-          { startAt: { gte: input.start, lt: input.end } },
-          { endAt: { gt: input.start, lte: input.end } },
+        where.AND = [
+          { startAt: { lt: input.end } },
+          { endAt: { gt: input.start } },
         ];
       }
       return db.event.findMany({ where });
