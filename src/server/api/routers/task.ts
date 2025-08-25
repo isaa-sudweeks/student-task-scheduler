@@ -101,6 +101,7 @@ export const taskRouter = router({
 
       const tasks = await db.task.findMany({
         where,
+        include: { course: true },
         orderBy: [
           // Respect manual ordering first
           { position: 'asc' },

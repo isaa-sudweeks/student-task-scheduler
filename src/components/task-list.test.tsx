@@ -11,8 +11,22 @@ import { ErrorBoundary } from './error-boundary';
 type Task = RouterOutputs['task']['list'][number];
 
 const defaultTasks: Task[] = [
-  { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math' } as any,
-  { id: '2', title: 'Test 2', dueAt: null, status: 'TODO', subject: 'science' } as any,
+  {
+    id: '1',
+    title: 'Test 1',
+    dueAt: null,
+    status: 'DONE',
+    subject: 'math',
+    course: { id: 'c1', title: 'Course 1', term: null, color: 'red' },
+  } as any,
+  {
+    id: '2',
+    title: 'Test 2',
+    dueAt: null,
+    status: 'TODO',
+    subject: 'science',
+    course: null,
+  } as any,
 ];
 
 // DnD mocks to support reorder tests
@@ -57,6 +71,7 @@ const defaultQuery = {
       status: 'DONE',
       subject: 'math',
       priority: 'HIGH',
+      course: { id: 'c1', title: 'Course 1', term: null, color: 'red' },
     },
     {
       id: '2',
@@ -65,6 +80,7 @@ const defaultQuery = {
       status: 'TODO',
       subject: 'science',
       priority: 'LOW',
+      course: null,
     },
   ],
   isLoading: false,
@@ -178,6 +194,7 @@ describe('TaskList', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
     });
+    // Default archived query to full dataset with priorities for most tests
     useQueryMock.mockReturnValue(defaultQuery);
   });
   it('shows loading skeleton when tasks are loading', () => {
@@ -395,5 +412,30 @@ describe('TaskList', () => {
     expect(container).toMatchSnapshot();
     Object.assign(window, { innerWidth: origWidth });
     window.dispatchEvent(new Event('resize'));
+  });
+
+  it('renders course color badge when course color is provided', () => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: {
+        pages: [[
+          {
+            id: '1',
+            title: 'Color Task',
+            dueAt: null,
+            status: 'TODO',
+            course: { id: 'c1', title: 'Course 1', term: null, color: 'blue' },
+          },
+        ]],
+      },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+    render(<TaskList />);
+    const badge = screen.getByTestId('course-color');
+    expect(badge).toHaveStyle({ backgroundColor: 'rgb(0, 0, 255)' });
   });
 });

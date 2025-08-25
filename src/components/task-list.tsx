@@ -364,6 +364,13 @@ export function TaskList() {
           />
           <div className="flex flex-col gap-1 flex-1">
             <div className="flex flex-wrap items-center gap-2">
+              {t.course?.color && (
+                <span
+                  data-testid="course-color"
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: t.course.color }}
+                />
+              )}
               <span className={`font-medium ${done ? "line-through opacity-60" : ""}`}>
                 {titleNode}
               </span>
