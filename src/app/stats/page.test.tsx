@@ -86,6 +86,32 @@ describe('StatsPage', () => {
     expect(screen.getByText('Task 2: 2m')).toBeInTheDocument();
   });
 
+  it('renders focus stats for tasks with duplicate titles without key warnings', () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    taskUseQueryMock.mockReturnValue({
+      data: [
+        { id: '1', status: 'TODO', subject: 'Math', title: 'Task' },
+        { id: '2', status: 'DONE', subject: 'Science', title: 'Task' },
+      ],
+      isLoading: false,
+    });
+    focusUseQueryMock.mockReturnValue({
+      data: [
+        { taskId: '1', durationMs: 60000 },
+        { taskId: '2', durationMs: 120000 },
+      ],
+      isLoading: false,
+    });
+
+    render(<StatsPage />);
+    expect(screen.getByText('Task: 1m')).toBeInTheDocument();
+    expect(screen.getByText('Task: 2m')).toBeInTheDocument();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
   it('renders fallback when query fails', () => {
     taskUseQueryMock.mockReturnValue({
       data: [],
