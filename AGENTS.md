@@ -33,10 +33,11 @@
 - Indentation: 2 spaces; keep imports ordered (libs → internal).
 - Components/routers: `PascalCase` for React components; `camelCase` for functions/vars; route folders use Next.js conventions.
 - Linting: ESLint enforces rules; run `npm run lint` and fix warnings before PRs.
+- External APIs: check type definitions before adding generics. For example, `redis.keys` already returns `string[]` and does not accept type parameters.
 
 ## Testing Guidelines
 - Frameworks: Vitest for unit, Playwright for E2E.
-- Compiling: Compile everything as a test to see if there are any errors.
+- Compiling: Run `npm run build` to perform a full type check and catch compile-time errors.
 - Naming: `*.test.ts`/`*.test.tsx` for unit; `*.spec.ts` for E2E.
 - Scope: Test tRPC procedures, Prisma logic, and critical UI flows.
 - Running: Use `npm test` locally and in CI; add/adjust tests with any code change.
@@ -48,7 +49,7 @@
 ## Commit & Pull Request Guidelines
 - Commits: Clear, imperative subject (e.g., "feat: add task calendar"). Keep changes focused.
 - PRs: Include description, rationale, linked issues, and screenshots for UI changes. Note schema or env impacts.
-- Checklist: Run `npm run lint`, `npm test`, and relevant E2E before requesting review.
+- Checklist: Run `npm run lint`, `npm test`, `npm run build`, and relevant E2E before requesting review.
 
 ## Security & Configuration Tips
 - Env vars: Configure `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `GITHUB_ID`, `GITHUB_SECRET`, `REDIS_URL` in `.env`. Never commit secrets.
