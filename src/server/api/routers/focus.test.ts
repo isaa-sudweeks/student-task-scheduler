@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
   updateMany: vi.fn(),
   create: vi.fn(),
   findFirst: vi.fn(),
   update: vi.fn(),
+  findMany: vi.fn(),
 }));
 
 vi.mock('@/server/db', () => ({
@@ -14,6 +15,7 @@ vi.mock('@/server/db', () => ({
       create: hoisted.create,
       findFirst: hoisted.findFirst,
       update: hoisted.update,
+      findMany: hoisted.findMany,
     },
   },
 }));
@@ -70,6 +72,40 @@ describe('focusRouter.stop', () => {
 
     expect(hoisted.update).not.toHaveBeenCalled();
     expect(result).toEqual({ ok: true });
+  });
+});
+
+describe('focusRouter.aggregate', () => {
+  beforeEach(() => {
+    hoisted.findMany.mockReset();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2023-01-01T03:00:00Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('sums durations per task including open logs', async () => {
+    hoisted.findMany.mockResolvedValueOnce([
+      {
+        taskId: 't1',
+        startedAt: new Date('2023-01-01T01:00:00Z'),
+        endedAt: new Date('2023-01-01T02:00:00Z'),
+      },
+      {
+        taskId: 't2',
+        startedAt: new Date('2023-01-01T02:00:00Z'),
+        endedAt: null,
+      },
+    ]);
+
+    const result = await focusRouter.createCaller({}).aggregate();
+
+    expect(hoisted.findMany).toHaveBeenCalled();
+    expect(result).toEqual([
+      { taskId: 't1', durationMs: 60 * 60 * 1000 },
+      { taskId: 't2', durationMs: 60 * 60 * 1000 },
+    ]);
   });
 });
 

@@ -56,6 +56,9 @@ vi.mock('@/server/api/react', () => {
       user: {
         get: { useQuery: () => ({ data: null, isLoading: false, error: undefined }) },
         setTimezone: { useMutation: fn },
+        // Return undefined so Settings page reads from localStorage in unit tests
+        getSettings: { useQuery: () => ({ data: undefined, isLoading: false, error: undefined }) },
+        setSettings: { useMutation: fn },
       },
       event: {
         listRange: { useQuery: () => ({ data: [], isLoading: false }) },
@@ -85,6 +88,25 @@ vi.mock('recharts', () => {
     Cell: Null,
     ResponsiveContainer: Div,
   } as any;
+});
+
+// Mock next-auth for components using session hooks in unit tests
+vi.mock('next-auth/react', () => {
+  return {
+    useSession: () => ({ data: { user: { name: 'Test User', image: null } }, status: 'authenticated' }),
+    signOut: vi.fn(),
+    SessionProvider: ({ children }: any) => children,
+  } as any;
+});
+
+// Mock fuse.js used in TaskList to avoid requiring the library in unit tests
+vi.mock('fuse.js', () => {
+  class FakeFuse<T> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    constructor(_list?: T[], _options?: any) {}
+    search() { return []; }
+  }
+  return { default: FakeFuse } as any;
 });
 
 // Mock Prisma enums to avoid requiring generated client in unit tests

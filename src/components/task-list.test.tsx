@@ -11,8 +11,22 @@ import { ErrorBoundary } from './error-boundary';
 type Task = RouterOutputs['task']['list'][number];
 
 const defaultTasks: Task[] = [
-  { id: '1', title: 'Test 1', dueAt: null, status: 'DONE', subject: 'math' } as any,
-  { id: '2', title: 'Test 2', dueAt: null, status: 'TODO', subject: 'science' } as any,
+  {
+    id: '1',
+    title: 'Test 1',
+    dueAt: null,
+    status: 'DONE',
+    subject: 'math',
+    course: { id: 'c1', title: 'Course 1', term: null, color: 'red' },
+  } as any,
+  {
+    id: '2',
+    title: 'Test 2',
+    dueAt: null,
+    status: 'TODO',
+    subject: 'science',
+    course: null,
+  } as any,
 ];
 
 // DnD mocks to support reorder tests
@@ -57,6 +71,7 @@ const defaultQuery = {
       status: 'DONE',
       subject: 'math',
       priority: 'HIGH',
+      course: { id: 'c1', title: 'Course 1', term: null, color: 'red' },
     },
     {
       id: '2',
@@ -65,6 +80,7 @@ const defaultQuery = {
       status: 'TODO',
       subject: 'science',
       priority: 'LOW',
+      course: null,
     },
   ],
   isLoading: false,
@@ -161,7 +177,45 @@ beforeEach(() => {
   courseListMock.mockReturnValue({ data: [] });
 });
 
+beforeEach(() => {
+  useInfiniteQueryMock.mockReturnValue({
+    data: { pages: [defaultTasks] },
+    isLoading: false,
+    error: undefined,
+    fetchNextPage: fetchNextPageMock,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+  });
+  useQueryMock.mockReturnValue(defaultQuery);
+});
+
+// Provide a sane default for infinite query across tests
+beforeEach(() => {
+  // Provide data with priorities for filtering tests
+  useInfiniteQueryMock.mockReturnValue({
+    data: { pages: [defaultQuery.data] },
+    isLoading: false,
+    error: undefined,
+    fetchNextPage: fetchNextPageMock,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+  });
+  useQueryMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+});
+
 describe('TaskList', () => {
+  beforeEach(() => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: { pages: [defaultTasks] },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    // Default archived query to full dataset with priorities for most tests
+    useQueryMock.mockReturnValue(defaultQuery);
+  });
   it('shows loading skeleton when tasks are loading', () => {
     useInfiniteQueryMock.mockReturnValue({
       data: { pages: [] },
@@ -199,6 +253,15 @@ describe('TaskList', () => {
     fireEvent.change(input, { target: { value: 'Nope' } });
     expect(screen.queryByText('Test')).not.toBeInTheDocument();
     expect(screen.getByText('No tasks.')).toBeInTheDocument();
+  });
+
+  it('returns fuzzy matches and highlights them', () => {
+    render(<TaskList />);
+    const input = screen.getByPlaceholderText('Search tasks...');
+    fireEvent.change(input, { target: { value: 'Tst 1' } });
+    const items = screen.getAllByRole('listitem');
+    expect(items[0]?.textContent).toContain('Test 1');
+    expect(items[0]?.querySelector('mark')).toBeInTheDocument();
   });
 
   it('filters by title only and ignores subject', () => {
@@ -273,7 +336,8 @@ describe('TaskList', () => {
     });
     render(<TaskList />);
     expect(screen.getByText('Test 1')).toBeInTheDocument();
-    expect(screen.queryByText('Test 2')).not.toBeInTheDocument();
+    // Flattens and renders tasks across pages
+    expect(screen.getByText('Test 2')).toBeInTheDocument();
   });
 
   it('filters tasks by priority', () => {
@@ -383,5 +447,58 @@ describe('TaskList', () => {
     fireEvent.click(checkboxes[1]);
     fireEvent.click(screen.getByText('Delete'));
     expect(bulkDeleteMock).toHaveBeenCalledWith({ ids: ['1', '2'] });
+  });
+
+  it('applies responsive max height for long lists', () => {
+    const origWidth = window.innerWidth;
+    Object.assign(window, { innerWidth: 375 });
+    window.dispatchEvent(new Event('resize'));
+    const manyTasks = Array.from({ length: 20 }, (_, i) => ({
+      id: String(i + 1),
+      title: `Task ${i + 1}`,
+      dueAt: null,
+      status: 'TODO',
+    })) as any;
+    useInfiniteQueryMock.mockReturnValue({
+      data: { pages: [manyTasks] },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+    const { container } = render(<TaskList />);
+    const scroll = screen.getByTestId('task-scroll');
+    expect(scroll).toHaveClass('max-h-[50vh]');
+    expect(scroll).toHaveClass('md:max-h-[600px]');
+    expect(container).toMatchSnapshot();
+    Object.assign(window, { innerWidth: origWidth });
+    window.dispatchEvent(new Event('resize'));
+  });
+
+  it('renders course color badge when course color is provided', () => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: {
+        pages: [[
+          {
+            id: '1',
+            title: 'Color Task',
+            dueAt: null,
+            status: 'TODO',
+            course: { id: 'c1', title: 'Course 1', term: null, color: 'blue' },
+          },
+        ]],
+      },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+    render(<TaskList />);
+    const badge = screen.getByTestId('course-color');
+    expect(badge).toHaveStyle({ backgroundColor: 'rgb(0, 0, 255)' });
   });
 });

@@ -13,10 +13,18 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
+  // For NextAuth compatibility
+  emailVerified DateTime?
   timezone  String   @default("America/Denver")
   image     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // User preferences
+  dayWindowStartHour   Int     @default(8)
+  dayWindowEndHour     Int     @default(18)
+  defaultDurationMinutes Int   @default(30)
+  googleSyncEnabled    Boolean @default(false)
 
   tasks    Task[]
   projects Project[]
@@ -37,6 +45,8 @@ model Account {
   token_type        String?
   scope             String?
   id_token          String? @db.Text
+  // For NextAuth provider compatibility (e.g., Google)
+  refresh_token_expires_in Int?
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -126,6 +136,8 @@ model Task {
   events    Event[]
   reminders Reminder[]
   timeLogs  TaskTimeLog[]
+
+  @@index([dueAt, status])
 }
 
 model Event {

@@ -50,7 +50,7 @@
 - Checklist: Run `npm run lint`, `npm test`, and relevant E2E before requesting review.
 
 ## Security & Configuration Tips
-- Env vars: Configure `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `GITHUB_ID`, `GITHUB_SECRET`, `REDIS_URL`, `NEXTAUTH_SECRET` in `.env`. Never commit secrets.
+- Env vars: Configure `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `GITHUB_ID`, `GITHUB_SECRET`, `REDIS_URL` in `.env`. Never commit secrets.
 - Prisma: Re-run `npx prisma generate` after schema changes.
 
 ## Contributor Workflow (Agents)

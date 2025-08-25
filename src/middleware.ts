@@ -1,2 +1,10 @@
 export { default } from 'next-auth/middleware';
-export const config = { matcher: ['/tasks'] };
+// Require authentication for app pages
+export const config = {
+  matcher: [
+    '/',
+    '/calendar/:path*',
+    '/settings/:path*',
+    '/stats/:path*',
+  ],
+};

@@ -21,4 +21,18 @@ describe("SettingsPage", () => {
     expect(start.value).toBe("6");
     expect(end.value).toBe("20");
   });
+
+  it("loads stored default duration", () => {
+    window.localStorage.setItem("defaultDurationMinutes", "45");
+    render(<SettingsPage />);
+    const duration = screen.getByLabelText(/default duration/i) as HTMLInputElement;
+    expect(duration.value).toBe("45");
+  });
+
+  it("loads stored google sync toggle", () => {
+    window.localStorage.setItem("googleSyncEnabled", "true");
+    render(<SettingsPage />);
+    const checkbox = screen.getByLabelText(/enable google calendar sync/i) as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+  });
 });

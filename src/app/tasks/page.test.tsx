@@ -10,12 +10,22 @@ vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ task: { list: { invalidate: vi.fn() } } }),
     task: {
-      list: { useQuery: () => ({ data: [], isLoading: false }) },
+      list: {
+        useInfiniteQuery: () => ({
+          data: { pages: [[]] },
+          isLoading: false,
+          error: undefined,
+          fetchNextPage: vi.fn(),
+          hasNextPage: false,
+          isFetchingNextPage: false,
+        }),
+        useQuery: () => ({ data: [], isLoading: false }),
+      },
       create: {
         useMutation: () => ({
           mutate: vi.fn(),
           isPending: false,
-          error: undefined,
+          error: { message: 'Failed to create task' },
         }),
       },
       update: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
@@ -23,21 +33,18 @@ vi.mock('@/server/api/react', () => ({
         useMutation: () => ({
           mutate: vi.fn(),
           isPending: false,
-          error: undefined,
+          error: { message: 'Failed to set due date' },
         }),
       },
       delete: { useMutation: () => ({ mutate: vi.fn() }) },
       updateTitle: { useMutation: () => ({ mutate: vi.fn() }) },
-      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: { message: 'Failed to update status' } }) },
       reorder: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       bulkUpdate: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       bulkDelete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
     },
     project: { list: { useQuery: () => ({ data: [] }) } },
     course: { list: { useQuery: () => ({ data: [] }) } },
-    user: {
-      get: { useQuery: () => ({ data: null, isLoading: false }) },
-    },
   },
 }));
 

@@ -5,6 +5,9 @@ module.exports = {
     'next',
     'next/core-web-vitals',
   ],
+  plugins: [
+    '@typescript-eslint',
+  ],
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',
@@ -39,4 +42,3 @@ module.exports = {
     },
   ],
 };
-

@@ -44,6 +44,21 @@ Notes:
 - No postinstall hook (avoids prisma generate before schema copy in Docker).
 - TypeScript 5.7.x + tRPC 11.4.4 + ESLint 8.57 aligned with Next 14.2.x.
 
+## Google Authentication & Calendar Sync
+
+1. Create a Google Cloud project and enable the Calendar API.
+2. Create OAuth credentials for a Web application and set the authorized redirect URI to `http://localhost:3000/api/auth/callback/google`.
+3. Copy the credentials into `.env`:
+
+   ```bash
+   GOOGLE_CLIENT_ID=your_client_id
+   GOOGLE_CLIENT_SECRET=your_client_secret
+   ```
+
+4. Start the app and sign in with Google.
+5. Open **Settings** and toggle **Google Calendar Sync** to enable or disable synchronization.
+6. An iCal feed of scheduled events is available at `/api/trpc/event.ical` and can be consumed by other calendar clients.
+
 ## Testing
 
 Run linting and the test suites locally:
@@ -53,6 +68,14 @@ npm run lint
 CI=true npm test
 npm run e2e
 ```
+
+## Caching
+
+`taskRouter.list` caches query results for 60 seconds using an in-memory store backed by
+[`@upstash/redis`](https://github.com/upstash/redis).
+Any mutation that changes tasks (create, update, delete, reorder, etc.) clears the cache so
+subsequent `list` calls return fresh data. Configure Redis via `REDIS_URL` and `REDIS_TOKEN` or
+leave them unset to fall back to a local in-memory cache.
 
 ## Problems
 - Drag reordering does not persist: Dragging tasks to a new order updates the UI briefly, but the order does not stay after refresh.
@@ -70,3 +93,7 @@ Missing Next.js chunk (e.g., Error: Cannot find module './948.js')
   - If things get wedged, run `make dev-clean` and then `make dev`.
 - Cloud-synced folders:
   - Avoid bind mounts when the repo lives under iCloud/Dropbox/OneDrive. Use the provided file-sync compose (`docker-compose.dev.yml`) so `.next` stays inside the container and isn’t synced.
+
+Login loop after Google sign-in
+- Cause: Using database sessions with `next-auth/middleware` prevents the middleware from reading the session, causing a redirect loop back to sign-in.
+- Fix: We use JWT sessions in NextAuth. Ensure your `.env` has `NEXTAUTH_SECRET` set and `NEXTAUTH_URL` matches how you access the app (e.g., `http://localhost:3000`).

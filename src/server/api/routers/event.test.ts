@@ -9,6 +9,13 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
+const googleMock = vi.hoisted(() => {
+  return {
+    OAuth2: vi.fn().mockReturnValue({ setCredentials: vi.fn() }),
+    list: vi.fn().mockResolvedValue({ data: { items: [{ id: 'g1' }] } }),
+  };
+});
+
 vi.mock('@/server/db', () => ({
   db: {
     event: {
@@ -16,6 +23,13 @@ vi.mock('@/server/db', () => ({
       create: hoisted.create,
       update: hoisted.update,
     },
+  },
+}));
+
+vi.mock('googleapis', () => ({
+  google: {
+    auth: { OAuth2: googleMock.OAuth2 },
+    calendar: () => ({ events: { list: googleMock.list } }),
   },
 }));
 
@@ -62,6 +76,43 @@ describe('eventRouter.schedule', () => {
         endAt: new Date('2023-01-01T07:00:00.000Z'),
       },
     });
+  });
+});
+
+describe('eventRouter.ical', () => {
+  beforeEach(() => {
+    hoisted.findMany.mockReset();
+  });
+
+  it('generates a simple iCal feed', async () => {
+    hoisted.findMany.mockResolvedValueOnce([
+      {
+        id: 'e1',
+        startAt: new Date('2023-01-01T10:00:00.000Z'),
+        endAt: new Date('2023-01-01T11:00:00.000Z'),
+        location: null,
+        task: { title: 'Test Event' },
+      },
+    ]);
+
+    const ics = await eventRouter.createCaller({}).ical();
+    expect(ics).toContain('BEGIN:VCALENDAR');
+    expect(ics).toContain('SUMMARY:Test Event');
+  });
+});
+
+describe('eventRouter.syncGoogle', () => {
+  beforeEach(() => {
+    googleMock.list.mockClear();
+  });
+
+  it('fetches events from Google calendar', async () => {
+    const items = await eventRouter
+      .createCaller({})
+      .syncGoogle({ accessToken: 't' });
+    expect(googleMock.OAuth2).toHaveBeenCalled();
+    expect(googleMock.list).toHaveBeenCalled();
+    expect(items).toEqual([{ id: 'g1' }]);
   });
 });
 

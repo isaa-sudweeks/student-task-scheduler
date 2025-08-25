@@ -1,11 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { api } from "@/server/api/react";
-import type { RouterOutputs } from "@/server/api/root";
-
-import { TaskListSkeleton } from "./task-list-skeleton";
-import { TaskFilterTabs } from "./task-filter-tabs";
+import Fuse from "fuse.js";
 import {
   DndContext,
   closestCenter,
@@ -26,6 +22,12 @@ import {
   ArrowDown,
   Minus,
 } from "lucide-react";
+
+import { api } from "@/server/api/react";
+import type { RouterOutputs } from "@/server/api/root";
+
+import { TaskListSkeleton } from "./task-list-skeleton";
+import { TaskFilterTabs } from "./task-filter-tabs";
 import { TaskModal } from "@/components/task-modal";
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
 import { Button } from "@/components/ui/button";
@@ -182,18 +184,43 @@ export function TaskList() {
     return items.map((id) => map.get(id)).filter(Boolean) as Task[];
   }, [taskData, items]);
 
+  type SearchResult = Pick<Fuse.FuseResult<Task>, "item" | "matches">;
+  const fuseResults = React.useMemo<SearchResult[]>(() => {
+    if (!query) return orderedTasks.map((t) => ({ item: t }));
+    const fuse = new Fuse(orderedTasks, {
+      keys: ["title"],
+      includeMatches: true,
+      threshold: 0.4,
+      ignoreLocation: true,
+    });
+    // Normalize results to only include the fields we use
+    return fuse.search(query).map((r) => ({ item: r.item, matches: r.matches }));
+  }, [orderedTasks, query]);
+
+  // Build map of match data for highlighting (preserves fuzzy search behavior)
+  const matchesById = React.useMemo(
+    () =>
+      new Map<string, readonly Fuse.FuseResultMatch[]>(
+        fuseResults.map((r) => [r.item.id, r.matches ?? []])
+      ),
+    [fuseResults]
+  );
+
+  // Apply structured filters (subject/priority/courseId/projectId) on top of search results
   const filteredOrderedTasks = React.useMemo(
     () =>
-      orderedTasks.filter(
-        (t) =>
-          t.title.toLowerCase().includes(query.toLowerCase()) &&
-          (!subject || t.subject === subject) &&
-          (!priority || t.priority === priority) &&
-          (!courseId || t.courseId === courseId) &&
-          (!projectId || t.projectId === projectId)
-      ),
-    [orderedTasks, query, subject, priority, courseId, projectId]
+      fuseResults
+        .map((r) => r.item)
+        .filter(
+          (t) =>
+            (!subject || t.subject === subject) &&
+            (!priority || t.priority === priority) &&
+            (!courseId || t.courseId === courseId) &&
+            (!projectId || t.projectId === projectId)
+        ),
+    [fuseResults, subject, priority, courseId, projectId]
   );
+
   // Compute the visible ids in the current order; feed to SortableContext
   const visibleIds = React.useMemo(
     () => filteredOrderedTasks.map((t) => t.id),
@@ -256,6 +283,21 @@ export function TaskList() {
   if (bulkUpdate.error) throw bulkUpdate.error;
   if (bulkDelete.error) throw bulkDelete.error;
 
+  const highlightMatches = (
+    text: string,
+    indices: readonly [number, number][]
+  ) => {
+    let last = 0;
+    const res: React.ReactNode[] = [];
+    indices.forEach(([start, end], i) => {
+      if (start > last) res.push(text.slice(last, start));
+      res.push(<mark key={i}>{text.slice(start, end + 1)}</mark>);
+      last = end + 1;
+    });
+    if (last < text.length) res.push(text.slice[last]);
+    return res;
+  };
+
   const TaskItem = ({
     t,
     virtualStyle,
@@ -282,13 +324,18 @@ export function TaskList() {
       MEDIUM: <Minus className="h-3 w-3" aria-hidden="true" />,
       LOW: <ArrowDown className="h-3 w-3" aria-hidden="true" />,
     };
+    const match = matchesById.get(t.id)?.find((m) => m.key === "title");
+    const titleNode = match && match.indices
+      ? highlightMatches(t.title, match.indices as any)
+      : t.title;
+
     return (
       <li
         ref={setNodeRef}
         style={style}
         {...attributes}
         key={t.id}
-        className={`flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${
+        className={`flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg_black/5 dark:hover:bg-white/5 ${
           overdue
             ? "border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
             : ""
@@ -326,8 +373,15 @@ export function TaskList() {
           />
           <div className="flex flex-col gap-1 flex-1">
             <div className="flex flex-wrap items-center gap-2">
+              {t.course?.color && (
+                <span
+                  data-testid="course-color"
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: t.course.color }}
+                />
+              )}
               <span className={`font-medium ${done ? "line-through opacity-60" : ""}`}>
-                {t.title}
+                {titleNode}
               </span>
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${priorityStyles[priority]}`}
@@ -359,7 +413,7 @@ export function TaskList() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="w-full space-y-3 md:w-auto">
       <input
         type="text"
         value={query}
@@ -389,7 +443,7 @@ export function TaskList() {
           {useVirtual ? (
             <div
               ref={parentRef}
-              className="overflow-auto max-h-[600px]"
+              className="overflow-auto max-h-[50vh] md:max-h-[600px]"
               data-testid="task-scroll"
             >
               <div
