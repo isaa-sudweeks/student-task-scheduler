@@ -10,7 +10,8 @@ export const eventRouter = router({
   listRange: protectedProcedure
     .input(z.object({ start: z.date().optional(), end: z.date().optional() }).optional())
     .query(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = ctx.session?.user?.id;
+      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
       const where: Prisma.EventWhereInput = { task: { userId } };
       if (input?.start && input?.end) {
         where.AND = [
@@ -32,7 +33,8 @@ export const eventRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { durationMinutes: duration, startAt: desiredStart, dayWindowStartHour, dayWindowEndHour } = input;
-      const userId = ctx.session.user.id;
+      const userId = ctx.session?.user?.id;
+      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
 
       const task = await db.task.findFirst({ where: { id: input.taskId, userId } });
       if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
@@ -85,7 +87,8 @@ export const eventRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'End must be after start' });
       }
 
-      const userId = ctx.session.user.id;
+      const userId = ctx.session?.user?.id;
+      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
       const existingEvent = await db.event.findFirst({ where: { id: input.eventId, task: { userId } } });
       if (!existingEvent) throw new TRPCError({ code: 'NOT_FOUND' });
 
@@ -129,7 +132,8 @@ export const eventRouter = router({
   ical: protectedProcedure
     .input(z.object({ start: z.date().optional(), end: z.date().optional() }).optional())
     .query(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = ctx.session?.user?.id;
+      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
       const where: Prisma.EventWhereInput = { task: { userId } };
       if (input?.start && input?.end) {
         where.OR = [

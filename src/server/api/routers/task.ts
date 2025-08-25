@@ -12,6 +12,12 @@ const buildListCacheKey = (input: unknown, userId: string | null) =>
   `${TASK_LIST_CACHE_PREFIX}${userId ?? 'null'}:${JSON.stringify(input ?? {})}`;
 
 const invalidateTaskListCache = () => cache.clear();
+
+const requireUserId = (ctx: { session?: { user?: { id?: string } | null } | null }) => {
+  const id = ctx.session?.user?.id;
+  if (!id) throw new TRPCError({ code: 'UNAUTHORIZED' });
+  return id;
+};
 export const taskRouter = router({
   // List tasks for the authenticated user
   list: protectedProcedure
@@ -34,7 +40,7 @@ export const taskRouter = router({
         .optional()
     )
     .query(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = requireUserId(ctx);
       const filter = input?.filter ?? 'all';
       const subject = input?.subject;
       const priority = input?.priority;
@@ -151,9 +157,10 @@ export const taskRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
+      const userId = requireUserId(ctx);
       const created = await db.task.create({
         data: {
-          userId: ctx.session.user.id,
+          userId,
           title: input.title,
           dueAt: input.dueAt ?? null,
           subject: input.subject ?? null,
@@ -192,7 +199,7 @@ export const taskRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
       const { id, ...rest } = input;
-      const userId = ctx.session.user.id;
+      const userId = requireUserId(ctx);
       const existing = await db.task.findFirst({ where: { id, userId } });
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const data: Record<string, unknown> = {};
@@ -216,7 +223,7 @@ export const taskRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
-      const userId = ctx.session.user.id;
+      const userId = requireUserId(ctx);
       const existing = await db.task.findFirst({ where: { id: input.id, userId } });
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const updated = await db.task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
@@ -228,7 +235,7 @@ export const taskRouter = router({
       z.object({ id: z.string().min(1), title: z.string().min(1).max(200) })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = requireUserId(ctx);
       const existing = await db.task.findFirst({ where: { id: input.id, userId } });
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const updated = await db.task.update({ where: { id: input.id }, data: { title: input.title } });
@@ -243,7 +250,7 @@ export const taskRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = requireUserId(ctx);
       const existing = await db.task.findFirst({ where: { id: input.id, userId } });
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const updated = await db.task.update({ where: { id: input.id }, data: { status: input.status } });
@@ -258,8 +265,9 @@ export const taskRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      const userId = requireUserId(ctx);
       await db.task.updateMany({
-        where: { id: { in: input.ids }, userId: ctx.session.user.id },
+        where: { id: { in: input.ids }, userId },
         data: { status: input.status },
       });
       await invalidateTaskListCache();
@@ -268,7 +276,7 @@ export const taskRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = requireUserId(ctx);
       const existing = await db.task.findFirst({ where: { id: input.id, userId } });
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       // Be resilient even if DB referential actions aren't cascaded yet
@@ -283,7 +291,7 @@ export const taskRouter = router({
   bulkDelete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().min(1)) }))
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = requireUserId(ctx);
       await db.$transaction([
         db.reminder.deleteMany({ where: { taskId: { in: input.ids }, task: { userId } } }),
         db.event.deleteMany({ where: { taskId: { in: input.ids }, task: { userId } } }),
@@ -295,7 +303,7 @@ export const taskRouter = router({
   reorder: protectedProcedure
     .input(z.object({ ids: z.array(z.string().min(1)) }))
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = requireUserId(ctx);
       const tasks = await db.task.findMany({ where: { id: { in: input.ids }, userId }, select: { id: true } });
       if (tasks.length !== input.ids.length) throw new TRPCError({ code: 'NOT_FOUND' });
       await db.$transaction(
