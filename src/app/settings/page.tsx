@@ -1,11 +1,15 @@
 "use client";
-import React from "react";
+import React, { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ThemeToggle from "@/components/theme-toggle";
 import { AccountMenu } from "@/components/account-menu";
 import { api } from "@/server/api/react";
 import { toast } from "react-hot-toast";
 
-export default function SettingsPage() {
+function SettingsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams?.get("returnTo") || "";
   // Day window (localStorage)
   const [startHour, setStartHour] = React.useState(8);
   const [endHour, setEndHour] = React.useState(18);
@@ -43,17 +47,40 @@ export default function SettingsPage() {
     window.localStorage.setItem("googleSyncEnabled", String(syncEnabled));
   }, [syncEnabled]);
 
-  // User timezone (tRPC)
-  const { data: user } = api.user.get.useQuery();
+  // User settings (tRPC)
+  const { data: settings } = api.user.getSettings.useQuery();
   const [tz, setTz] = React.useState(
-    user?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+    settings?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
   );
   React.useEffect(() => {
-    if (user?.timezone) setTz(user.timezone);
-  }, [user?.timezone]);
-  const update = api.user.setTimezone.useMutation({
-    onSuccess: () => toast.success("Timezone updated"),
-    onError: (e) => toast.error(e.message || "Failed to update timezone"),
+    if (!settings) return;
+    setTz(settings.timezone);
+    setStartHour(settings.dayWindowStartHour);
+    setEndHour(settings.dayWindowEndHour);
+    setDefaultDuration(settings.defaultDurationMinutes);
+    setSyncEnabled(settings.googleSyncEnabled);
+    // Keep localStorage in sync for other pages
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("dayWindowStartHour", String(settings.dayWindowStartHour));
+      window.localStorage.setItem("dayWindowEndHour", String(settings.dayWindowEndHour));
+      window.localStorage.setItem("defaultDurationMinutes", String(settings.defaultDurationMinutes));
+      window.localStorage.setItem("googleSyncEnabled", String(settings.googleSyncEnabled));
+    }
+  }, [settings]);
+  const saveSettings = api.user.setSettings.useMutation({
+    onSuccess: () => {
+      toast.success("Settings saved");
+      // Prefer explicit returnTo; otherwise, go back. Fallback to /calendar.
+      if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+        router.push(returnTo);
+      } else {
+        // Attempt to go back; if no history, push default
+        router.back();
+        // as a fallback, ensure navigation to a safe default after a tick
+        setTimeout(() => router.push("/calendar"), 50);
+      }
+    },
+    onError: (e) => toast.error(e.message || "Failed to save settings"),
   });
   const zones = React.useMemo(
     () => (Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : [tz]),
@@ -66,7 +93,9 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-semibold">Settings</h1>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <AccountMenu />
+          <Suspense fallback={null}>
+            <AccountMenu />
+          </Suspense>
         </div>
       </header>
 
@@ -132,7 +161,22 @@ export default function SettingsPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            update.mutate({ timezone: tz });
+            // Persist local preferences immediately
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem("dayWindowStartHour", String(startHour));
+              window.localStorage.setItem("dayWindowEndHour", String(endHour));
+              window.localStorage.setItem("defaultDurationMinutes", String(defaultDuration));
+              window.localStorage.setItem("googleSyncEnabled", String(syncEnabled));
+            }
+
+            // Persist all settings via API (always save all fields)
+            saveSettings.mutate({
+              timezone: tz,
+              dayWindowStartHour: startHour,
+              dayWindowEndHour: endHour,
+              defaultDurationMinutes: defaultDuration,
+              googleSyncEnabled: syncEnabled,
+            });
           }}
           className="space-y-2 max-w-md"
         >
@@ -153,12 +197,20 @@ export default function SettingsPage() {
           <button
             type="submit"
             className="px-3 py-1 border rounded"
-            disabled={update.isPending}
+            disabled={saveSettings.isPending}
           >
             Save
           </button>
         </form>
       </section>
     </main>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsContent />
+    </Suspense>
   );
 }

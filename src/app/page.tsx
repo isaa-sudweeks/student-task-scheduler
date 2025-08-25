@@ -3,6 +3,7 @@ import Link from "next/link";
 import { TaskList } from "@/components/task-list";
 import { NewTaskForm } from "@/components/new-task-form";
 import ThemeToggle from "@/components/theme-toggle";
+import { Suspense } from "react";
 import { AccountMenu } from "@/components/account-menu";
 
 export default function HomePage() {
@@ -30,7 +31,9 @@ export default function HomePage() {
             Statistics
           </Link>
           <ThemeToggle />
-          <AccountMenu />
+          <Suspense fallback={null}>
+            <AccountMenu />
+          </Suspense>
         </div>
       </header>
       <NewTaskForm />

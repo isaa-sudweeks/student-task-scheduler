@@ -3,10 +3,17 @@
 import React from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 
 export function AccountMenu() {
   const { data } = useSession();
   const user = data?.user;
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const current = React.useMemo(() => {
+    const q = searchParams?.toString();
+    return q && q.length > 0 ? `${pathname}?${q}` : pathname;
+  }, [pathname, searchParams]);
   const initials = React.useMemo(() => {
     if (!user?.name) return "";
     const parts = user.name.split(" ").filter(Boolean);
@@ -16,7 +23,7 @@ export function AccountMenu() {
   return (
     <div className="flex items-center gap-2">
       <Link
-        href="/settings"
+        href={`/settings?returnTo=${encodeURIComponent(current || "/")}`}
         className="inline-flex items-center gap-2 rounded border px-2 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
         title="Account settings"
       >
@@ -41,4 +48,3 @@ export function AccountMenu() {
     </div>
   );
 }
-

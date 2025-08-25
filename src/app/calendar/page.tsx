@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, type DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
 import { api } from '@/server/api/react';
@@ -202,7 +202,9 @@ export default function CalendarPage() {
             Home
           </a>
           {/* Settings link removed; accessible via AccountMenu */}
-          <AccountMenu />
+          <Suspense fallback={null}>
+            <AccountMenu />
+          </Suspense>
         </header>
         {ViewTabs}
         <section className="p-4 rounded border">
@@ -227,7 +229,9 @@ export default function CalendarPage() {
           Home
         </a>
         {/* Settings link removed; accessible via AccountMenu */}
-        <AccountMenu />
+        <Suspense fallback={null}>
+          <AccountMenu />
+        </Suspense>
       </div>
       <DndContext
         sensors={sensors}

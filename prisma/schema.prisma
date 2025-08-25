@@ -20,6 +20,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // User preferences
+  dayWindowStartHour   Int     @default(8)
+  dayWindowEndHour     Int     @default(18)
+  defaultDurationMinutes Int   @default(30)
+  googleSyncEnabled    Boolean @default(false)
+
   tasks    Task[]
   projects Project[]
   courses  Course[]
