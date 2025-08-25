@@ -6,6 +6,8 @@ const hoisted = vi.hoisted(() => {
     findMany: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    eventFindFirst: vi.fn(),
+    taskFindFirst: vi.fn(),
   };
 });
 
@@ -22,7 +24,9 @@ vi.mock('@/server/db', () => ({
       findMany: hoisted.findMany,
       create: hoisted.create,
       update: hoisted.update,
+      findFirst: hoisted.eventFindFirst,
     },
+    task: { findFirst: hoisted.taskFindFirst },
   },
 }));
 
@@ -34,6 +38,8 @@ vi.mock('googleapis', () => ({
 }));
 
 import { eventRouter } from './event';
+
+const ctx = { session: { user: { id: 'user1' } } } as any;
 
 describe('eventRouter.listRange', () => {
   beforeEach(() => {
@@ -56,10 +62,7 @@ describe('eventRouter.listRange', () => {
 
     expect(hoisted.findMany).toHaveBeenCalledWith({
       where: {
-        AND: [
-          { startAt: { lt: end } },
-          { endAt: { gt: start } },
-        ],
+        AND: [{ startAt: { lt: end } }, { endAt: { gt: start } }],
       },
     });
     expect(res).toEqual(events);
@@ -70,19 +73,24 @@ describe('eventRouter.schedule', () => {
   beforeEach(() => {
     hoisted.findMany.mockReset();
     hoisted.create.mockReset();
+    hoisted.taskFindFirst.mockReset();
+    hoisted.taskFindFirst.mockResolvedValue({ id: 't1' });
   });
 
   it('rejects overlapping times', async () => {
     hoisted.findMany.mockResolvedValueOnce([
-      { startAt: new Date('2023-01-01T08:00:00.000Z'), endAt: new Date('2023-01-01T18:00:00.000Z') },
+      {
+        startAt: new Date('2023-01-01T08:00:00.000Z'),
+        endAt: new Date('2023-01-01T18:00:00.000Z'),
+      },
     ]);
 
     await expect(
-      eventRouter.createCaller({}).schedule({
+      eventRouter.createCaller(ctx).schedule({
         taskId: 't1',
         startAt: new Date('2023-01-01T09:00:00.000Z'),
         durationMinutes: 60,
-      })
+      }),
     ).rejects.toThrow(TRPCError);
 
     expect(hoisted.create).not.toHaveBeenCalled();
@@ -92,7 +100,7 @@ describe('eventRouter.schedule', () => {
     hoisted.findMany.mockResolvedValueOnce([]);
     hoisted.create.mockResolvedValueOnce({});
 
-    await eventRouter.createCaller({}).schedule({
+    await eventRouter.createCaller(ctx).schedule({
       taskId: 't1',
       startAt: new Date('2023-01-01T06:00:00.000Z'),
       durationMinutes: 60,
@@ -126,7 +134,7 @@ describe('eventRouter.ical', () => {
       },
     ]);
 
-    const ics = await eventRouter.createCaller({}).ical();
+    const ics = await eventRouter.createCaller(ctx).ical();
     expect(ics).toContain('BEGIN:VCALENDAR');
     expect(ics).toContain('SUMMARY:Test Event');
   });
@@ -139,7 +147,7 @@ describe('eventRouter.syncGoogle', () => {
 
   it('fetches events from Google calendar', async () => {
     const items = await eventRouter
-      .createCaller({})
+      .createCaller(ctx)
       .syncGoogle({ accessToken: 't' });
     expect(googleMock.OAuth2).toHaveBeenCalled();
     expect(googleMock.list).toHaveBeenCalled();
@@ -151,15 +159,21 @@ describe('eventRouter.move', () => {
   beforeEach(() => {
     hoisted.findMany.mockReset();
     hoisted.update.mockReset();
+    hoisted.eventFindFirst.mockReset();
+    hoisted.eventFindFirst.mockResolvedValue({ id: 'e1' });
   });
 
   it('reschedules to the next available slot when overlaps occur', async () => {
     hoisted.findMany.mockResolvedValueOnce([
-      { id: 'e2', startAt: new Date('2023-01-01T09:00:00.000Z'), endAt: new Date('2023-01-01T10:00:00.000Z') },
+      {
+        id: 'e2',
+        startAt: new Date('2023-01-01T09:00:00.000Z'),
+        endAt: new Date('2023-01-01T10:00:00.000Z'),
+      },
     ]);
     hoisted.update.mockResolvedValueOnce({});
 
-    await eventRouter.createCaller({}).move({
+    await eventRouter.createCaller(ctx).move({
       eventId: 'e1',
       startAt: new Date('2023-01-01T09:00:00.000Z'),
       endAt: new Date('2023-01-01T10:00:00.000Z'),
@@ -176,11 +190,15 @@ describe('eventRouter.move', () => {
 
   it('respects custom day window when resolving overlaps', async () => {
     hoisted.findMany.mockResolvedValueOnce([
-      { id: 'e2', startAt: new Date('2023-01-01T06:00:00.000Z'), endAt: new Date('2023-01-01T07:00:00.000Z') },
+      {
+        id: 'e2',
+        startAt: new Date('2023-01-01T06:00:00.000Z'),
+        endAt: new Date('2023-01-01T07:00:00.000Z'),
+      },
     ]);
     hoisted.update.mockResolvedValueOnce({});
 
-    await eventRouter.createCaller({}).move({
+    await eventRouter.createCaller(ctx).move({
       eventId: 'e1',
       startAt: new Date('2023-01-01T06:30:00.000Z'),
       endAt: new Date('2023-01-01T07:30:00.000Z'),
@@ -197,4 +215,3 @@ describe('eventRouter.move', () => {
     });
   });
 });
-

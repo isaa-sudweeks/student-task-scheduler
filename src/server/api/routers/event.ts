@@ -1,16 +1,17 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { publicProcedure, router } from '../trpc';
+import { protectedProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 import { findNonOverlappingSlot, Interval } from '@/lib/scheduling';
 import type { Event as EventModel, Prisma } from '@prisma/client';
 import { google } from 'googleapis';
 
 export const eventRouter = router({
-  listRange: publicProcedure
+  listRange: protectedProcedure
     .input(z.object({ start: z.date().optional(), end: z.date().optional() }).optional())
-    .query(async ({ input }) => {
-      const where: Prisma.EventWhereInput = {};
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      const where: Prisma.EventWhereInput = { task: { userId } };
       if (input?.start && input?.end) {
         where.AND = [
           { startAt: { lt: input.end } },
@@ -19,7 +20,7 @@ export const eventRouter = router({
       }
       return db.event.findMany({ where });
     }),
-  schedule: publicProcedure
+  schedule: protectedProcedure
     .input(
       z.object({
         taskId: z.string().min(1),
@@ -29,8 +30,12 @@ export const eventRouter = router({
         dayWindowEndHour: z.number().int().min(0).max(23).default(18),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { durationMinutes: duration, startAt: desiredStart, dayWindowStartHour, dayWindowEndHour } = input;
+      const userId = ctx.session.user.id;
+
+      const task = await db.task.findFirst({ where: { id: input.taskId, userId } });
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
 
       const sameDayStart = new Date(desiredStart);
       sameDayStart.setHours(0, 0, 0, 0);
@@ -39,6 +44,7 @@ export const eventRouter = router({
 
       const existing: EventModel[] = await db.event.findMany({
         where: {
+          task: { userId },
           // Consider same day events for overlap avoidance
           OR: [
             { startAt: { gte: sameDayStart, lte: sameDayEnd } },
@@ -64,7 +70,7 @@ export const eventRouter = router({
 
       return db.event.create({ data: { taskId: input.taskId, startAt: slot.startAt, endAt: slot.endAt } });
     }),
-  move: publicProcedure
+  move: protectedProcedure
     .input(
       z.object({
         eventId: z.string().min(1),
@@ -74,10 +80,14 @@ export const eventRouter = router({
         dayWindowEndHour: z.number().int().min(0).max(23).default(18),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       if (input.endAt <= input.startAt) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'End must be after start' });
       }
+
+      const userId = ctx.session.user.id;
+      const existingEvent = await db.event.findFirst({ where: { id: input.eventId, task: { userId } } });
+      if (!existingEvent) throw new TRPCError({ code: 'NOT_FOUND' });
 
       const sameDayStart = new Date(input.startAt);
       sameDayStart.setHours(0, 0, 0, 0);
@@ -86,6 +96,7 @@ export const eventRouter = router({
 
       const existing: EventModel[] = await db.event.findMany({
         where: {
+          task: { userId },
           id: { not: input.eventId },
           OR: [
             { startAt: { gte: sameDayStart, lte: sameDayEnd } },
@@ -115,10 +126,11 @@ export const eventRouter = router({
 
       return db.event.update({ where: { id: input.eventId }, data: { startAt: input.startAt, endAt: input.endAt } });
     }),
-  ical: publicProcedure
+  ical: protectedProcedure
     .input(z.object({ start: z.date().optional(), end: z.date().optional() }).optional())
-    .query(async ({ input }) => {
-      const where: Prisma.EventWhereInput = {};
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      const where: Prisma.EventWhereInput = { task: { userId } };
       if (input?.start && input?.end) {
         where.OR = [
           { startAt: { gte: input.start, lt: input.end } },
@@ -148,7 +160,7 @@ export const eventRouter = router({
       lines.push('END:VCALENDAR');
       return lines.join('\r\n');
     }),
-  syncGoogle: publicProcedure
+  syncGoogle: protectedProcedure
     .input(
       z.object({ accessToken: z.string(), refreshToken: z.string().optional() })
     )

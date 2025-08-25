@@ -1,7 +1,8 @@
 import React from 'react';
-import { api } from '@/server/api/react';
+import { useSession } from 'next-auth/react';
 import { Tag, ChevronDown, Flag, BookOpen, Folder } from 'lucide-react';
 import type { TaskPriority } from '@prisma/client';
+import { api } from '@/server/api/react';
 
 export type TaskFilter = 'all' | 'overdue' | 'today' | 'archive';
 
@@ -37,7 +38,11 @@ export function TaskFilterTabs({
     { value: 'archive', label: 'Archive' },
   ];
 
-  const subjectsQuery = api.task.list.useQuery({ filter: 'all' });
+  const { data: session } = useSession();
+  const subjectsQuery = api.task.list.useQuery(
+    { filter: 'all' },
+    { enabled: !!session }
+  );
   const { data: courses = [] } = api.course.list.useQuery();
   const { data: projects = [] } = api.project.list.useQuery();
   const subjects = React.useMemo(() => {

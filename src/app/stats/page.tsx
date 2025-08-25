@@ -2,9 +2,7 @@
 
 import React from "react";
 import { useTheme } from "next-themes";
-import { api } from "@/server/api/react";
-import type { RouterOutputs } from "@/server/api/root";
-import { ErrorBoundary } from "@/components/error-boundary";
+import { useSession } from "next-auth/react";
 import {
   BarChart,
   Bar,
@@ -16,11 +14,17 @@ import {
   Cell,
   ResponsiveContainer,
 } from "recharts";
+import { api } from "@/server/api/react";
+import type { RouterOutputs } from "@/server/api/root";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 type Task = RouterOutputs["task"]["list"][number];
 
 export default function StatsPage() {
-  const { data, isLoading, error } = api.task.list.useQuery();
+  const { data: session } = useSession();
+  const { data, isLoading, error } = api.task.list.useQuery(undefined, {
+    enabled: !!session,
+  });
   const tasks: RouterOutputs["task"]["list"] = data ?? [];
   const { data: focusData } = api.focus.aggregate.useQuery();
   const focusMap = React.useMemo(() => {

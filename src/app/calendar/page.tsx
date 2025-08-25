@@ -2,6 +2,7 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, type DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { api } from '@/server/api/react';
 import type { RouterOutputs } from '@/server/api/root';
 import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
@@ -16,6 +17,7 @@ export default function CalendarPage() {
   const [view, setView] = useState<ViewMode>('week');
   const utils = api.useUtils();
   const router = useRouter();
+  const { data: session } = useSession();
 
   const [dayStart, setDayStart] = useState(8);
   const [dayEnd, setDayEnd] = useState(18);
@@ -41,8 +43,8 @@ export default function CalendarPage() {
   );
 
   // Tasks and events for the current visible range (simplified for now)
-  const tasksQ = api.task.list.useQuery();
-  const eventsQ = api.event.listRange.useQuery();
+  const tasksQ = api.task.list.useQuery(undefined, { enabled: !!session });
+  const eventsQ = api.event.listRange.useQuery(undefined, { enabled: !!session });
 
   const tasksData = useMemo(() => tasksQ.data ?? [], [tasksQ.data]);
   const eventsData = useMemo(() => eventsQ.data ?? [], [eventsQ.data]);

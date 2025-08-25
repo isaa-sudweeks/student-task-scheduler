@@ -27,3 +27,12 @@ const rateLimit = t.middleware(async ({ ctx, next }) => {
 
 export const router = t.router;
 export const publicProcedure = t.procedure.use(rateLimit);
+
+const isAuthed = t.middleware(({ ctx, next }) => {
+  if (!ctx.session?.user?.id) {
+    throw new TRPCError({ code: 'UNAUTHORIZED' });
+  }
+  return next();
+});
+
+export const protectedProcedure = t.procedure.use(rateLimit).use(isAuthed);
