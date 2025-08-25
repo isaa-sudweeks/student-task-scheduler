@@ -49,13 +49,13 @@ describe('taskRouter.list ordering', () => {
     await cache.clear();
   });
 
-  it('orders by priority, then position, dueAt, then createdAt', async () => {
+  it('orders by position, then priority, dueAt, then createdAt', async () => {
     await taskRouter.createCaller({}).list({ filter: 'all' });
     expect(hoisted.findMany).toHaveBeenCalledTimes(1);
     const arg = hoisted.findMany.mock.calls[0][0];
     expect(arg.orderBy).toEqual([
-      { priority: 'desc' },
       { position: 'asc' },
+      { priority: 'desc' },
       { dueAt: { sort: 'asc', nulls: 'last' } },
       { createdAt: 'desc' },
     ]);

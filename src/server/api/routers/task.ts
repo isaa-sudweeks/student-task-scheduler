@@ -102,11 +102,11 @@ export const taskRouter = router({
       const tasks = await db.task.findMany({
         where,
         orderBy: [
-          // Highest priority first
-          { priority: 'desc' },
-          // Respect manual ordering within same priority
+          // Respect manual ordering first
           { position: 'asc' },
-          // Then sort by due date (nulls last) for items with equal positions
+          // Then highest priority within the same position
+          { priority: 'desc' },
+          // Next sort by due date (nulls last)
           dueAtOrder,
           // Finally, newest first as a tiebreaker
           { createdAt: 'desc' },
