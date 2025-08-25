@@ -294,7 +294,7 @@ export function TaskList() {
       res.push(<mark key={i}>{text.slice(start, end + 1)}</mark>);
       last = end + 1;
     });
-    if (last < text.length) res.push(text.slice[last]);
+    if (last < text.length) res.push(text.slice(last));
     return res;
   };
 
