@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import timezoneMock from 'timezone-mock';
 import { findNonOverlappingSlot } from './scheduling';
 
 function d(s: string) { return new Date(s); }
@@ -74,6 +75,25 @@ describe('findNonOverlappingSlot', () => {
       stepMinutes: 15,
     });
     expect(result).toBeNull();
+  });
+
+  it('respects timezone offsets when applying day window', () => {
+    timezoneMock.register('US/Eastern');
+    try {
+      const events: any[] = [];
+      const result = findNonOverlappingSlot({
+        desiredStart: d('2020-01-01T06:00:00Z'), // 1 AM local time
+        durationMinutes: 30,
+        dayWindowStartHour: 8,
+        dayWindowEndHour: 18,
+        existing: events,
+        stepMinutes: 15,
+      });
+      expect(result?.startAt.toISOString()).toBe('2020-01-01T13:00:00.000Z');
+      expect(result?.endAt.toISOString()).toBe('2020-01-01T13:30:00.000Z');
+    } finally {
+      timezoneMock.unregister();
+    }
   });
 });
 
