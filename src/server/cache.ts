@@ -1,5 +1,7 @@
 import { Redis } from '@upstash/redis';
 
+export const CACHE_PREFIX = 'task:';
+
 interface CacheStore {
   get<T>(key: string): Promise<T | null>;
   set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
@@ -21,7 +23,10 @@ if (url && token) {
       await redis.set(key, value, ttlSeconds ? { ex: ttlSeconds } : undefined);
     },
     async clear() {
-      await redis.flushdb();
+      const keys = await redis.keys<string>(`${CACHE_PREFIX}*`);
+      if (keys.length) {
+        await redis.del(...keys);
+      }
     },
   };
 } else {
@@ -40,7 +45,11 @@ if (url && token) {
       map.set(key, { value, expires: ttlSeconds ? Date.now() + ttlSeconds * 1000 : null });
     },
     async clear() {
-      map.clear();
+      for (const key of Array.from(map.keys())) {
+        if (key.startsWith(CACHE_PREFIX)) {
+          map.delete(key);
+        }
+      }
     },
   };
 }
