@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { TaskStatus, TaskPriority, Prisma, RecurrenceType } from '@prisma/client';
-import { publicProcedure, router } from '../trpc';
+import { protectedProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 import { cache } from '@/server/cache';
 import type { Task } from '@prisma/client';
@@ -13,8 +13,8 @@ const buildListCacheKey = (input: unknown) =>
 
 const invalidateTaskListCache = () => cache.clear();
 export const taskRouter = router({
-  // No authentication: list all tasks
-  list: publicProcedure
+  // List tasks for the authenticated user
+  list: protectedProcedure
     .input(
       z
         .object({
@@ -34,6 +34,7 @@ export const taskRouter = router({
         .optional()
     )
     .query(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
       const filter = input?.filter ?? 'all';
       const subject = input?.subject;
       const priority = input?.priority;
@@ -76,8 +77,8 @@ export const taskRouter = router({
       // Show only DONE in archive; otherwise include all by default
       const baseWhere: Prisma.TaskWhereInput =
         filter === 'archive'
-          ? { status: TaskStatus.DONE }
-          : {};
+          ? { status: TaskStatus.DONE, userId }
+          : { userId };
 
       let where: Prisma.TaskWhereInput =
         filter === 'overdue'
@@ -130,7 +131,7 @@ export const taskRouter = router({
       await cache.set(cacheKey, tasks, 60);
       return tasks;
     }),
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         title: z.string().min(1).max(200),
@@ -146,12 +147,13 @@ export const taskRouter = router({
         courseId: z.string().min(1).optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
       const created = await db.task.create({
         data: {
+          userId: ctx.session.user.id,
           title: input.title,
           dueAt: input.dueAt ?? null,
           subject: input.subject ?? null,
@@ -168,7 +170,7 @@ export const taskRouter = router({
       await invalidateTaskListCache();
       return created;
     }),
-  update: publicProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.string().min(1),
@@ -185,98 +187,117 @@ export const taskRouter = router({
         courseId: z.string().nullable().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
       const { id, ...rest } = input;
+      const userId = ctx.session.user.id;
+      const existing = await db.task.findFirst({ where: { id, userId } });
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const data: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(rest)) {
         if (typeof value !== 'undefined') data[key] = value;
       }
       let result: Task;
       if (Object.keys(data).length === 0) {
-        result = await db.task.findUniqueOrThrow({ where: { id } });
+        result = existing;
       } else {
         result = await db.task.update({ where: { id }, data: data as Prisma.TaskUpdateInput });
       }
       await invalidateTaskListCache();
       return result;
     }),
-  setDueDate: publicProcedure
+  setDueDate: protectedProcedure
     .input(
       z.object({ id: z.string().min(1), dueAt: z.date().nullable() })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
+      const userId = ctx.session.user.id;
+      const existing = await db.task.findFirst({ where: { id: input.id, userId } });
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const updated = await db.task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
       await invalidateTaskListCache();
       return updated;
     }),
-  updateTitle: publicProcedure
+  updateTitle: protectedProcedure
     .input(
       z.object({ id: z.string().min(1), title: z.string().min(1).max(200) })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      const existing = await db.task.findFirst({ where: { id: input.id, userId } });
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const updated = await db.task.update({ where: { id: input.id }, data: { title: input.title } });
       await invalidateTaskListCache();
       return updated;
     }),
-  setStatus: publicProcedure
+  setStatus: protectedProcedure
     .input(
       z.object({
         id: z.string().min(1),
         status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      const existing = await db.task.findFirst({ where: { id: input.id, userId } });
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const updated = await db.task.update({ where: { id: input.id }, data: { status: input.status } });
       await invalidateTaskListCache();
       return updated;
     }),
-  bulkUpdate: publicProcedure
+  bulkUpdate: protectedProcedure
     .input(
       z.object({
         ids: z.array(z.string().min(1)),
         status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       await db.task.updateMany({
-        where: { id: { in: input.ids } },
+        where: { id: { in: input.ids }, userId: ctx.session.user.id },
         data: { status: input.status },
       });
       await invalidateTaskListCache();
       return { success: true };
     }),
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      const existing = await db.task.findFirst({ where: { id: input.id, userId } });
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       // Be resilient even if DB referential actions aren't cascaded yet
       const [, , deleted] = await db.$transaction([
-        db.reminder.deleteMany({ where: { taskId: input.id } }),
-        db.event.deleteMany({ where: { taskId: input.id } }),
+        db.reminder.deleteMany({ where: { taskId: input.id, task: { userId } } }),
+        db.event.deleteMany({ where: { taskId: input.id, task: { userId } } }),
         db.task.delete({ where: { id: input.id } }),
       ]);
       await invalidateTaskListCache();
       return deleted;
     }),
-  bulkDelete: publicProcedure
+  bulkDelete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().min(1)) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
       await db.$transaction([
-        db.reminder.deleteMany({ where: { taskId: { in: input.ids } } }),
-        db.event.deleteMany({ where: { taskId: { in: input.ids } } }),
-        db.task.deleteMany({ where: { id: { in: input.ids } } }),
+        db.reminder.deleteMany({ where: { taskId: { in: input.ids }, task: { userId } } }),
+        db.event.deleteMany({ where: { taskId: { in: input.ids }, task: { userId } } }),
+        db.task.deleteMany({ where: { id: { in: input.ids }, userId } }),
       ]);
       await invalidateTaskListCache();
       return { success: true };
     }),
-  reorder: publicProcedure
+  reorder: protectedProcedure
     .input(z.object({ ids: z.array(z.string().min(1)) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      const tasks = await db.task.findMany({ where: { id: { in: input.ids }, userId }, select: { id: true } });
+      if (tasks.length !== input.ids.length) throw new TRPCError({ code: 'NOT_FOUND' });
       await db.$transaction(
         input.ids.map((id, index) =>
           db.task.update({ where: { id }, data: { position: index } })

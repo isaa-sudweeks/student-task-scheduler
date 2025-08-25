@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
 import Fuse from "fuse.js";
 import {
   DndContext,
@@ -44,6 +45,7 @@ export function TaskList() {
   const [query, setQuery] = useState("");
   const utils = api.useUtils();
   const user = api.user.get.useQuery();
+  const { data: session } = useSession();
 
   const queryInput = React.useMemo(() => {
     const base: any = {
@@ -75,6 +77,7 @@ export function TaskList() {
         lastPage.length === PAGE_SIZE
           ? lastPage[lastPage.length - 1]?.id
           : undefined,
+      enabled: !!session,
     }
   );
   // Query archived count for header stats
@@ -87,7 +90,9 @@ export function TaskList() {
     }
     return base;
   }, [queryInput, user.data?.timezone]);
-  const archived = api.task.list.useQuery(archivedQueryInput);
+  const archived = api.task.list.useQuery(archivedQueryInput, {
+    enabled: !!session,
+  });
   const flatTasks = React.useMemo(
     () => tasks.data?.pages.flat() ?? [],
     [tasks.data]
