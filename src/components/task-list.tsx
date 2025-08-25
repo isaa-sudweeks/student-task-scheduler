@@ -28,7 +28,6 @@ import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
 
 import { TaskListSkeleton } from "./task-list-skeleton";
-import { TaskFilterTabs } from "./task-filter-tabs";
 import { TaskModal } from "@/components/task-modal";
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
 import { Button } from "@/components/ui/button";
@@ -36,13 +35,23 @@ import { Button } from "@/components/ui/button";
 type Task = RouterOutputs["task"]["list"][number];
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 
-export function TaskList() {
-  const [filter, setFilter] = useState<"all" | "overdue" | "today" | "archive">("all");
-  const [subject, setSubject] = useState<string | null>(null);
-  const [priority, setPriority] = useState<Priority | null>(null);
-  const [courseId, setCourseId] = useState<string | null>(null);
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+interface TaskListProps {
+  filter: "all" | "overdue" | "today" | "archive";
+  subject: string | null;
+  priority: Priority | null;
+  courseId: string | null;
+  projectId: string | null;
+  query: string;
+}
+
+export function TaskList({
+  filter,
+  subject,
+  priority,
+  courseId,
+  projectId,
+  query,
+}: TaskListProps) {
   const utils = api.useUtils();
   const user = api.user.get.useQuery();
   const { data: session } = useSession();
@@ -80,19 +89,6 @@ export function TaskList() {
       enabled: !!session,
     }
   );
-  // Query archived count for header stats
-  const archivedQueryInput = React.useMemo(() => {
-    const base: any = { filter: "archive" as const };
-    if (!user.data?.timezone) {
-      base.tzOffsetMinutes = (queryInput as any).tzOffsetMinutes;
-      base.todayStart = (queryInput as any).todayStart;
-      base.todayEnd = (queryInput as any).todayEnd;
-    }
-    return base;
-  }, [queryInput, user.data?.timezone]);
-  const archived = api.task.list.useQuery(archivedQueryInput, {
-    enabled: !!session,
-  });
   const flatTasks = React.useMemo(
     () => tasks.data?.pages.flat() ?? [],
     [tasks.data]
@@ -147,7 +143,6 @@ export function TaskList() {
   }, [items]);
 
   const totalTasks = flatTasks.length;
-  const archivedCount = archived.data?.length ?? 0;
 
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
@@ -418,30 +413,6 @@ export function TaskList() {
 
   return (
     <div className="w-full space-y-3 md:w-auto">
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.currentTarget.value)}
-        placeholder="Search tasks..."
-        className="w-full bg-transparent border-0 px-0 py-1 outline-none placeholder:text-muted-foreground"
-      />
-      <div className="flex items-center justify-between">
-        <TaskFilterTabs
-          value={filter}
-          onChange={setFilter}
-          subject={subject}
-          onSubjectChange={setSubject}
-          priority={priority}
-          onPriorityChange={setPriority}
-          courseId={courseId}
-          onCourseChange={setCourseId}
-          projectId={projectId}
-          onProjectChange={setProjectId}
-        />
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          {archivedCount} archived
-        </p>
-      </div>
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={visibleIds}>
           {useVirtual ? (

@@ -38,10 +38,9 @@ vi.mock('@/server/api/react', () => ({
 }));
 
 describe('HomePage', () => {
-  it('shows a link to the calendar view', () => {
+  it('renders search and new task controls', () => {
     render(<HomePage />);
-    const link = screen.getByRole('link', { name: /calendar view/i });
-    expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/calendar');
+    expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /new task/i })).toBeInTheDocument();
   });
 });
