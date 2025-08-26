@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import { TaskList } from "@/components/task-list";
 import { TaskFilterTabs } from "@/components/task-filter-tabs";
 import { TaskModal } from "@/components/task-modal";
@@ -17,6 +17,28 @@ export default function HomePage() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
+
+  // Global hotkey: press "n" to open New Task modal
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      // Ignore when typing in inputs/textareas or contenteditable
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isEditable =
+        tag === "input" ||
+        tag === "textarea" ||
+        (target && (target as HTMLElement).isContentEditable);
+      if (isEditable) return;
+      // Only plain "n" without modifiers
+      if (e.key.toLowerCase() === "n" && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        setShowModal(true);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <>
