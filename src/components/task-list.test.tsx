@@ -20,8 +20,6 @@ vi.mock('@/server/api/react', () => ({
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       reorder: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-      bulkUpdate: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-      bulkDelete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
     },
     user: { get: { useQuery: () => ({ data: null, isLoading: false, error: undefined }) } },
   },
@@ -47,6 +45,6 @@ describe('TaskList', () => {
         query="Beta"
       />
     );
-    expect(screen.getByText('No tasks.')).toBeInTheDocument();
+    expect(screen.getByText('Create your first task')).toBeInTheDocument();
   });
 });

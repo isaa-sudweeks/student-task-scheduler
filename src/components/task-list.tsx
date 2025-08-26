@@ -22,6 +22,7 @@ import {
   ArrowUp,
   ArrowDown,
   Minus,
+  MoreVertical,
 } from "lucide-react";
 
 import { api } from "@/server/api/react";
@@ -138,11 +139,7 @@ export function TaskList({
     setItems(flatTasks.map((t) => t.id));
   }, [flatTasks]);
 
-  useEffect(() => {
-    setSelected((prev) => new Set([...prev].filter((id) => items.includes(id))));
-  }, [items]);
 
-  const totalTasks = flatTasks.length;
 
   const setDue = api.task.setDueDate.useMutation({
     onSuccess: async () => utils.task.list.invalidate(),
@@ -227,30 +224,7 @@ export function TaskList({
   );
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  const toggleSelected = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const bulkUpdate = api.task.bulkUpdate.useMutation({
-    onSuccess: async () => {
-      setSelected(new Set());
-      await utils.task.list.invalidate();
-    },
-  });
-
-  const bulkDelete = api.task.bulkDelete.useMutation({
-    onSuccess: async () => {
-      setSelected(new Set());
-      await utils.task.list.invalidate();
-    },
-  });
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
@@ -279,8 +253,6 @@ export function TaskList({
   if (setDue.error) throw setDue.error;
   if (setStatus.error) throw setStatus.error;
   if (reorder.error) throw reorder.error;
-  if (bulkUpdate.error) throw bulkUpdate.error;
-  if (bulkDelete.error) throw bulkDelete.error;
 
   const highlightMatches = (
     text: string,
@@ -297,6 +269,18 @@ export function TaskList({
     return res;
   };
 
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center gap-3 py-10 text-center text-neutral-500">
+      <span className="text-4xl">📝</span>
+      <Button onClick={() => setShowCreateModal(true)}>
+        Create your first task
+      </Button>
+      <p className="text-xs text-neutral-400">
+        Tip: press <kbd className="rounded border px-1">N</kbd> to add a task
+      </p>
+    </div>
+  );
+
   const TaskItem = ({
     t,
     virtualStyle,
@@ -304,12 +288,15 @@ export function TaskList({
     t: Task;
     virtualStyle?: React.CSSProperties;
   }) => {
-    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: t.id });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: t.id });
     const style: React.CSSProperties = {
       ...virtualStyle,
       ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
       ...(transition ? { transition } : {}),
     };
+    if (isDragging) {
+      style.transform = `${style.transform ?? ""} translateY(-1px)`;
+    }
     const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
     const done = t.status === "DONE";
     const priority: Priority = t.priority ?? "MEDIUM";
@@ -332,46 +319,27 @@ export function TaskList({
       <li
         ref={setNodeRef}
         style={style}
-        {...attributes}
         key={t.id}
-        className={`flex items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${
+        className={`group flex items-center justify-between rounded-md border bg-white p-3 transition-colors hover:bg-neutral-50 ${
           overdue
-            ? "border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
-            : ""
-        }`}
+            ? 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200'
+            : ''
+        } ${isDragging ? 'shadow-sm ring-1 ring-neutral-200 translate-y-[-1px]' : ''}`}
         onClick={() => setEditingTask(t)}
       >
-        <div className="flex items-start gap-3 flex-1">
-          <input
-            type="checkbox"
-            aria-label="Select task"
-            className="mt-1"
-            checked={selected.has(t.id)}
-            onChange={(e) => {
-              e.stopPropagation();
-              toggleSelected(t.id);
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
+        <div className="flex items-center gap-3 flex-1">
           <button
             type="button"
             aria-label="Drag to reorder"
-            className="mt-0.5 -ml-1 cursor-grab touch-none select-none rounded p-1 text-slate-400 hover:text-slate-600 active:cursor-grabbing dark:text-slate-500 dark:hover:text-slate-300"
+            className="cursor-grab opacity-50 text-neutral-400 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
             {...attributes}
             {...listeners}
             onClick={(e) => e.stopPropagation()}
           >
             <GripVertical className="h-4 w-4" />
           </button>
-          <StatusDropdown
-            className="mt-0.5"
-            value={t.status as TaskStatus}
-            onChange={(next) =>
-              setStatus.mutate({ id: t.id, status: next })
-            }
-          />
-          <div className="flex flex-col gap-1 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col flex-1 gap-1">
+            <div className="flex items-center gap-2">
               {t.course?.color && (
                 <span
                   data-testid="course-color"
@@ -379,26 +347,28 @@ export function TaskList({
                   style={{ backgroundColor: t.course.color }}
                 />
               )}
-              <span className={`font-medium ${done ? "line-through opacity-60" : ""}`}>
-                {titleNode}
-              </span>
+              <span className={`font-medium ${done ? 'line-through opacity-60' : ''}`}>{titleNode}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${priorityStyles[priority]}`}
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ring-1 ${priorityStyles[priority]}`}
               >
                 {priorityIcons[priority]}
                 {priority.charAt(0) + priority.slice(1).toLowerCase()}
               </span>
               {t.subject && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
                   <Tag className="h-3 w-3" /> {t.subject}
                 </span>
               )}
               {t.dueAt && (
-                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${
-                  overdue
-                    ? "bg-red-100 text-red-700 ring-red-200 dark:bg-red-900/30 dark:text-red-200 dark:ring-red-800"
-                    : "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:ring-amber-800"
-                }`}>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ring-1 ${
+                    overdue
+                      ? 'bg-red-100 text-red-700 ring-red-200 dark:bg-red-900/30 dark:text-red-200 dark:ring-red-800'
+                      : 'bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:ring-amber-800'
+                  }`}
+                >
                   <Calendar className="h-3 w-3" />
                   {new Date(t.dueAt!).toLocaleString()}
                 </span>
@@ -406,7 +376,23 @@ export function TaskList({
             </div>
           </div>
         </div>
-        {/* Right side kept minimal on list */}
+        <div className="flex items-center gap-2">
+          <StatusDropdown
+            value={t.status as TaskStatus}
+            onChange={(next) => setStatus.mutate({ id: t.id, status: next })}
+          />
+          <button
+            type="button"
+            aria-label="More actions"
+            className="p-1 text-neutral-400 hover:text-neutral-600"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingTask(t);
+            }}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </button>
+        </div>
       </li>
     );
   };
@@ -452,9 +438,12 @@ export function TaskList({
                 <TaskItem key={t.id} t={t} />
               ))}
               {(tasks.isLoading || tasks.isFetchingNextPage) && <TaskListSkeleton />}
-              {!tasks.isLoading && !tasks.isFetchingNextPage &&
+              {!tasks.isLoading &&
+                !tasks.isFetchingNextPage &&
                 filteredOrderedTasks.length === 0 && (
-                  <li className="opacity-60">No tasks.</li>
+                  <li>
+                    <EmptyState />
+                  </li>
                 )}
             </ul>
           )}
@@ -462,41 +451,21 @@ export function TaskList({
         {useVirtual &&
           !tasks.isLoading &&
           !tasks.isFetchingNextPage &&
-          filteredOrderedTasks.length === 0 && (
-          <div className="opacity-60">No tasks.</div>
-        )}
+          filteredOrderedTasks.length === 0 && <EmptyState />}
         {useVirtual &&
           (tasks.isLoading || tasks.isFetchingNextPage) && <TaskListSkeleton />}
       </DndContext>
-
-      {selected.size > 0 && (
-        <div data-testid="bulk-actions" className="flex gap-2">
-          <Button
-            onClick={() =>
-              bulkUpdate.mutate({
-                ids: Array.from(selected),
-                status: "DONE",
-              })
-            }
-          >
-            Mark done
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() =>
-              bulkDelete.mutate({ ids: Array.from(selected) })
-            }
-          >
-            Delete
-          </Button>
-        </div>
-      )}
 
       <TaskModal
         open={!!editingTask}
         mode="edit"
         onClose={() => setEditingTask(null)}
         task={editingTask ?? undefined}
+      />
+      <TaskModal
+        open={showCreateModal}
+        mode="create"
+        onClose={() => setShowCreateModal(false)}
       />
     </div>
   );
