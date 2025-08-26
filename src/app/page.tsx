@@ -21,10 +21,10 @@ export default function HomePage() {
   return (
     <>
       <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur dark:bg-slate-950/80">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+        <div className="mx-auto max-w-4xl space-y-4 px-3.5 py-2.5 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold">Tasks</h1>
-            <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold">Tasks</h1>
+            <div className="flex items-center gap-3">
               <Button onClick={() => setShowModal(true)}>New task</Button>
               <ThemeToggle />
               <Suspense fallback={null}>
@@ -32,13 +32,13 @@ export default function HomePage() {
               </Suspense>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.currentTarget.value)}
               placeholder="Search tasks..."
-              className="flex-1 bg-transparent border-0 p-0 outline-none placeholder:text-muted-foreground"
+              className="flex-1 rounded-md border bg-transparent px-3.5 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
           <TaskFilterTabs
