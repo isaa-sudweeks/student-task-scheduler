@@ -1,9 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { TaskList } from "@/components/task-list";
 import { TaskModal } from "@/components/task-modal";
 import { Button } from "@/components/ui/button";
 import { clsx } from "clsx";
+import { AccountMenu } from "@/components/account-menu";
+import ThemeToggle from "@/components/theme-toggle";
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 
@@ -48,15 +50,21 @@ export default function HomePage() {
               <h1 className="text-2xl font-semibold">Tasks</h1>
               <span className="text-sm text-muted-foreground">· {taskCount}</span>
             </div>
-            <div className="order-last flex items-center gap-3 md:order-none md:ml-auto">
-              <Button onClick={() => setShowModal(true)}>+ New Task</Button>
+            <div className="order-last flex items-center gap-2 md:order-none md:ml-auto">
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.currentTarget.value)}
                 placeholder="Search tasks..."
-                className="w-40 md:w-80 rounded-md border bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+                className="h-9 w-40 md:w-80 rounded-md border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
               />
+              <Button className="h-9" onClick={() => setShowModal(true)}>
+                + New Task
+              </Button>
+              <ThemeToggle />
+              <Suspense fallback={<div aria-hidden className="h-9 w-9 rounded-full bg-black/10 dark:bg-white/10 animate-pulse" />}>
+                <AccountMenu />
+              </Suspense>
             </div>
             <div className="flex justify-center md:mx-auto">
               <div className="inline-flex rounded-lg border bg-white p-1">

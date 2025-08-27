@@ -7,6 +7,16 @@ expect.extend(matchers);
 
 import HomePage from './page';
 
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ data: { user: { name: 'Test User', image: '' } } }),
+  signOut: () => {},
+}));
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(''),
+}));
+
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ task: { list: { invalidate: () => {} } } }),
@@ -47,5 +57,15 @@ describe('HomePage', () => {
     ['All', 'Today', 'Overdue'].forEach((label) => {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     });
+  });
+
+  it('shows account menu with Settings and opens dropdown', () => {
+    render(<HomePage />);
+    const acctBtn = screen.getByRole('button', { name: /settings/i });
+    expect(acctBtn).toBeInTheDocument();
+    // open menu
+    acctBtn.click();
+    expect(screen.getByRole('menuitem', { name: /account settings/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeInTheDocument();
   });
 });
