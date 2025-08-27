@@ -43,6 +43,7 @@ interface TaskListProps {
   courseId: string | null;
   projectId: string | null;
   query: string;
+  onCountChange?: (count: number) => void;
 }
 
 export function TaskList({
@@ -52,6 +53,7 @@ export function TaskList({
   courseId,
   projectId,
   query,
+  onCountChange,
 }: TaskListProps) {
   const utils = api.useUtils();
   const user = api.user.get.useQuery();
@@ -216,6 +218,10 @@ export function TaskList({
         ),
     [fuseResults, subject, priority, courseId, projectId]
   );
+
+  React.useEffect(() => {
+    onCountChange?.(filteredOrderedTasks.length);
+  }, [filteredOrderedTasks.length, onCountChange]);
 
   // Compute the visible ids in the current order; feed to SortableContext
   const visibleIds = React.useMemo(
