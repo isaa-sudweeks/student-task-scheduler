@@ -12,19 +12,21 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 };
 
 const STATUS_STYLES: Record<TaskStatus, string> = {
-  TODO: "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700",
+  TODO:
+    "bg-neutral-100 text-neutral-700 ring-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:ring-neutral-700",
   IN_PROGRESS:
-    "bg-blue-100 text-blue-700 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:ring-blue-800",
-  DONE: "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-800",
+    "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:ring-amber-800",
+  DONE:
+    "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-800",
   CANCELLED:
-    "bg-gray-100 text-gray-700 ring-gray-200 dark:bg-gray-900/30 dark:text-gray-200 dark:ring-gray-700",
+    "bg-neutral-100 text-neutral-500 ring-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:ring-neutral-700",
 };
 
 const DOT_STYLES: Record<TaskStatus, string> = {
-  TODO: "bg-slate-500",
-  IN_PROGRESS: "bg-blue-500",
+  TODO: "bg-neutral-400",
+  IN_PROGRESS: "bg-amber-500",
   DONE: "bg-emerald-500",
-  CANCELLED: "bg-gray-400",
+  CANCELLED: "bg-neutral-400",
 };
 
 export interface StatusDropdownProps {
