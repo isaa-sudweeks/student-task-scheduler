@@ -38,9 +38,14 @@ vi.mock('@/server/api/react', () => ({
 }));
 
 describe('HomePage', () => {
-  it('renders search and new task controls', () => {
+  it('renders header with count, filters, search and new task button', () => {
     render(<HomePage />);
+    expect(screen.getByText('Tasks')).toBeInTheDocument();
+    expect(screen.getByText('· 0')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /new task/i })).toBeInTheDocument();
+    ['All', 'Today', 'Overdue'].forEach((label) => {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+    });
   });
 });
