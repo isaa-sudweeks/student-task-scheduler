@@ -41,25 +41,25 @@ export function AccountMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 rounded border px-2 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-        title="Account menu"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent p-0 hover:bg-black/5 dark:hover:bg-white/10"
+        aria-label="Account menu"
+        title={user?.name ? `${user.name} — Account menu` : "Account menu"}
       >
         {user?.image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.image} alt={user?.name ?? "Account"} className="h-6 w-6 rounded-full" />
+          <img src={user.image} alt={user?.name ?? "Account"} className="h-9 w-9 rounded-full object-cover" />
         ) : (
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/10 text-xs dark:bg-white/10">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/10 text-xs dark:bg-white/10">
             {initials || ""}
           </span>
         )}
-        <span className="hidden sm:inline">Settings</span>
       </button>
 
       {open && (
         <div
           role="menu"
           aria-label="Account menu"
-          className="absolute right-0 z-10 mt-2 w-48 rounded border bg-white p-1 text-sm shadow-lg dark:border-white/10 dark:bg-zinc-900"
+          className="absolute right-0 z-10 mt-2 w-56 rounded border bg-white p-1 text-sm shadow-lg dark:border-white/10 dark:bg-zinc-900"
         >
           <Link
             role="menuitem"

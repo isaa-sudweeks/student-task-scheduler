@@ -1,10 +1,10 @@
 "use client";
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { api } from "@/server/api/react";
-import { toast } from "react-hot-toast";
 import { MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { TaskModal } from "@/components/task-modal";
+import { api } from "@/server/api/react";
+import { toast } from "@/lib/toast";
 
 export function NewTaskForm() {
   const utils = api.useUtils();
@@ -17,8 +17,9 @@ export function NewTaskForm() {
       setTitle("");
       setPendingDueAt(null);
       await utils.task.list.invalidate();
+      toast.success("Task added.");
     },
-    onError: (e) => toast.error(e.message || "Failed to create task"),
+    onError: (e) => toast.error(e.message || "Create failed."),
   });
 
   return (
