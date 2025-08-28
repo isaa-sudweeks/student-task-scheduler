@@ -5,6 +5,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 import { NewTaskForm } from './new-task-form';
+vi.mock('@/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 let mutateSpy = vi.fn();
 
@@ -17,7 +18,7 @@ vi.mock('@/server/api/react', () => ({
         useMutation: () => ({
           mutate: (...args: unknown[]) => (mutateSpy as any)(...args),
           isPending: false,
-          error: { message: 'Failed to create task' },
+          error: undefined,
         }),
       },
       update: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },

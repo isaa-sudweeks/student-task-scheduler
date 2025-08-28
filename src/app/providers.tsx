@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
 import { Toaster } from "react-hot-toast";
-import { api } from "@/server/api/react";
 import { SessionProvider } from "next-auth/react";
+import { api } from "@/server/api/react";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = React.useState(() => new QueryClient());
@@ -29,7 +29,28 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <api.Provider client={trpcClient} queryClient={queryClient}>
           <QueryClientProvider client={queryClient}>
             {children}
-            <Toaster />
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 3500,
+                style: {
+                  background: "#f3f4f6",
+                  color: "#374151",
+                },
+                success: {
+                  style: {
+                    background: "#dcfce7",
+                    color: "#166534",
+                  },
+                },
+                error: {
+                  style: {
+                    background: "#fee2e2",
+                    color: "#991b1b",
+                  },
+                },
+              }}
+            />
           </QueryClientProvider>
         </api.Provider>
       </SessionProvider>
