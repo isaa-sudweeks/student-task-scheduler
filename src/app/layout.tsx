@@ -1,6 +1,7 @@
 import "./../styles/globals.css";
 import React from "react";
 import Providers from "./providers";
+import FloatingTaskButton from "@/components/floating-task-button";
 
 export const metadata = {
   title: "Student Task Scheduler",
@@ -12,6 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-neutral-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
         <Providers>{children}</Providers>
+        <FloatingTaskButton hiddenPaths={["/settings", "/stats"]} />
       </body>
     </html>
   );
