@@ -1,11 +1,11 @@
 "use client";
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import ThemeToggle from "@/components/theme-toggle";
 import { AccountMenu } from "@/components/account-menu";
+import ThemeToggle from "@/components/theme-toggle";
+import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
 // Define expected shape of user settings returned by API
-import { toast } from "react-hot-toast";
 
 function SettingsContent() {
   const router = useRouter();
@@ -77,7 +77,7 @@ function SettingsContent() {
   }, [settings]);
   const saveSettings = api.user.setSettings.useMutation({
     onSuccess: () => {
-      toast.success("Settings saved");
+      toast.success("Settings saved.");
       // Prefer explicit returnTo; otherwise, go back. Fallback to /calendar.
       if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
         router.push(returnTo);
@@ -88,7 +88,7 @@ function SettingsContent() {
         setTimeout(() => router.push("/calendar"), 50);
       }
     },
-    onError: (e) => toast.error(e.message || "Failed to save settings"),
+    onError: (e) => toast.error(e.message || "Save failed."),
   });
   const zones = React.useMemo(
     () => (Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : [tz]),

@@ -1,7 +1,12 @@
 import React from 'react';
 import { clsx } from 'clsx';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger';
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'danger'
+  | 'destructive'
+  | 'tertiary';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -19,6 +24,10 @@ export function Button({
     secondary:
       'bg-gray-100 text-gray-900 border border-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700',
     danger: 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-700',
+    destructive:
+      'border border-red-600 text-red-600 hover:bg-red-50 dark:text-red-400 dark:border-red-400 dark:hover:bg-red-900/20',
+    tertiary:
+      'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
   };
 
   return (
