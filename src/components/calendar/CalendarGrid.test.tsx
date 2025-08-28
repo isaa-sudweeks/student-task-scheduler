@@ -8,10 +8,9 @@ expect.extend(matchers);
 let dndDragEnd: ((e: any) => void) | undefined;
 const transforms = new Map<string, (t: any) => void>();
 const monitors: any[] = [];
-
-vi.mock('@dnd-kit/core', async () => {
-  const React = await import('react');
+vi.mock('@dnd-kit/core', () => {
   return {
+    __esModule: true,
     DndContext: ({ children, onDragEnd }: any) => {
       dndDragEnd = onDragEnd;
       return <div>{children}</div>;
@@ -30,9 +29,6 @@ vi.mock('@dnd-kit/core', async () => {
   };
 });
 
-afterAll(() => {
-  vi.unmock('@dnd-kit/core');
-});
 
 import { CalendarGrid } from './CalendarGrid';
 import { DndContext } from '@dnd-kit/core';
@@ -160,5 +156,39 @@ describe('CalendarGrid interactions', () => {
     expect(aBox).toBeInTheDocument();
     expect(bBox).toBeInTheDocument();
     expect(aBox.compareDocumentPosition(bBox) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe('CalendarGrid current time indicator', () => {
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it('renders now line in day and week views', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2099-01-01T09:00:00Z'));
+    render(<CalendarGrid view="day" events={[]} onDropTask={() => {}} />);
+    expect(screen.getByTestId('now-indicator')).toBeInTheDocument();
+    cleanup();
+    render(<CalendarGrid view="week" events={[]} onDropTask={() => {}} />);
+    expect(screen.getByTestId('now-indicator')).toBeInTheDocument();
+    cleanup();
+    render(<CalendarGrid view="month" events={[]} onDropTask={() => {}} />);
+    expect(screen.queryByTestId('now-indicator')).toBeNull();
+  });
+
+  it('updates position every minute', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2099-01-01T09:30:00Z'));
+    render(<CalendarGrid view="day" events={[]} onDropTask={() => {}} />);
+    const line = screen.getByTestId('now-indicator') as HTMLElement;
+    const firstTop = parseFloat(line.style.top);
+    act(() => {
+      vi.setSystemTime(new Date('2099-01-01T09:31:00Z'));
+      vi.advanceTimersByTime(60_000);
+    });
+    const newTop = parseFloat(screen.getByTestId('now-indicator').style.top);
+    expect(newTop).toBeGreaterThan(firstTop);
   });
 });

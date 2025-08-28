@@ -50,7 +50,7 @@ export default function HomePage() {
       }
       if ((e.key === "ArrowRight" || e.key === "ArrowLeft") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        const options: Array<"all" | "overdue" | "today"> = ["all", "today", "overdue"];
+        const options: Array<"all" | "overdue" | "today" | "archive"> = ["all", "today", "overdue", "archive"];
         const idx = options.indexOf(filter);
         const nextIndex =
           e.key === "ArrowRight"
