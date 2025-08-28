@@ -6,7 +6,9 @@ import Fuse from "fuse.js";
 import {
   DndContext,
   closestCenter,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -32,6 +34,7 @@ import { TaskListSkeleton } from "./task-list-skeleton";
 import { TaskModal } from "@/components/task-modal";
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
 import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Task = RouterOutputs["task"]["list"][number];
 type Priority = "LOW" | "MEDIUM" | "HIGH";
@@ -134,6 +137,7 @@ export function TaskList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, flatTasks, taskDataSnapshot]);
   const [items, setItems] = useState<string[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
     setItems(flatTasks.map((t) => t.id));
@@ -153,8 +157,13 @@ export function TaskList({
 
   const reorder = api.task.reorder.useMutation();
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
     if (!over || active.id === over.id) return;
     setItems((prev) => {
       const oldIndex = prev.indexOf(active.id as string);
@@ -223,6 +232,11 @@ export function TaskList({
     [filteredOrderedTasks]
   );
 
+  const activeTask = React.useMemo(
+    () => filteredOrderedTasks.find((t) => t.id === activeId) ?? null,
+    [activeId, filteredOrderedTasks]
+  );
+
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -281,22 +295,17 @@ export function TaskList({
     </div>
   );
 
-  const TaskItem = ({
-    t,
-    virtualStyle,
-  }: {
-    t: Task;
-    virtualStyle?: React.CSSProperties;
-  }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: t.id });
-    const style: React.CSSProperties = {
-      ...virtualStyle,
-      ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
-      ...(transition ? { transition } : {}),
-    };
-    if (isDragging) {
-      style.transform = `${style.transform ?? ""} translateY(-1px)`;
+  const TaskCard = React.forwardRef<
+    HTMLLIElement,
+    {
+      t: Task;
+      style?: React.CSSProperties;
+      listeners?: any;
+      attributes?: any;
+      isDragging?: boolean;
+      onClick?: () => void;
     }
+  >(({ t, style, listeners, attributes, isDragging, onClick }, ref) => {
     const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
     const done = t.status === "DONE";
     const priority: Priority = t.priority ?? "MEDIUM";
@@ -311,21 +320,28 @@ export function TaskList({
       LOW: <ArrowDown className="h-3 w-3" aria-hidden="true" />,
     };
     const match = matchesById.get(t.id)?.find((m) => m.key === "title");
-    const titleNode = match && match.indices
-      ? highlightMatches(t.title, match.indices as any)
-      : t.title;
+    const titleNode =
+      match && match.indices
+        ? highlightMatches(t.title, match.indices as any)
+        : t.title;
 
     return (
-      <li
-        ref={setNodeRef}
+      <motion.li
+        ref={ref}
         style={style}
-        key={t.id}
+        layout
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.98 }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+        whileHover={{ scale: 1.02, transition: { duration: 0.15, ease: "easeInOut" } }}
+        whileTap={{ scale: 0.98, transition: { duration: 0.15, ease: "easeInOut" } }}
         className={`group flex items-center justify-between rounded-md border bg-white p-3 transition-colors hover:bg-neutral-50 ${
           overdue
             ? 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200'
             : ''
         } ${isDragging ? 'shadow-sm ring-1 ring-neutral-200 translate-y-[-1px]' : ''}`}
-        onClick={() => setEditingTask(t)}
+        onClick={onClick}
       >
         <div className="flex items-center gap-3 flex-1">
           <button
@@ -393,13 +409,49 @@ export function TaskList({
             <MoreVertical className="h-4 w-4" />
           </button>
         </div>
-      </li>
+      </motion.li>
+    );
+  });
+  TaskCard.displayName = "TaskCard";
+
+  const TaskItem = ({
+    t,
+    virtualStyle,
+  }: {
+    t: Task;
+    virtualStyle?: React.CSSProperties;
+  }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+      useSortable({ id: t.id });
+    const style: React.CSSProperties = {
+      ...virtualStyle,
+      ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
+      ...(transition ? { transition } : {}),
+    };
+    if (isDragging) {
+      style.transform = `${style.transform ?? ""} translateY(-1px)`;
+    }
+    return (
+      <TaskCard
+        ref={setNodeRef}
+        t={t}
+        style={style}
+        listeners={listeners}
+        attributes={attributes}
+        isDragging={isDragging}
+        onClick={() => setEditingTask(t)}
+      />
     );
   };
 
   return (
     <div className="w-full space-y-3 md:w-auto">
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
         <SortableContext items={visibleIds}>
           {useVirtual ? (
             <div
@@ -413,30 +465,34 @@ export function TaskList({
                   position: "relative",
                 }}
               >
-                {rowVirtualizer!.getVirtualItems().map((virtualRow) => {
-                  const t = filteredOrderedTasks[virtualRow.index];
-                  return (
-                    <TaskItem
-                      key={t.id}
-                      t={t}
-                      virtualStyle={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        transform: `translateY(${virtualRow.start}px)`,
-                        height: `${virtualRow.size}px`,
-                      }}
-                    />
-                  );
-                })}
+                <AnimatePresence initial={false}>
+                  {rowVirtualizer!.getVirtualItems().map((virtualRow) => {
+                    const t = filteredOrderedTasks[virtualRow.index];
+                    return (
+                      <TaskItem
+                        key={t.id}
+                        t={t}
+                        virtualStyle={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          transform: `translateY(${virtualRow.start}px)`,
+                          height: `${virtualRow.size}px`,
+                        }}
+                      />
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             </div>
           ) : (
             <ul className="space-y-2">
-              {filteredOrderedTasks.map((t) => (
-                <TaskItem key={t.id} t={t} />
-              ))}
+              <AnimatePresence initial={false}>
+                {filteredOrderedTasks.map((t) => (
+                  <TaskItem key={t.id} t={t} />
+                ))}
+              </AnimatePresence>
               {(tasks.isLoading || tasks.isFetchingNextPage) && <TaskListSkeleton />}
               {!tasks.isLoading &&
                 !tasks.isFetchingNextPage &&
@@ -448,6 +504,9 @@ export function TaskList({
             </ul>
           )}
         </SortableContext>
+        <DragOverlay dropAnimation={null}>
+          {activeTask ? <TaskCard t={activeTask} isDragging /> : null}
+        </DragOverlay>
         {useVirtual &&
           !tasks.isLoading &&
           !tasks.isFetchingNextPage &&
