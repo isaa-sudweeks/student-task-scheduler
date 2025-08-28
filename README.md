@@ -77,8 +77,6 @@ Any mutation that changes tasks (create, update, delete, reorder, etc.) clears t
 subsequent `list` calls return fresh data. Configure Redis via `REDIS_URL` and `REDIS_TOKEN` or
 leave them unset to fall back to a local in-memory cache.
 
-## Problems
-- Drag reordering does not persist: Dragging tasks to a new order updates the UI briefly, but the order does not stay after refresh.
 
 ## Troubleshooting
 
