@@ -7,7 +7,7 @@ import { api } from '@/server/api/react';
 import type { RouterOutputs } from '@/server/api/root';
 import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { AccountMenu } from "@/components/account-menu";
+// Account menu provided globally in nav bar
 
 type ViewMode = 'day' | 'week' | 'month';
 type Task = RouterOutputs['task']['list'][number];
@@ -203,10 +203,7 @@ export default function CalendarPage() {
           >
             Home
           </a>
-          {/* Settings link removed; accessible via AccountMenu */}
-          <Suspense fallback={null}>
-            <AccountMenu />
-          </Suspense>
+          {/* Account menu available in the global nav bar */}
         </header>
         {ViewTabs}
         <section className="p-4 rounded border">
@@ -230,10 +227,7 @@ export default function CalendarPage() {
         >
           Home
         </a>
-        {/* Settings link removed; accessible via AccountMenu */}
-        <Suspense fallback={null}>
-          <AccountMenu />
-        </Suspense>
+        {/* Account menu available in the global nav bar */}
       </div>
       <DndContext
         sensors={sensors}

@@ -1,8 +1,7 @@
 "use client";
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AccountMenu } from "@/components/account-menu";
-import ThemeToggle from "@/components/theme-toggle";
+// Theme and account controls are provided in the global nav bar
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
 // Define expected shape of user settings returned by API
@@ -99,12 +98,6 @@ function SettingsContent() {
     <main className="space-y-6 p-4">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Settings</h1>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <Suspense fallback={null}>
-            <AccountMenu />
-          </Suspense>
-        </div>
       </header>
 
       <section className="space-y-4">

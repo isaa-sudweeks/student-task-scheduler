@@ -5,9 +5,7 @@ import { TaskList } from "@/components/task-list";
 import { TaskModal } from "@/components/task-modal";
 import { Button } from "@/components/ui/button";
 import { clsx } from "clsx";
-import { AccountMenu } from "@/components/account-menu";
-import ThemeToggle from "@/components/theme-toggle";
-import { ShortcutsPopover } from "@/components/shortcuts-popover";
+// Controls moved to global nav bar: AccountMenu, ThemeToggle, ShortcutsPopover
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 
@@ -86,11 +84,6 @@ export default function HomePage() {
               <Button className="h-9" onClick={() => setShowModal(true)}>
                 + New Task
               </Button>
-              <ShortcutsPopover />
-              <ThemeToggle />
-              <Suspense fallback={<div aria-hidden className="h-9 w-9 rounded-full bg-black/10 dark:bg-white/10 animate-pulse" />}>
-                <AccountMenu />
-              </Suspense>
             </div>
             <div className="flex justify-center md:mx-auto">
               <div className="inline-flex rounded-lg border bg-white p-1">
