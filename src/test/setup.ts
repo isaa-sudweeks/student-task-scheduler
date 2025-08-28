@@ -94,6 +94,7 @@ vi.mock('recharts', () => {
 vi.mock('next-auth/react', () => {
   return {
     useSession: () => ({ data: { user: { name: 'Test User', image: null } }, status: 'authenticated' }),
+    signIn: vi.fn(),
     signOut: vi.fn(),
     SessionProvider: ({ children }: any) => children,
   } as any;
