@@ -116,14 +116,14 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
     <>
       {isEdit && task && (
         <Button
-          variant="danger"
+          variant="destructive"
           className="mr-auto"
           onClick={() => del.mutate({ id: task.id })}
         >
           Delete
         </Button>
       )}
-      <Button variant="secondary" onClick={onClose}>
+      <Button variant="tertiary" onClick={onClose}>
         Cancel
       </Button>
       <Button
@@ -176,10 +176,10 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? "Edit Task" : "New Task"} footer={footer}>
-      <div className="grid grid-cols-1 gap-3">
+      <div className="flex flex-col gap-6">
         {isEdit && task && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wide opacity-60">Status</span>
+          <div className="flex items-center gap-4">
+            <span className="w-28 text-sm font-medium">Status</span>
             <StatusDropdown
               value={task.status ?? "TODO"}
               onChange={(next) => {
@@ -189,48 +189,55 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
             />
           </div>
         )}
-        <label className="flex flex-col gap-1">
-          <span className="text-xs uppercase tracking-wide opacity-60">Title</span>
+        <div className="flex items-center gap-4">
+          <label htmlFor="title" className="w-28 text-sm font-medium">
+            Title
+          </label>
           <input
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            id="title"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
             placeholder="Task title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
-        </label>
+        </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide opacity-60">Subject</span>
-            <input
-              className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
-              placeholder="e.g., Math, CS, English"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
+        <div className="flex items-center gap-4">
+          <label htmlFor="subject" className="w-28 text-sm font-medium">
+            Subject
           </label>
-          <div className="flex flex-col gap-1">
-            <label className="flex items-center gap-2 text-xs uppercase tracking-wide opacity-60">
-              <input
-                type="checkbox"
-                className="accent-black dark:accent-white"
-                checked={dueEnabled}
-                onChange={(e) => {
-                  const enabled = e.target.checked;
-                  setDueEnabled(enabled);
-                  if (enabled && !due) {
-                    const v = defaultEndOfToday();
-                    setDue(v);
-                    onDraftDueChange?.(parseLocalDateTime(v));
-                  }
-                  if (!enabled) onDraftDueChange?.(null);
-                }}
-              />
-              Set due date
-            </label>
+          <input
+            id="subject"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            placeholder="e.g., Math, CS, English"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="w-28 text-sm font-medium">Due date</span>
+          <div className="flex flex-1 items-center gap-2">
             <input
+              id="due-enabled"
+              type="checkbox"
+              className="accent-black dark:accent-white"
+              checked={dueEnabled}
+              aria-label="Set due date"
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setDueEnabled(enabled);
+                if (enabled && !due) {
+                  const v = defaultEndOfToday();
+                  setDue(v);
+                  onDraftDueChange?.(parseLocalDateTime(v));
+                }
+                if (!enabled) onDraftDueChange?.(null);
+              }}
+            />
+            <input
+              id="due"
               type="datetime-local"
-              className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 disabled:opacity-50 dark:border-white/10 dark:focus:ring-white/20"
+              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 disabled:opacity-50 dark:border-white/10 dark:focus:ring-white/20"
               value={due}
               onChange={(e) => {
                 setDue(e.target.value);
@@ -240,42 +247,49 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
             />
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide opacity-60">Project</span>
-            <select
-              className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
-              value={projectId ?? ""}
-              onChange={(e) => setProjectId(e.target.value || null)}
-            >
-              <option value="">None</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
+        <div className="flex items-center gap-4">
+          <label htmlFor="project" className="w-28 text-sm font-medium">
+            Project
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide opacity-60">Course</span>
-            <select
-              className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
-              value={courseId ?? ""}
-              onChange={(e) => setCourseId(e.target.value || null)}
-            >
-              <option value="">None</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs uppercase tracking-wide opacity-60">Priority</span>
           <select
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            id="project"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            value={projectId ?? ""}
+            onChange={(e) => setProjectId(e.target.value || null)}
+          >
+            <option value="">None</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-4">
+          <label htmlFor="course" className="w-28 text-sm font-medium">
+            Course
+          </label>
+          <select
+            id="course"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            value={courseId ?? ""}
+            onChange={(e) => setCourseId(e.target.value || null)}
+          >
+            <option value="">None</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-4">
+          <label htmlFor="priority" className="w-28 text-sm font-medium">
+            Priority
+          </label>
+          <select
+            id="priority"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
             value={priority}
             onChange={(e) => setPriority(e.target.value as Task["priority"])}
           >
@@ -283,72 +297,85 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
             <option value="MEDIUM">Medium</option>
             <option value="HIGH">High</option>
           </select>
-        </label>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide opacity-60">Recurrence</span>
-            <select
-              className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
-              value={recurrenceType}
-              onChange={(e) => setRecurrenceType(e.target.value as typeof recurrenceType)}
-            >
-              <option value="NONE">None</option>
-              <option value="DAILY">Daily</option>
-              <option value="WEEKLY">Weekly</option>
-              <option value="MONTHLY">Monthly</option>
-            </select>
-          </label>
-          {recurrenceType !== 'NONE' && (
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide opacity-60">Interval</span>
-              <input
-                type="number"
-                min={1}
-                className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
-                value={recurrenceInterval}
-                onChange={(e) => setRecurrenceInterval(parseInt(e.target.value, 10) || 1)}
-              />
-            </label>
-          )}
         </div>
 
+        <div className="flex items-center gap-4">
+          <label htmlFor="recurrenceType" className="w-28 text-sm font-medium">
+            Recurrence
+          </label>
+          <select
+            id="recurrenceType"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            value={recurrenceType}
+            onChange={(e) => setRecurrenceType(e.target.value as typeof recurrenceType)}
+          >
+            <option value="NONE">None</option>
+            <option value="DAILY">Daily</option>
+            <option value="WEEKLY">Weekly</option>
+            <option value="MONTHLY">Monthly</option>
+          </select>
+        </div>
         {recurrenceType !== 'NONE' && (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide opacity-60">End after occurrences</span>
+          <div className="flex items-center gap-4">
+            <label htmlFor="recurrenceInterval" className="w-28 text-sm font-medium">
+              Interval
+            </label>
+            <input
+              id="recurrenceInterval"
+              type="number"
+              min={1}
+              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+              value={recurrenceInterval}
+              onChange={(e) => setRecurrenceInterval(parseInt(e.target.value, 10) || 1)}
+            />
+          </div>
+        )}
+
+        {recurrenceType !== 'NONE' && (
+          <>
+            <div className="flex items-center gap-4">
+              <label htmlFor="recurrenceCount" className="w-28 text-sm font-medium">
+                End after
+              </label>
               <input
+                id="recurrenceCount"
                 type="number"
                 min={1}
-                className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+                className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
                 value={recurrenceCount}
                 onChange={(e) =>
                   setRecurrenceCount(e.target.value ? parseInt(e.target.value, 10) : '')
                 }
               />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide opacity-60">End on date</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <label htmlFor="recurrenceUntil" className="w-28 text-sm font-medium">
+                End on
+              </label>
               <input
+                id="recurrenceUntil"
                 type="date"
-                className="rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+                className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
                 value={recurrenceUntil}
                 onChange={(e) => setRecurrenceUntil(e.target.value)}
               />
-            </label>
-          </div>
+            </div>
+          </>
         )}
 
-        <label className="flex flex-col gap-1">
-          <span className="text-xs uppercase tracking-wide opacity-60">Notes</span>
+        <div className="flex items-start gap-4">
+          <label htmlFor="notes" className="w-28 text-sm font-medium">
+            Notes
+          </label>
           <textarea
+            id="notes"
             rows={4}
-            className="resize-none rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            className="flex-1 resize-none rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
             placeholder="Optional details…"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
-        </label>
+        </div>
       </div>
     </Modal>
   );

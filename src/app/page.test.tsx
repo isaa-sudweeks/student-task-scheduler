@@ -7,6 +7,16 @@ expect.extend(matchers);
 
 import HomePage from './page';
 
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ data: { user: { name: 'Test User', image: '' } } }),
+  signOut: () => {},
+}));
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(''),
+}));
+
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ task: { list: { invalidate: () => {} } } }),
@@ -38,10 +48,25 @@ vi.mock('@/server/api/react', () => ({
 }));
 
 describe('HomePage', () => {
-  it('renders search and new task controls', () => {
+  it('renders header with count, filters, search and new task button', () => {
     render(<HomePage />);
+    expect(screen.getByText('Tasks')).toBeInTheDocument();
+    expect(screen.getByText('· 0')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /new task/i })).toBeInTheDocument();
+    ['All', 'Today', 'Overdue'].forEach((label) => {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+    });
+  });
+
+  it('shows account menu with Settings and opens dropdown', () => {
+    render(<HomePage />);
+    const acctBtn = screen.getByRole('button', { name: /settings/i });
+    expect(acctBtn).toBeInTheDocument();
+    // open menu
+    acctBtn.click();
+    expect(screen.getByRole('menuitem', { name: /account settings/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeInTheDocument();
   });
 
   it('focuses search on "/" key', () => {
