@@ -25,7 +25,7 @@ export function NewTaskForm() {
   return (
     <div className="flex items-center gap-2">
       <input
-        className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+        className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
         placeholder="Add a task…"
         value={title}
         onChange={(e) => setTitle(e.target.value)}

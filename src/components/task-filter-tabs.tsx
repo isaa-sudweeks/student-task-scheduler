@@ -77,7 +77,7 @@ export function TaskFilterTabs({
           <select
             aria-label="Subject filter"
             title="Filter by subject"
-            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
             value={subject ?? ''}
             onChange={(e) => onSubjectChange(e.target.value || null)}
           >
@@ -97,7 +97,7 @@ export function TaskFilterTabs({
           <select
             aria-label="Priority filter"
             title="Filter by priority"
-            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
             value={priority ?? ''}
             onChange={(e) => onPriorityChange(e.target.value ? (e.target.value as TaskPriority) : null)}
           >
@@ -115,7 +115,7 @@ export function TaskFilterTabs({
           <select
             aria-label="Course filter"
             title="Filter by course"
-            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
             value={courseId ?? ''}
             onChange={(e) => onCourseChange(e.target.value || null)}
           >
@@ -135,7 +135,7 @@ export function TaskFilterTabs({
           <select
             aria-label="Project filter"
             title="Filter by project"
-            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
             value={projectId ?? ''}
             onChange={(e) => onProjectChange(e.target.value || null)}
           >

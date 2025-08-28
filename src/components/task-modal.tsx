@@ -195,20 +195,20 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
           </label>
           <input
             id="title"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             placeholder="Task title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
         </div>
-
+  
         <div className="flex items-center gap-4">
           <label htmlFor="subject" className="w-28 text-sm font-medium">
             Subject
           </label>
           <input
             id="subject"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             placeholder="e.g., Math, CS, English"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
@@ -237,7 +237,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
             <input
               id="due"
               type="datetime-local"
-              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 disabled:opacity-50 dark:border-white/10 dark:focus:ring-white/20"
+              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:border-white/10"
               value={due}
               onChange={(e) => {
                 setDue(e.target.value);
@@ -247,13 +247,14 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
             />
           </div>
         </div>
+        
         <div className="flex items-center gap-4">
           <label htmlFor="project" className="w-28 text-sm font-medium">
             Project
           </label>
           <select
             id="project"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             value={projectId ?? ""}
             onChange={(e) => setProjectId(e.target.value || null)}
           >
@@ -271,7 +272,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
           </label>
           <select
             id="course"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             value={courseId ?? ""}
             onChange={(e) => setCourseId(e.target.value || null)}
           >
@@ -289,7 +290,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
           </label>
           <select
             id="priority"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             value={priority}
             onChange={(e) => setPriority(e.target.value as Task["priority"])}
           >
@@ -305,7 +306,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
           </label>
           <select
             id="recurrenceType"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             value={recurrenceType}
             onChange={(e) => setRecurrenceType(e.target.value as typeof recurrenceType)}
           >
@@ -324,7 +325,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
               id="recurrenceInterval"
               type="number"
               min={1}
-              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
               value={recurrenceInterval}
               onChange={(e) => setRecurrenceInterval(parseInt(e.target.value, 10) || 1)}
             />
@@ -341,7 +342,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
                 id="recurrenceCount"
                 type="number"
                 min={1}
-                className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+                className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
                 value={recurrenceCount}
                 onChange={(e) =>
                   setRecurrenceCount(e.target.value ? parseInt(e.target.value, 10) : '')
@@ -355,7 +356,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
               <input
                 id="recurrenceUntil"
                 type="date"
-                className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+                className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
                 value={recurrenceUntil}
                 onChange={(e) => setRecurrenceUntil(e.target.value)}
               />
@@ -370,7 +371,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
           <textarea
             id="notes"
             rows={4}
-            className="flex-1 resize-none rounded border border-black/10 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:border-white/10 dark:focus:ring-white/20"
+            className="flex-1 resize-none rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             placeholder="Optional details…"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}

@@ -3,6 +3,17 @@
 @tailwind utilities;
 html, body, #__next { height: 100%; }
 
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [role="button"]:focus-visible {
+    @apply outline-none ring-2 ring-indigo-500 ring-offset-2;
+  }
+}
+
 @layer utilities {
   @keyframes slide-up {
     from { transform: translateY(100%); }
