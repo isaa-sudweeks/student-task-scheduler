@@ -153,4 +153,30 @@ describe('CalendarPage', () => {
     expect(arg.dayWindowStartHour).toBe(6);
     expect(arg.dayWindowEndHour).toBe(20);
   });
+
+  it('resets base date to today when Today is clicked', () => {
+    vi.useFakeTimers();
+    const today = new Date('2024-05-15T12:00:00Z');
+    vi.setSystemTime(today);
+    render(<CalendarPage />);
+    const eventMonday = (() => {
+      const d = new Date(events[0].startAt);
+      d.setHours(0, 0, 0, 0);
+      const diff = (d.getDay() + 6) % 7;
+      d.setDate(d.getDate() - diff);
+      return d;
+    })();
+    const todayMonday = (() => {
+      const d = new Date(today);
+      d.setHours(0, 0, 0, 0);
+      const diff = (d.getDay() + 6) % 7;
+      d.setDate(d.getDate() - diff);
+      return d;
+    })();
+    const fmt = (d: Date) => d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
+    expect(screen.getByText(fmt(eventMonday))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /today/i }));
+    expect(screen.getByText(fmt(todayMonday))).toBeInTheDocument();
+    vi.useRealTimers();
+  });
 });

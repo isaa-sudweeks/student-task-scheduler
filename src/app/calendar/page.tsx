@@ -7,6 +7,7 @@ import { api } from '@/server/api/react';
 import type { RouterOutputs } from '@/server/api/root';
 import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { AccountMenu } from '@/components/account-menu';
 // Account menu provided globally in nav bar
 
 type ViewMode = 'day' | 'week' | 'month';
@@ -15,6 +16,7 @@ type Event = RouterOutputs['event']['listRange'][number];
 
 export default function CalendarPage() {
   const [view, setView] = useState<ViewMode>('week');
+  const [baseDate, setBaseDate] = useState<Date>(new Date());
   const utils = api.useUtils();
   const router = useRouter();
   const { data: session } = useSession();
@@ -60,8 +62,12 @@ export default function CalendarPage() {
     return tasksData.filter((t) => !scheduledTaskIds.has(t.id));
   }, [tasksData, eventsData]);
 
-  // Choose a base week to render: prefer the first event's week for stability in tests
-  const baseDate = eventsData?.[0]?.startAt ? new Date(eventsData[0].startAt) : new Date();
+  useEffect(() => {
+    if (eventsData?.[0]?.startAt) {
+      setBaseDate(new Date(eventsData[0].startAt));
+    }
+  }, [eventsData]);
+
   const baseMonday = new Date(baseDate);
   const day = baseMonday.getDay();
   const diff = (day + 6) % 7;
@@ -218,17 +224,31 @@ export default function CalendarPage() {
   return (
     <ErrorBoundary fallback={<main>Failed to load calendar</main>}>
     <main className="grid w-full grid-cols-1 gap-4 md:grid-cols-4">
-      <div className="flex items-center justify-end gap-2 md:col-span-4">
-        <a
-          href="/"
-          className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-          title="Back to Home"
-          onClick={(e) => { e.preventDefault(); router.push('/'); }}
-        >
-          Home
-        </a>
-        {/* Account menu available in the global nav bar */}
-      </div>
+      <header className="flex items-center justify-between gap-2 md:col-span-4">
+        <div className="flex items-center gap-2">
+          <a
+            href="/"
+            className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+            title="Back to Home"
+            onClick={(e) => { e.preventDefault(); router.push('/'); }}
+          >
+            Home
+          </a>
+          <button
+            type="button"
+            className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+            onClick={() => setBaseDate(new Date())}
+          >
+            Today
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          {ViewTabs}
+          <Suspense fallback={null}>
+            <AccountMenu />
+          </Suspense>
+        </div>
+      </header>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -290,7 +310,6 @@ export default function CalendarPage() {
         }}
       >
       <div className="w-full space-y-3 md:col-span-1">
-        {ViewTabs}
         <h2 className="font-semibold">Backlog</h2>
         <ul className="space-y-2">
           {backlog.map((t) => (

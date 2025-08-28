@@ -14,6 +14,11 @@ export function CalendarGrid(props: {
 }) {
   const { view } = props;
   const days = getDays(view, props.startOfWeek);
+  const [now, setNow] = React.useState(new Date());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   // Special handling for month view - show a simple month grid with events
   if (view === 'month') {
@@ -88,6 +93,11 @@ export function CalendarGrid(props: {
   const endHour = 18;
   const rows = endHour - startHour;
   const rowPx = 48;
+  const showNow =
+    (view === 'day' || view === 'week') &&
+    days.some((d) => d.toDateString() === now.toDateString());
+  const minutesFromStart = now.getHours() * 60 + now.getMinutes() - startHour * 60;
+  const top = (minutesFromStart / 60) * rowPx;
 
   return (
       <div className="border rounded overflow-hidden">
@@ -154,6 +164,13 @@ export function CalendarGrid(props: {
                 />
               );
             })}
+            {showNow && minutesFromStart >= 0 && minutesFromStart <= rows * 60 && (
+              <div
+                data-testid="now-indicator"
+                className="absolute left-20 right-0 h-0.5 bg-red-500"
+                style={{ top }}
+              />
+            )}
           </div>
         </div>
       </div>
