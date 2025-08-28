@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -46,5 +46,33 @@ describe('TaskList', () => {
       />
     );
     expect(screen.getByText('Create your first task')).toBeInTheDocument();
+  });
+
+  it('moves selection with j key', () => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: { pages: [[
+        { id: '1', title: 'Alpha', dueAt: null, status: 'TODO' },
+        { id: '2', title: 'Beta', dueAt: null, status: 'TODO' },
+      ]] },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    render(
+      <TaskList
+        filter="all"
+        subject={null}
+        priority={null}
+        courseId={null}
+        projectId={null}
+        query=""
+      />
+    );
+    const items = screen.getAllByRole('option');
+    expect(items[0]).toHaveAttribute('aria-selected', 'true');
+    fireEvent.keyDown(window, { key: 'j' });
+    expect(items[1]).toHaveAttribute('aria-selected', 'true');
   });
 });
