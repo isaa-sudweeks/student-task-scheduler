@@ -46,7 +46,7 @@ describe('CalendarGrid month view', () => {
   ])('renders all days for %s', (iso, count) => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(iso));
-    render(<CalendarGrid view="month" events={[]} onDropTask={() => {}} />);
+    render(<CalendarGrid view="month" startOfWeek={new Date(iso)} events={[]} onDropTask={() => {}} />);
     expect(screen.getAllByTestId('day-cell')).toHaveLength(count);
   });
 
@@ -58,7 +58,7 @@ describe('CalendarGrid month view', () => {
       { id: 'e2', taskId: 't2', title: 'Science Project', startAt: '2024-05-10T14:00:00.000Z', endAt: '2024-05-10T15:00:00.000Z' },
       { id: 'e3', taskId: 't3', title: 'Piano', startAt: '2024-05-12T09:00:00.000Z', endAt: '2024-05-12T10:00:00.000Z' },
     ];
-    render(<CalendarGrid view="month" events={events} onDropTask={() => {}} />);
+    render(<CalendarGrid view="month" startOfWeek={new Date('2024-05-05T12:00:00Z')} events={events} onDropTask={() => {}} />);
     expect(screen.getByText('Math HW')).toBeInTheDocument();
     expect(screen.getByText('Science Project')).toBeInTheDocument();
     expect(screen.getByText('Piano')).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('CalendarGrid month view', () => {
         endAt: '2024-05-12T10:00:00.000Z',
       },
     ];
-    render(<CalendarGrid view="month" events={events} onDropTask={() => {}} />);
+    render(<CalendarGrid view="month" startOfWeek={new Date('2024-05-05T12:00:00Z')} events={events} onDropTask={() => {}} />);
     ['2024-05-10', '2024-05-11', '2024-05-12'].forEach((d) => {
       const cell = screen.getByLabelText(`month-day-${d}`);
       expect(within(cell).getByText('Retreat')).toBeInTheDocument();
@@ -113,7 +113,7 @@ describe('CalendarGrid interactions', () => {
           onDropTask(taskId, new Date(iso));
         }}
       >
-        <CalendarGrid view="day" events={[]} onDropTask={onDropTask} />
+        <CalendarGrid view="day" startOfWeek={new Date('2099-01-01T00:00:00Z')} events={[]} onDropTask={onDropTask} />
       </DndContext>
     );
     const iso = new Date('2099-01-01T08:00:00.000Z').toISOString();
@@ -128,6 +128,7 @@ describe('CalendarGrid interactions', () => {
     render(
       <CalendarGrid
         view="day"
+        startOfWeek={new Date('2099-01-01T00:00:00Z')}
         events={[{ id: 'e1', taskId: 't1', startAt: start, endAt: end, title: 'Study' }]}
         onDropTask={() => {}}
         onResizeEvent={onResizeEvent}
@@ -148,7 +149,7 @@ describe('CalendarGrid interactions', () => {
     ];
     render(
       <DndContext>
-        <CalendarGrid view="day" events={events} onDropTask={() => {}} />
+        <CalendarGrid view="day" startOfWeek={new Date('2099-01-01T00:00:00Z')} events={events} onDropTask={() => {}} />
       </DndContext>
     );
     const aBox = screen.getByText('Event A');
@@ -168,13 +169,13 @@ describe('CalendarGrid current time indicator', () => {
   it('renders now line in day and week views', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2099-01-01T09:00:00Z'));
-    render(<CalendarGrid view="day" events={[]} onDropTask={() => {}} />);
+    render(<CalendarGrid view="day" startOfWeek={new Date('2099-01-01T00:00:00Z')} events={[]} onDropTask={() => {}} />);
     expect(screen.getByTestId('now-indicator')).toBeInTheDocument();
     cleanup();
-    render(<CalendarGrid view="week" events={[]} onDropTask={() => {}} />);
+    render(<CalendarGrid view="week" startOfWeek={new Date('2099-01-01T00:00:00Z')} events={[]} onDropTask={() => {}} />);
     expect(screen.getByTestId('now-indicator')).toBeInTheDocument();
     cleanup();
-    render(<CalendarGrid view="month" events={[]} onDropTask={() => {}} />);
+    render(<CalendarGrid view="month" startOfWeek={new Date('2099-01-01T00:00:00Z')} events={[]} onDropTask={() => {}} />);
     expect(screen.queryByTestId('now-indicator')).toBeNull();
   });
 
@@ -190,5 +191,58 @@ describe('CalendarGrid current time indicator', () => {
     });
     const newTop = parseFloat(screen.getByTestId('now-indicator').style.top);
     expect(newTop).toBeGreaterThan(firstTop);
+  });
+});
+
+describe('CalendarGrid work hours + today highlight', () => {
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it('renders full-day time labels and work hours highlight in day view', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2099-01-01T09:00:00Z'));
+    render(
+      <CalendarGrid
+        view="day"
+        startOfWeek={new Date('2099-01-01T00:00:00Z')}
+        events={[]}
+        onDropTask={() => {}}
+        workStartHour={6}
+        workEndHour={20}
+      />
+    );
+    expect(screen.getByText('12 AM')).toBeInTheDocument();
+    expect(screen.getByText('11 PM')).toBeInTheDocument();
+    // One highlight overlay for the single day
+    expect(screen.getAllByTestId('work-hours-highlight')).toHaveLength(1);
+  });
+
+  it('renders work hours highlight for each day in week view and marks today', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-05-15T09:00:00Z'));
+    render(
+      <CalendarGrid
+        view="week"
+        startOfWeek={new Date('2024-05-13T00:00:00Z')}
+        events={[]}
+        onDropTask={() => {}}
+        workStartHour={8}
+        workEndHour={18}
+      />
+    );
+    // 7 work-hour overlays (one per day)
+    expect(screen.getAllByTestId('work-hours-highlight')).toHaveLength(7);
+    // Today header is marked with title
+    expect(screen.getByTitle('Today')).toBeInTheDocument();
+  });
+
+  it('highlights today in month view', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-05-15T09:00:00Z'));
+    render(<CalendarGrid view="month" startOfWeek={new Date('2024-05-01T00:00:00Z')} events={[]} onDropTask={() => {}} />);
+    // Month view shows one element marked as Today
+    expect(screen.getByTitle('Today')).toBeInTheDocument();
   });
 });

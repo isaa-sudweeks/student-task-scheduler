@@ -11,6 +11,8 @@ export function CalendarGrid(props: {
   onMoveEvent?: (eventId: string, startAt: Date) => void;
   onResizeEvent?: (eventId: string, edge: 'start' | 'end', at: Date) => void;
   events: { id: string; taskId: string; startAt: Date | string; endAt: Date | string; title?: string }[];
+  workStartHour?: number; // inclusive [0..23]
+  workEndHour?: number;   // exclusive [1..24]
 }) {
   const { view } = props;
   const days = getDays(view, props.startOfWeek);
@@ -64,10 +66,20 @@ export function CalendarGrid(props: {
               <div
                 key={d.toDateString()}
                 data-testid="day-cell"
-                className="h-24 border p-1 text-xs"
+                className="h-24 border p-1 text-xs relative"
                 aria-label={`month-day-${ymd(d)}`}
               >
-                <div className="font-medium mb-1 px-1">{d.getDate()}</div>
+                <div
+                  className={`font-medium mb-1 px-1 inline-flex items-center justify-center rounded ${
+                    isSameDay(d, new Date())
+                      ? 'bg-blue-600 text-white dark:bg-blue-500' // highlight today
+                      : ''
+                  }`}
+                  aria-current={isSameDay(d, new Date()) ? 'date' : undefined}
+                  title={isSameDay(d, new Date()) ? 'Today' : undefined}
+                >
+                  {d.getDate()}
+                </div>
                 <div className="space-y-0.5">
                   {(eventsByDay.get(ymd(d)) ?? []).map((ev) => (
                     <div
@@ -89,8 +101,11 @@ export function CalendarGrid(props: {
       </div>
     );
   }
-  const startHour = 8;
-  const endHour = 18;
+  // Show full day, but highlight work window
+  const workStart = clampHour(props.workStartHour ?? 8);
+  const workEnd = clampHour(props.workEndHour ?? 18, true);
+  const startHour = 0;
+  const endHour = 24;
   const rows = endHour - startHour;
   const rowPx = 48;
   const showNow =
@@ -105,7 +120,16 @@ export function CalendarGrid(props: {
         <div className="grid" style={{ gridTemplateColumns: `80px repeat(${days.length}, 1fr)` }}>
           <div className="bg-slate-50 dark:bg-slate-900 p-2 text-xs">Time</div>
           {days.map((d) => (
-            <div key={d.toDateString()} className="bg-slate-50 dark:bg-slate-900 p-2 text-xs text-center">
+            <div
+              key={d.toDateString()}
+              className={`p-2 text-xs text-center ${
+                isSameDay(d, new Date())
+                  ? 'bg-blue-50 font-semibold dark:bg-blue-900/30' // highlight today in week/day header
+                  : 'bg-slate-50 dark:bg-slate-900'
+              }`}
+              aria-current={isSameDay(d, new Date()) ? 'date' : undefined}
+              title={isSameDay(d, new Date()) ? 'Today' : undefined}
+            >
               {d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
             </div>
           ))}
@@ -126,6 +150,22 @@ export function CalendarGrid(props: {
             })}
           </div>
           <div className="absolute inset-0 pointer-events-none">
+            {/* Work hours highlight per day */}
+            {days.map((d, idx) => {
+              const topPx = workStart * rowPx;
+              const heightPx = Math.max(0, (workEnd - workStart) * rowPx);
+              const left = `calc(80px + ${idx} * ((100% - 80px) / ${days.length}))`;
+              const width = `calc((100% - 80px) / ${days.length})`;
+              return (
+                <div
+                  key={`work-${d.toDateString()}`}
+                  data-testid="work-hours-highlight"
+                  className="absolute rounded-sm bg-amber-100/40 dark:bg-amber-900/20 border border-amber-300/60 dark:border-amber-700/40"
+                  style={{ top: topPx, left, width, height: heightPx }}
+                  aria-label={`work-hours-${workStart}-${workEnd}`}
+                />
+              );
+            })}
             {props.events.map((e) => {
               const s = new Date(e.startAt as any);
               const ed = new Date(e.endAt as any);
@@ -332,4 +372,19 @@ function formatHour(h: number) {
   const ampm = h >= 12 ? 'PM' : 'AM';
   const hr = ((h + 11) % 12) + 1;
   return `${hr} ${ampm}`;
+}
+
+function clampHour(h: number, isEnd = false): number {
+  if (!Number.isFinite(h)) return isEnd ? 24 : 0;
+  const n = Math.max(0, Math.min(24, Math.floor(h)));
+  if (isEnd && n === 0) return 24; // allow 24 as exclusive end
+  return n;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }

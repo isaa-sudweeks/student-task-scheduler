@@ -236,8 +236,13 @@ export default function CalendarPage() {
           </a>
           <button
             type="button"
-            className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+            className={`rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${
+              baseDate.toDateString() === new Date().toDateString()
+                ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                : ''
+            }`}
             onClick={() => setBaseDate(new Date())}
+            aria-current={baseDate.toDateString() === new Date().toDateString() ? 'date' : undefined}
           >
             Today
           </button>
@@ -351,6 +356,8 @@ export default function CalendarPage() {
           <CalendarGrid
             view={view}
             startOfWeek={baseMonday}
+            workStartHour={dayStart}
+            workEndHour={dayEnd}
             onDropTask={(taskId, startAt) => {
               scheduleWithPrefs({ taskId, startAt, durationMinutes: defaultDuration });
             }}
