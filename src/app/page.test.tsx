@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -67,5 +67,28 @@ describe('HomePage', () => {
     acctBtn.click();
     expect(screen.getByRole('menuitem', { name: /account settings/i })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeInTheDocument();
+  });
+
+  it('focuses search on "/" key', () => {
+    render(<HomePage />);
+    const input = screen.getByPlaceholderText('Search tasks...') as HTMLInputElement;
+    expect(document.activeElement).not.toBe(input);
+    fireEvent.keyDown(window, { key: '/' });
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('cycles filter with ctrl+arrow keys', () => {
+    render(<HomePage />);
+    // Tabs are buttons styled as tabs; verify cycling changes selected label
+    expect(screen.getByRole('button', { name: /all/i })).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'ArrowRight', ctrlKey: true });
+    expect(screen.getByRole('button', { name: /overdue/i })).toBeInTheDocument();
+  });
+
+  it('shows shortcuts popover when clicking question mark', () => {
+    render(<HomePage />);
+    const btn = screen.getByRole('button', { name: /show shortcuts/i });
+    fireEvent.click(btn);
+    expect(screen.getByText('Create task')).toBeInTheDocument();
   });
 });

@@ -1,16 +1,20 @@
 "use client";
-import React, { useState, useEffect, Suspense } from "react";
+
+import React, { useState, useEffect, Suspense, useRef } from "react";
 import { TaskList } from "@/components/task-list";
 import { TaskModal } from "@/components/task-modal";
 import { Button } from "@/components/ui/button";
 import { clsx } from "clsx";
 import { AccountMenu } from "@/components/account-menu";
 import ThemeToggle from "@/components/theme-toggle";
+import { ShortcutsPopover } from "@/components/shortcuts-popover";
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 
 export default function HomePage() {
-  const [filter, setFilter] = useState<"all" | "overdue" | "today">("all");
+  const [filter, setFilter] = useState<"all" | "overdue" | "today" | "archive">(
+    "all"
+  );
   const [subject] = useState<string | null>(null);
   const [priority] = useState<Priority | null>(null);
   const [courseId] = useState<string | null>(null);
@@ -18,28 +22,46 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [taskCount, setTaskCount] = useState(0);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  // Global hotkey: press "n" to open New Task modal
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
-      // Ignore when typing in inputs/textareas or contenteditable
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
       const isEditable =
         tag === "input" ||
         tag === "textarea" ||
-        (target && (target as HTMLElement).isContentEditable);
+        (target && target.isContentEditable);
       if (isEditable) return;
-      // Only plain "n" without modifiers
-      if (e.key.toLowerCase() === "n" && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      if (
+        e.key.toLowerCase() === "n" &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.shiftKey
+      ) {
         e.preventDefault();
         setShowModal(true);
+      }
+      if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowLeft") && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const options: Array<"all" | "overdue" | "today"> = ["all", "today", "overdue"];
+        const idx = options.indexOf(filter);
+        const nextIndex =
+          e.key === "ArrowRight"
+            ? (idx + 1) % options.length
+            : (idx - 1 + options.length) % options.length;
+        setFilter(options[nextIndex]);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [filter]);
 
   return (
     <>
@@ -57,10 +79,12 @@ export default function HomePage() {
                 onChange={(e) => setQuery(e.currentTarget.value)}
                 placeholder="Search tasks..."
                 className="h-9 w-40 md:w-80 rounded-md border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
+                ref={searchRef}
               />
               <Button className="h-9" onClick={() => setShowModal(true)}>
                 + New Task
               </Button>
+              <ShortcutsPopover />
               <ThemeToggle />
               <Suspense fallback={<div aria-hidden className="h-9 w-9 rounded-full bg-black/10 dark:bg-white/10 animate-pulse" />}>
                 <AccountMenu />
@@ -102,7 +126,11 @@ export default function HomePage() {
           />
         </div>
       </main>
-      <TaskModal open={showModal} mode="create" onClose={() => setShowModal(false)} />
+      <TaskModal
+        open={showModal}
+        mode="create"
+        onClose={() => setShowModal(false)}
+      />
     </>
   );
 }

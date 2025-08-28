@@ -231,6 +231,8 @@ export function TaskList({
     estimateSize: () => 64,
   });
   const useVirtual = filteredOrderedTasks.length >= 20;
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
 
   // Infinite scroll handler for virtualized list
   useEffect(() => {
@@ -245,6 +247,41 @@ export function TaskList({
     el.addEventListener("scroll", handleScroll);
     return () => el.removeEventListener("scroll", handleScroll);
   }, [tasks]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const target = e.target as HTMLElement | null;
+      const container = parentRef.current;
+      if (!container || !target || !container.contains(target)) return;
+      const focusable = target.closest(
+        "input, textarea, select, button, a, [contenteditable], [tabindex]:not([tabindex='-1'])"
+      );
+      if (focusable) return;
+      const overlay = document.querySelector(
+        "[role='dialog'], [role='menu'], [role='listbox']:not([data-task-list])"
+      );
+      if (overlay) return;
+      if (e.key === "ArrowDown" || e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        setSelectedIndex((i) => Math.min(i + 1, filteredOrderedTasks.length - 1));
+      } else if (e.key === "ArrowUp" || e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSelectedIndex((i) => Math.max(i - 1, 0));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [filteredOrderedTasks.length]);
+
+  useEffect(() => {
+    if (selectedIndex < 0 || selectedIndex >= filteredOrderedTasks.length) return;
+    if (useVirtual) {
+      rowVirtualizer.scrollToIndex(selectedIndex);
+    } else {
+      itemRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [selectedIndex, useVirtual, rowVirtualizer, filteredOrderedTasks.length]);
 
   // Surface API errors to be caught by ErrorBoundary
   if (tasks.error) throw tasks.error;
@@ -281,9 +318,11 @@ export function TaskList({
 
   const TaskItem = ({
     t,
+    index,
     virtualStyle,
   }: {
     t: Task;
+    index: number;
     virtualStyle?: React.CSSProperties;
   }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: t.id });
@@ -314,11 +353,20 @@ export function TaskList({
 
     return (
       <li
-        ref={setNodeRef}
+        role="option"
+        ref={(node) => {
+          setNodeRef(node);
+          itemRefs.current[index] = node;
+        }}
         style={style}
         key={t.id}
+        aria-selected={selectedIndex === index}
         className={`group flex items-center justify-between rounded-md border bg-white p-3 transition-colors hover:bg-neutral-50 ${
-          isDragging ? 'shadow-sm ring-1 ring-neutral-200 translate-y-[-1px]' : ''
+          selectedIndex === index
+            ? "ring-2 ring-indigo-500"
+            : isDragging
+              ? "shadow-sm ring-1 ring-neutral-200 translate-y-[-1px]"
+              : ""
         }`}
         onClick={() => setEditingTask(t)}
       >
@@ -390,6 +438,8 @@ export function TaskList({
               ref={parentRef}
               className="overflow-auto max-h-[50vh] md:max-h-[600px]"
               data-testid="task-scroll"
+              role="listbox"
+              data-task-list
             >
               <div
                 style={{
@@ -403,6 +453,7 @@ export function TaskList({
                     <TaskItem
                       key={t.id}
                       t={t}
+                      index={virtualRow.index}
                       virtualStyle={{
                         position: "absolute",
                         top: 0,
@@ -417,9 +468,9 @@ export function TaskList({
               </div>
             </div>
           ) : (
-            <ul className="space-y-2">
-              {filteredOrderedTasks.map((t) => (
-                <TaskItem key={t.id} t={t} />
+            <ul className="space-y-2" role="listbox">
+              {filteredOrderedTasks.map((t, i) => (
+                <TaskItem key={t.id} t={t} index={i} />
               ))}
               {(tasks.isLoading || tasks.isFetchingNextPage) && <TaskListSkeleton />}
               {!tasks.isLoading &&
