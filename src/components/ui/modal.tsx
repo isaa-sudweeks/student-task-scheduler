@@ -67,7 +67,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
   return (
     <div
       ref={dialogRef}
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-end justify-center md:items-center"
       aria-modal="true"
       role="dialog"
       aria-labelledby={title ? titleId : undefined}
@@ -78,7 +78,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-lg rounded-xl border border-black/10 bg-white/90 p-4 shadow-2xl dark:border-white/10 dark:bg-neutral-900/90">
+      <div className="relative z-10 w-full rounded-t-xl border border-black/10 bg-white/90 p-4 shadow-2xl animate-slide-up dark:border-white/10 dark:bg-neutral-900/90 md:max-w-lg md:rounded-xl">
         {title && (
           <div
             id={titleId}
