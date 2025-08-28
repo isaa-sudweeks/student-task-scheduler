@@ -50,8 +50,10 @@ export default function HomePage() {
       }
       if ((e.key === "ArrowRight" || e.key === "ArrowLeft") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        const options: Array<"all" | "overdue" | "today"> = ["all", "today", "overdue"];
-        const idx = options.indexOf(filter);
+        const options = ["all", "today", "overdue"] as const;
+        // Treat non-cyclable filters like 'archive' as 'all' for cycling
+        const current = filter === "archive" ? "all" : filter;
+        const idx = options.indexOf(current);
         const nextIndex =
           e.key === "ArrowRight"
             ? (idx + 1) % options.length
