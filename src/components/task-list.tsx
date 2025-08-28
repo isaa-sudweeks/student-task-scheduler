@@ -252,12 +252,16 @@ export function TaskList({
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
       const target = e.target as HTMLElement | null;
-      const tag = target?.tagName?.toLowerCase();
-      const isEditable =
-        tag === "input" ||
-        tag === "textarea" ||
-        (target && target.isContentEditable);
-      if (isEditable) return;
+      const container = parentRef.current;
+      if (!container || !target || !container.contains(target)) return;
+      const focusable = target.closest(
+        "input, textarea, select, button, a, [contenteditable], [tabindex]:not([tabindex='-1'])"
+      );
+      if (focusable) return;
+      const overlay = document.querySelector(
+        "[role='dialog'], [role='menu'], [role='listbox']:not([data-task-list])"
+      );
+      if (overlay) return;
       if (e.key === "ArrowDown" || e.key.toLowerCase() === "j") {
         e.preventDefault();
         setSelectedIndex((i) => Math.min(i + 1, filteredOrderedTasks.length - 1));
@@ -435,6 +439,7 @@ export function TaskList({
               className="overflow-auto max-h-[50vh] md:max-h-[600px]"
               data-testid="task-scroll"
               role="listbox"
+              data-task-list
             >
               <div
                 style={{

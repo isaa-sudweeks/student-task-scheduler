@@ -1,12 +1,13 @@
 "use client";
+
 import React, { useState, useEffect, Suspense, useRef } from "react";
 import { TaskList } from "@/components/task-list";
 import { TaskModal } from "@/components/task-modal";
 import { Button } from "@/components/ui/button";
 import { clsx } from "clsx";
 import { AccountMenu } from "@/components/account-menu";
-import { ShortcutsPopover } from "@/components/shortcuts-popover";
 import ThemeToggle from "@/components/theme-toggle";
+import { ShortcutsPopover } from "@/components/shortcuts-popover";
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 
@@ -23,7 +24,6 @@ export default function HomePage() {
   const [taskCount, setTaskCount] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Global hotkeys
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
@@ -32,7 +32,7 @@ export default function HomePage() {
       const isEditable =
         tag === "input" ||
         tag === "textarea" ||
-        (target && (target as HTMLElement).isContentEditable);
+        (target && target.isContentEditable);
       if (isEditable) return;
       if (
         e.key.toLowerCase() === "n" &&
@@ -50,12 +50,7 @@ export default function HomePage() {
       }
       if ((e.key === "ArrowRight" || e.key === "ArrowLeft") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        const options: Array<"all" | "overdue" | "today" | "archive"> = [
-          "all",
-          "overdue",
-          "today",
-          "archive",
-        ];
+        const options: Array<"all" | "overdue" | "today"> = ["all", "today", "overdue"];
         const idx = options.indexOf(filter);
         const nextIndex =
           e.key === "ArrowRight"
@@ -91,14 +86,7 @@ export default function HomePage() {
               </Button>
               <ShortcutsPopover />
               <ThemeToggle />
-              <Suspense
-                fallback={
-                  <div
-                    aria-hidden
-                    className="h-9 w-9 rounded-full bg-black/10 dark:bg-white/10 animate-pulse"
-                  />
-                }
-              >
+              <Suspense fallback={<div aria-hidden className="h-9 w-9 rounded-full bg-black/10 dark:bg-white/10 animate-pulse" />}>
                 <AccountMenu />
               </Suspense>
             </div>
@@ -146,4 +134,3 @@ export default function HomePage() {
     </>
   );
 }
-

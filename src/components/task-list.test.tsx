@@ -54,12 +54,10 @@ describe('TaskList', () => {
   it('moves selection with j key', () => {
     useInfiniteQueryMock.mockReturnValue({
       data: {
-        pages: [
-          [
-            { id: '1', title: 'Alpha', dueAt: null, status: 'TODO' },
-            { id: '2', title: 'Beta', dueAt: null, status: 'TODO' },
-          ],
-        ],
+        pages: [[
+          { id: '1', title: 'Alpha', dueAt: null, status: 'TODO' },
+          { id: '2', title: 'Beta', dueAt: null, status: 'TODO' },
+        ]],
       },
       isLoading: false,
       error: undefined,
@@ -77,9 +75,10 @@ describe('TaskList', () => {
         query=""
       />
     );
+    const list = screen.getByRole('listbox');
     const items = screen.getAllByRole('option');
     expect(items[0]).toHaveAttribute('aria-selected', 'true');
-    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(list, { key: 'j' });
     expect(items[1]).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -88,11 +87,7 @@ describe('TaskList', () => {
     vi.setSystemTime(now);
     useInfiniteQueryMock.mockReturnValue({
       data: {
-        pages: [
-          [
-            { id: '1', title: 'Alpha', dueAt: new Date('2023-01-01T12:00:00Z'), status: 'TODO' },
-          ],
-        ],
+        pages: [[{ id: '1', title: 'Alpha', dueAt: new Date('2023-01-01T12:00:00Z'), status: 'TODO' }]],
       },
       isLoading: false,
       error: undefined,
@@ -119,11 +114,7 @@ describe('TaskList', () => {
     vi.setSystemTime(now);
     useInfiniteQueryMock.mockReturnValue({
       data: {
-        pages: [
-          [
-            { id: '1', title: 'Alpha', dueAt: new Date('2023-01-02T15:00:00Z'), status: 'TODO' },
-          ],
-        ],
+        pages: [[{ id: '1', title: 'Alpha', dueAt: new Date('2023-01-02T15:00:00Z'), status: 'TODO' }]],
       },
       isLoading: false,
       error: undefined,
@@ -150,11 +141,7 @@ describe('TaskList', () => {
     vi.setSystemTime(now);
     useInfiniteQueryMock.mockReturnValue({
       data: {
-        pages: [
-          [
-            { id: '1', title: 'Alpha', dueAt: new Date('2023-01-03T12:00:00Z'), status: 'TODO' },
-          ],
-        ],
+        pages: [[{ id: '1', title: 'Alpha', dueAt: new Date('2023-01-03T12:00:00Z'), status: 'TODO' }]],
       },
       isLoading: false,
       error: undefined,
