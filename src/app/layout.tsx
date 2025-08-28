@@ -16,8 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <NavBar />
           {children}
+          <FloatingTaskButton hiddenPaths={["/settings", "/stats"]} />
         </Providers>
-        <FloatingTaskButton hiddenPaths={["/settings", "/stats"]} />
       </body>
     </html>
   );
