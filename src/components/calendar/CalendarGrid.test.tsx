@@ -142,6 +142,28 @@ describe('CalendarGrid interactions', () => {
     expect(onResizeEvent).toHaveBeenCalledWith('e1', 'end', new Date('2099-01-01T11:00:00.000Z'));
   });
 
+  it('updates event box position while dragging resize handles', () => {
+    const start = '2099-01-01T09:00:00.000Z';
+    const end = '2099-01-01T10:00:00.000Z';
+    render(
+      <CalendarGrid
+        view="day"
+        startOfWeek={new Date('2099-01-01T00:00:00Z')}
+        events={[{ id: 'e1', taskId: 't1', startAt: start, endAt: end, title: 'Study' }]}
+        onDropTask={() => {}}
+      />
+    );
+    const box = screen.getByText('Study').parentElement!.parentElement as HTMLElement;
+    expect(box.style.height).toBe('48px');
+    expect(box.style.top).toBe('432px');
+    act(() => {
+      const setter = transforms.get('event-resize-start-e1');
+      setter?.({ x: 0, y: -24 });
+    });
+    expect(box.style.top).toBe('408px');
+    expect(box.style.height).toBe('72px');
+  });
+
   it('stacks overlapping events in DOM order', () => {
     const events = [
       { id: 'a', taskId: 't1', startAt: '2099-01-01T09:00:00.000Z', endAt: '2099-01-01T10:00:00.000Z', title: 'Event A' },
