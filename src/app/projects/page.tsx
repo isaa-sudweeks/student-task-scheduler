@@ -79,7 +79,14 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
         >
           Save
         </Button>
-        <Button variant="danger" onClick={() => del.mutate({ id: project.id })}>
+        <Button
+          variant="danger"
+          onClick={() => {
+            if (window.confirm("Delete this project?")) {
+              del.mutate({ id: project.id });
+            }
+          }}
+        >
           Delete
         </Button>
       </div>
