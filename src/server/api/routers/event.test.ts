@@ -9,6 +9,7 @@ const hoisted = vi.hoisted(() => {
     eventFindFirst: vi.fn(),
     taskFindFirst: vi.fn(),
     taskCreate: vi.fn(),
+    taskUpdate: vi.fn(),
     userFindUnique: vi.fn(),
     accountFindFirst: vi.fn(),
   };
@@ -41,7 +42,7 @@ vi.mock('@/server/db', () => ({
       update: hoisted.update,
       findFirst: hoisted.eventFindFirst,
     },
-    task: { findFirst: hoisted.taskFindFirst, create: hoisted.taskCreate },
+    task: { findFirst: hoisted.taskFindFirst, create: hoisted.taskCreate, update: hoisted.taskUpdate },
     user: { findUnique: hoisted.userFindUnique },
     account: { findFirst: hoisted.accountFindFirst },
   },
@@ -142,9 +143,14 @@ describe('eventRouter.schedule', () => {
 
   it('pushes events to Google when sync enabled', async () => {
     hoisted.findMany.mockResolvedValueOnce([]);
-    hoisted.create.mockResolvedValueOnce({ startAt: new Date('2023-01-01T06:00:00.000Z'), endAt: new Date('2023-01-01T07:00:00.000Z') });
+    hoisted.create.mockResolvedValueOnce({
+      startAt: new Date('2023-01-01T08:00:00.000Z'),
+      endAt: new Date('2023-01-01T09:00:00.000Z'),
+      googleEventId: 'gid1',
+    });
     hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true });
     hoisted.accountFindFirst.mockResolvedValueOnce({ access_token: 'a', refresh_token: 'r' });
+    googleMock.insert.mockResolvedValueOnce({ data: { id: 'gid1' } });
 
     await eventRouter.createCaller(ctx).schedule({
       taskId: 't1',
@@ -153,6 +159,14 @@ describe('eventRouter.schedule', () => {
     });
 
     expect(googleMock.insert).toHaveBeenCalled();
+    expect(hoisted.create).toHaveBeenCalledWith({
+      data: {
+        taskId: 't1',
+        startAt: new Date('2023-01-01T08:00:00.000Z'),
+        endAt: new Date('2023-01-01T09:00:00.000Z'),
+        googleEventId: 'gid1',
+      },
+    });
   });
 });
 
@@ -187,26 +201,34 @@ describe('eventRouter.syncGoogle', () => {
     hoisted.findMany.mockReset();
     hoisted.userFindUnique.mockReset();
     hoisted.accountFindFirst.mockReset();
+    hoisted.eventFindFirst.mockReset();
+    hoisted.update.mockReset();
+    hoisted.taskUpdate.mockReset();
   });
 
-  it('syncs events with Google calendar', async () => {
+  it('syncs events with Google calendar without duplication', async () => {
     hoisted.userFindUnique.mockResolvedValue({ googleSyncEnabled: true });
     hoisted.accountFindFirst.mockResolvedValue({ access_token: 'a', refresh_token: 'r' });
-    hoisted.taskCreate.mockResolvedValue({ id: 'nt1' });
-    hoisted.create.mockResolvedValue({});
-    hoisted.findMany.mockResolvedValue([
+    hoisted.eventFindFirst.mockResolvedValueOnce({ id: 'e1', taskId: 't1', task: { id: 't1', title: 'Old' } });
+    hoisted.findMany.mockResolvedValueOnce([
       {
+        id: 'e2',
         startAt: new Date('2023-01-02T00:00:00.000Z'),
         endAt: new Date('2023-01-02T01:00:00.000Z'),
+        googleEventId: null,
         task: { title: 'Local' },
       },
     ]);
+    hoisted.update.mockResolvedValue({});
+    hoisted.taskUpdate.mockResolvedValue({});
+    googleMock.insert.mockResolvedValue({ data: { id: 'gid2' } });
 
     const items = await eventRouter.createCaller(ctx).syncGoogle();
-    expect(googleMock.OAuth2).toHaveBeenCalled();
     expect(googleMock.list).toHaveBeenCalled();
-    expect(hoisted.taskCreate).toHaveBeenCalled();
-    expect(googleMock.insert).toHaveBeenCalled();
+    expect(hoisted.taskCreate).not.toHaveBeenCalled();
+    expect(hoisted.create).not.toHaveBeenCalled();
+    expect(googleMock.insert).toHaveBeenCalledTimes(1);
+    expect(hoisted.update).toHaveBeenCalled();
     expect(items).toHaveLength(1);
   });
 });

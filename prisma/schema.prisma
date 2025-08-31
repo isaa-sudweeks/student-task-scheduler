@@ -147,6 +147,7 @@ model Event {
   startAt  DateTime
   endAt    DateTime
   location String?
+  googleEventId String? @unique
 }
 
 enum ReminderChannel {

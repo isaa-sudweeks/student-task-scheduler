@@ -73,10 +73,7 @@ export const eventRouter = router({
         throw new TRPCError({ code: 'CONFLICT', message: 'No available time slot without overlap' });
       }
 
-      const created = await db.event.create({
-        data: { taskId: input.taskId, startAt: slot.startAt, endAt: slot.endAt },
-      });
-
+      let googleEventId: string | undefined;
       const user = await db.user.findUnique({
         where: { id: userId },
         select: { googleSyncEnabled: true },
@@ -93,18 +90,25 @@ export const eventRouter = router({
             refresh_token: account.refresh_token || undefined,
           });
           const calendar = google.calendar({ version: 'v3', auth });
-          await calendar.events.insert({
-            calendarId: 'primary',
-            requestBody: {
-              summary: task.title,
-              start: { dateTime: created.startAt.toISOString() },
-              end: { dateTime: created.endAt.toISOString() },
-            },
-          });
+          try {
+            const res = await calendar.events.insert({
+              calendarId: 'primary',
+              requestBody: {
+                summary: task.title,
+                start: { dateTime: slot.startAt.toISOString() },
+                end: { dateTime: slot.endAt.toISOString() },
+              },
+            });
+            googleEventId = res.data.id || undefined;
+          } catch {
+            throw new TRPCError({ code: 'BAD_GATEWAY', message: 'Failed to sync with Google Calendar' });
+          }
         }
       }
 
-      return created;
+      return db.event.create({
+        data: { taskId: input.taskId, startAt: slot.startAt, endAt: slot.endAt, googleEventId },
+      });
     }),
   move: protectedProcedure
     .input(
@@ -229,29 +233,50 @@ export const eventRouter = router({
       const summary = item.summary;
       const start = item.start?.dateTime;
       const end = item.end?.dateTime;
-      if (!summary || !start || !end) continue;
-      const task = await db.task.create({ data: { title: summary, userId } });
-      await db.event.create({
-        data: {
-          taskId: task.id,
-          startAt: new Date(start),
-          endAt: new Date(end),
-        },
+      const id = item.id;
+      if (!summary || !start || !end || !id) continue;
+
+      const existing = await db.event.findFirst({
+        where: { googleEventId: id, task: { userId } },
+        include: { task: true },
       });
+      if (existing) {
+        await db.event.update({
+          where: { id: existing.id },
+          data: { startAt: new Date(start), endAt: new Date(end) },
+        });
+        if (existing.task.title !== summary) {
+          await db.task.update({ where: { id: existing.taskId }, data: { title: summary } });
+        }
+      } else {
+        const task = await db.task.create({ data: { title: summary, userId } });
+        await db.event.create({
+          data: {
+            taskId: task.id,
+            startAt: new Date(start),
+            endAt: new Date(end),
+            googleEventId: id,
+          },
+        });
+      }
     }
 
     const locals = await db.event.findMany({
-      where: { task: { userId } },
+      where: { task: { userId }, googleEventId: null },
       include: { task: true },
     });
     for (const e of locals) {
-      await calendar.events.insert({
+      const inserted = await calendar.events.insert({
         calendarId: 'primary',
         requestBody: {
           summary: e.task?.title ?? '',
           start: { dateTime: e.startAt.toISOString() },
           end: { dateTime: e.endAt.toISOString() },
         },
+      });
+      await db.event.update({
+        where: { id: e.id },
+        data: { googleEventId: inserted.data.id || undefined },
       });
     }
 
