@@ -153,8 +153,7 @@ describe('CalendarPage', () => {
     expect(arg.dayWindowStartHour).toBe(6);
     expect(arg.dayWindowEndHour).toBe(20);
   });
-
-  it('resets base date to today when Today is clicked', () => {
+  it('navigates between weeks and resets to today', () => {
     vi.useFakeTimers();
     const today = new Date('2024-05-15T12:00:00Z');
     vi.setSystemTime(today);
@@ -166,6 +165,14 @@ describe('CalendarPage', () => {
       d.setDate(d.getDate() - diff);
       return d;
     })();
+    const fmt = (d: Date) => d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
+    expect(screen.getByText(fmt(eventMonday))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    const nextMonday = new Date(eventMonday);
+    nextMonday.setDate(eventMonday.getDate() + 7);
+    expect(screen.getByText(fmt(nextMonday))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /previous/i }));
+    expect(screen.getByText(fmt(eventMonday))).toBeInTheDocument();
     const todayMonday = (() => {
       const d = new Date(today);
       d.setHours(0, 0, 0, 0);
@@ -173,25 +180,34 @@ describe('CalendarPage', () => {
       d.setDate(d.getDate() - diff);
       return d;
     })();
-    const fmt = (d: Date) => d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
-    expect(screen.getByText(fmt(eventMonday))).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /today/i }));
     expect(screen.getByText(fmt(todayMonday))).toBeInTheDocument();
     vi.useRealTimers();
   });
 
-  it('Day tab focuses today (not Monday of week)', () => {
-    vi.useFakeTimers();
-    const today = new Date('2024-05-15T12:00:00Z'); // Wednesday
-    vi.setSystemTime(today);
+  it('navigates between days in Day view', () => {
     render(<CalendarPage />);
-    // Switch to Day view
     const tabs = screen.getByRole('tablist', { name: /calendar view/i });
-    const dayTab = within(tabs).getByRole('tab', { name: /day/i });
-    fireEvent.click(dayTab);
-    // Expect header to show today's exact date, not Monday
+    fireEvent.click(within(tabs).getByRole('tab', { name: /day/i }));
+    const baseDay = new Date(events[0].startAt);
     const fmt = (d: Date) => d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
-    expect(screen.getByText(fmt(new Date(today)))).toBeInTheDocument();
-    vi.useRealTimers();
+    expect(screen.getByText(fmt(baseDay))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    const nextDay = new Date(baseDay);
+    nextDay.setDate(baseDay.getDate() + 1);
+    expect(screen.getByText(fmt(nextDay))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /previous/i }));
+    expect(screen.getByText(fmt(baseDay))).toBeInTheDocument();
+  });
+
+  it('navigates between months in Month view', () => {
+    render(<CalendarPage />);
+    const tabs = screen.getByRole('tablist', { name: /calendar view/i });
+    fireEvent.click(within(tabs).getByRole('tab', { name: /month/i }));
+    expect(screen.getByLabelText('month-day-2099-01-01')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    expect(screen.getByLabelText('month-day-2099-02-01')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /previous/i }));
+    expect(screen.getByLabelText('month-day-2099-01-01')).toBeInTheDocument();
   });
 });
