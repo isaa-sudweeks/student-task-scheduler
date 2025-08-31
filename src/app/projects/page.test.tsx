@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 
@@ -9,27 +9,37 @@ import ProjectsPage from './page';
 
 const createMock = vi.fn();
 const updateMock = vi.fn();
-const listData: { data: Array<{ id: string; title: string; description: string | null }> } = { data: [] };
+let listData: Array<{ id: string; title: string; description: string | null }> = [];
+let createIsPending = false;
+let updateIsPending = false;
+let deleteIsPending = false;
 
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ project: { list: { invalidate: vi.fn() } } }),
     project: {
-      list: { useQuery: () => ({ data: listData.data }) },
-      create: { useMutation: () => ({ mutate: createMock }) },
-      update: { useMutation: () => ({ mutate: updateMock }) },
-      delete: { useMutation: () => ({ mutate: vi.fn() }) },
+      list: { useQuery: () => ({ data: listData }) },
+      create: { useMutation: () => ({ mutate: createMock, isPending: createIsPending }) },
+      update: { useMutation: () => ({ mutate: updateMock, isPending: updateIsPending }) },
+      delete: { useMutation: () => ({ mutate: vi.fn(), isPending: deleteIsPending }) },
     },
   },
 }));
 
-describe('ProjectsPage validation', () => {
-  beforeEach(() => {
-    createMock.mockReset();
-    updateMock.mockReset();
-    listData.data = [];
-  });
+beforeEach(() => {
+  createMock.mockReset();
+  updateMock.mockReset();
+  listData = [];
+  createIsPending = false;
+  updateIsPending = false;
+  deleteIsPending = false;
+});
 
+afterEach(() => {
+  cleanup();
+});
+
+describe('ProjectsPage validation', () => {
   it('shows error when title too long', () => {
     render(<ProjectsPage />);
     fireEvent.change(screen.getByPlaceholderText('Project title'), {
@@ -43,7 +53,7 @@ describe('ProjectsPage validation', () => {
   });
 
   it('shows error when description too long on update', () => {
-    listData.data = [{ id: '1', title: 'Test', description: 'desc' }];
+    listData = [{ id: '1', title: 'Test', description: 'desc' }];
     render(<ProjectsPage />);
     const textarea = screen.getByDisplayValue('desc');
     fireEvent.change(textarea, { target: { value: 'a'.repeat(1001) } });
@@ -52,5 +62,30 @@ describe('ProjectsPage validation', () => {
       screen.getByText(/description must be at most 1000 characters/i),
     ).toBeInTheDocument();
     expect(updateMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ProjectsPage loading states', () => {
+  it('disables add button when creating', () => {
+    createIsPending = true;
+    render(<ProjectsPage />);
+    const btn = screen.getByRole('button', { name: /saving/i });
+    expect(btn).toBeDisabled();
+  });
+
+  it('disables save button when updating', () => {
+    listData = [{ id: '1', title: 'Proj', description: null }];
+    updateIsPending = true;
+    render(<ProjectsPage />);
+    const btn = screen.getByRole('button', { name: /saving/i });
+    expect(btn).toBeDisabled();
+  });
+
+  it('disables delete button when deleting', () => {
+    listData = [{ id: '1', title: 'Proj', description: null }];
+    deleteIsPending = true;
+    render(<ProjectsPage />);
+    const btn = screen.getByRole('button', { name: /deleting/i });
+    expect(btn).toBeDisabled();
   });
 });

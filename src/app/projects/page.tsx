@@ -67,7 +67,9 @@ export default function ProjectsPage() {
           aria-invalid={!!descriptionError}
         />
         {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
-        <Button type="submit">Add Project</Button>
+        <Button type="submit" disabled={create.isPending}>
+          {create.isPending ? "Saving..." : "Add Project"}
+        </Button>
       </form>
       <ul className="space-y-4 max-w-md">
         {projects.map((p) => (
@@ -122,6 +124,7 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
       {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
       <div className="flex gap-2">
         <Button
+          disabled={update.isPending}
           onClick={() => {
             const t = title.trim();
             const d = description.trim();
@@ -138,10 +141,14 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
             update.mutate({ id: project.id, title: t, description: d || null });
           }}
         >
-          Save
+          {update.isPending ? "Saving..." : "Save"}
         </Button>
-        <Button variant="danger" onClick={() => del.mutate({ id: project.id })}>
-          Delete
+        <Button
+          variant="danger"
+          disabled={del.isPending}
+          onClick={() => del.mutate({ id: project.id })}
+        >
+          {del.isPending ? "Deleting..." : "Delete"}
         </Button>
       </div>
     </li>
