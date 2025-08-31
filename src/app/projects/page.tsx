@@ -29,6 +29,7 @@ export default function ProjectsPage() {
           onChange={(e) => setDescription(e.target.value)}
         />
         <Button
+          disabled={create.isPending}
           onClick={() => {
             const t = title.trim();
             if (!t) return;
@@ -37,7 +38,7 @@ export default function ProjectsPage() {
             setDescription("");
           }}
         >
-          Add Project
+          {create.isPending ? "Saving..." : "Add Project"}
         </Button>
       </div>
       <ul className="space-y-4 max-w-md">
@@ -73,14 +74,19 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
       />
       <div className="flex gap-2">
         <Button
+          disabled={update.isPending}
           onClick={() =>
             update.mutate({ id: project.id, title: title.trim(), description: description.trim() || null })
           }
         >
-          Save
+          {update.isPending ? "Saving..." : "Save"}
         </Button>
-        <Button variant="danger" onClick={() => del.mutate({ id: project.id })}>
-          Delete
+        <Button
+          variant="danger"
+          disabled={del.isPending}
+          onClick={() => del.mutate({ id: project.id })}
+        >
+          {del.isPending ? "Deleting..." : "Delete"}
         </Button>
       </div>
     </li>
