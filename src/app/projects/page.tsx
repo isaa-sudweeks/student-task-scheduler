@@ -2,12 +2,16 @@
 import React, { useState } from "react";
 import { api } from "@/server/api/react";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/lib/toast";
 
 export default function ProjectsPage() {
   const utils = api.useUtils();
   const { data: projects = [] } = api.project.list.useQuery();
   const create = api.project.create.useMutation({
-    onSuccess: () => utils.project.list.invalidate(),
+    onSuccess: () => {
+      toast.success("Saved!");
+      utils.project.list.invalidate();
+    },
   });
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -52,10 +56,16 @@ export default function ProjectsPage() {
 function ProjectItem({ project }: { project: { id: string; title: string; description: string | null } }) {
   const utils = api.useUtils();
   const update = api.project.update.useMutation({
-    onSuccess: () => utils.project.list.invalidate(),
+    onSuccess: () => {
+      toast.success("Saved!");
+      utils.project.list.invalidate();
+    },
   });
   const del = api.project.delete.useMutation({
-    onSuccess: () => utils.project.list.invalidate(),
+    onSuccess: () => {
+      toast.success("Saved!");
+      utils.project.list.invalidate();
+    },
   });
   const [title, setTitle] = useState(project.title);
   const [description, setDescription] = useState(project.description ?? "");
