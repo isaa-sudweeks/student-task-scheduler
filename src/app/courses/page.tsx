@@ -166,7 +166,11 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
         <Button
           variant="danger"
           disabled={isDeleting}
-          onClick={() => deleteCourse({ id: course.id })}
+          onClick={() => {
+            if (window.confirm("Delete this course?")) {
+              deleteCourse({ id: course.id });
+            }
+          }}
         >
           Delete
         </Button>
