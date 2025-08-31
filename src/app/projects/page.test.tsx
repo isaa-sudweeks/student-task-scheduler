@@ -25,7 +25,6 @@ vi.mock('@/server/api/react', () => ({
   },
 }));
 
-<<<<<<< HEAD
 beforeEach(() => {
   createMock.mockReset();
   updateMock.mockReset();
@@ -101,14 +100,16 @@ describe('ProjectsPage', () => {
   it('resets fields to initial values when Cancel is clicked', () => {
     listData = [{ id: '1', title: 'Initial Title', description: 'Initial Description' }];
     render(<ProjectsPage />);
-    const inputs = screen.getAllByRole('textbox');
-    const titleInput = inputs[2] as HTMLInputElement;
-    const descInput = inputs[3] as HTMLTextAreaElement;
+    const list = screen.getByRole('list');
+    const items = within(list).getAllByRole('listitem');
+    const item = items[0];
+    const titleInput = within(item).getAllByRole('textbox').find((el) => el.tagName === 'INPUT') as HTMLInputElement;
+    const descInput = within(item).getAllByRole('textbox').find((el) => el.tagName === 'TEXTAREA') as HTMLTextAreaElement;
 
     fireEvent.change(titleInput, { target: { value: 'Changed Title' } });
     fireEvent.change(descInput, { target: { value: 'Changed Description' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    fireEvent.click(within(item).getByRole('button', { name: /cancel/i }));
 
     expect(titleInput.value).toBe('Initial Title');
     expect(descInput.value).toBe('Initial Description');

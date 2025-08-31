@@ -24,8 +24,8 @@ describe('projectRouter.create', () => {
     hoisted.create.mockClear();
   });
   it('creates project with title and description', async () => {
-    await projectRouter.createCaller({}).create({ title: 'p', description: 'd' });
-    expect(hoisted.create).toHaveBeenCalledWith({ data: { title: 'p', userId: 'anon', description: 'd' } });
+    await projectRouter.createCaller({ session: { user: { id: 'u1' } } as any }).create({ title: 'p', description: 'd' });
+    expect(hoisted.create).toHaveBeenCalledWith({ data: { title: 'p', userId: 'u1', description: 'd' } });
   });
 });
 

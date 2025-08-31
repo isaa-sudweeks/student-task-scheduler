@@ -3,10 +3,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
+import { useSession } from "next-auth/react";
 
 export default function ProjectsPage() {
   const utils = api.useUtils();
-  const { data: projects = [] } = api.project.list.useQuery();
+  const { data: session } = useSession();
+  const { data: projects = [] } = api.project.list.useQuery(undefined, { enabled: !!session });
   const create = api.project.create.useMutation({
     onSuccess: () => {
       toast.success("Saved!");
