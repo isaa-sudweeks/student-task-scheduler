@@ -20,6 +20,7 @@ export default function CoursesPage() {
   const [title, setTitle] = useState("");
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
+  const isAddDisabled = isCreating || title.trim() === "";
 
   if (isLoading) return <p>Loading...</p>;
   if (error) return <p className="text-red-500">{error.message}</p>;
@@ -67,7 +68,7 @@ export default function CoursesPage() {
           </div>
         </label>
         <Button
-          disabled={isCreating}
+          disabled={isAddDisabled}
           onClick={() => {
             const t = title.trim();
             if (!t) return;
@@ -112,6 +113,14 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
   const titleId = `course-${course.id}-title`;
   const termId = `course-${course.id}-term`;
   const colorId = `course-${course.id}-color`;
+  const trimmedTitle = title.trim();
+  const trimmedTerm = term.trim();
+  const trimmedColor = color.trim();
+  const hasChanges =
+    trimmedTitle !== course.title ||
+    trimmedTerm !== (course.term ?? "") ||
+    trimmedColor !== (course.color ?? "");
+  const isSaveDisabled = isUpdating || !hasChanges;
   return (
     <li className="flex flex-col gap-2 border-b pb-4">
       <label htmlFor={titleId} className="flex flex-col gap-1">
@@ -151,13 +160,13 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
       </label>
       <div className="flex gap-2">
         <Button
-          disabled={isUpdating}
+          disabled={isSaveDisabled}
           onClick={() =>
             updateCourse({
               id: course.id,
-              title: title.trim(),
-              term: term.trim() || null,
-              color: color.trim() || null,
+              title: trimmedTitle,
+              term: trimmedTerm || null,
+              color: trimmedColor || null,
             })
           }
         >
