@@ -12,10 +12,19 @@ export default function ProjectsPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const t = title.trim();
+    if (!t) return;
+    create.mutate({ title: t, description: description.trim() || undefined });
+    setTitle("");
+    setDescription("");
+  };
+
   return (
     <main className="space-y-6">
       <h1 className="text-2xl font-semibold">Projects</h1>
-      <div className="flex flex-col gap-2 max-w-md">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 max-w-md">
         <input
           className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           placeholder="Project title"
@@ -28,18 +37,8 @@ export default function ProjectsPage() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-        <Button
-          onClick={() => {
-            const t = title.trim();
-            if (!t) return;
-            create.mutate({ title: t, description: description.trim() || undefined });
-            setTitle("");
-            setDescription("");
-          }}
-        >
-          Add Project
-        </Button>
-      </div>
+        <Button type="submit">Add Project</Button>
+      </form>
       <ul className="space-y-4 max-w-md">
         {projects.map((p) => (
           <ProjectItem key={p.id} project={p} />
