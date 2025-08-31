@@ -32,7 +32,18 @@ const isAuthed = t.middleware(({ ctx, next }) => {
   if (!ctx.session?.user?.id) {
     throw new TRPCError({ code: 'UNAUTHORIZED' });
   }
-  return next();
+  // Narrow the context so downstream procedures know session is defined
+  return next({
+    ctx: {
+      ...ctx,
+      session: {
+        user: {
+          id: ctx.session.user.id as string,
+          timezone: ctx.session.user?.timezone ?? null,
+        },
+      },
+    },
+  });
 });
 
 export const protectedProcedure = t.procedure.use(rateLimit).use(isAuthed);
