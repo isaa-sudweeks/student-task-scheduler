@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { api } from "@/server/api/react";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +12,13 @@ export default function CoursesPage() {
   const [title, setTitle] = useState("");
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   return (
     <main className="space-y-6">
@@ -48,11 +55,23 @@ export default function CoursesPage() {
           Add Course
         </Button>
       </div>
-      <ul className="space-y-4 max-w-md">
-        {courses.map((c) => (
-          <CourseItem key={c.id} course={c} />
-        ))}
-      </ul>
+      <div className="max-w-md">
+        <input
+          className="mb-4 w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          placeholder="Search courses..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <ul className="space-y-4">
+          {courses
+            .filter((c) =>
+              c.title.toLowerCase().includes(debouncedSearch.toLowerCase())
+            )
+            .map((c) => (
+              <CourseItem key={c.id} course={c} />
+            ))}
+        </ul>
+      </div>
     </main>
   );
 }
