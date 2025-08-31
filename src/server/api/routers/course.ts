@@ -1,22 +1,22 @@
 import { z } from 'zod';
-import { publicProcedure, router } from '../trpc';
+import { protectedProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 
 export const courseRouter = router({
-  list: publicProcedure.query(async () => {
-    return db.course.findMany();
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    return db.course.findMany({ where: { userId } });
   }),
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         title: z.string().min(1).max(200),
-        userId: z.string().min(1).optional(),
         term: z.string().max(100).optional(),
         color: z.string().max(50).optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      const userId = input.userId ?? process.env.DEFAULT_USER_ID ?? 'anon';
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
       return db.course.create({
         data: {
           title: input.title,
@@ -26,7 +26,7 @@ export const courseRouter = router({
         },
       });
     }),
-  update: publicProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.string().min(1),
@@ -35,21 +35,23 @@ export const courseRouter = router({
         color: z.string().max(50).nullable().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
       const { id, ...rest } = input;
       const data: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(rest)) {
         if (typeof value !== 'undefined') data[key] = value;
       }
       if (Object.keys(data).length === 0) {
-        return db.course.findUniqueOrThrow({ where: { id } });
+        return db.course.findUniqueOrThrow({ where: { id, userId } });
       }
-      return db.course.update({ where: { id }, data });
+      return db.course.update({ where: { id, userId }, data });
     }),
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
-    .mutation(async ({ input }) => {
-      return db.course.delete({ where: { id: input.id } });
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      return db.course.delete({ where: { id: input.id, userId } });
     }),
 });
 
