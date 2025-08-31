@@ -215,7 +215,11 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
         <Button
           variant="danger"
           disabled={del.isPending}
-          onClick={() => del.mutate({ id: project.id })}
+          onClick={() => {
+            if (window.confirm("Delete this project?")) {
+              del.mutate({ id: project.id });
+            }
+          }}
         >
           {del.isPending ? "Deleting..." : "Delete"}
         </Button>
