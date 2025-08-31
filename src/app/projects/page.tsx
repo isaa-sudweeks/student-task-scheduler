@@ -16,13 +16,21 @@ export default function ProjectsPage() {
     <main className="space-y-6">
       <h1 className="text-2xl font-semibold">Projects</h1>
       <div className="flex flex-col gap-2 max-w-md">
+        <label htmlFor="new-project-title" className="sr-only">
+          Project title
+        </label>
         <input
+          id="new-project-title"
           className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           placeholder="Project title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
+        <label htmlFor="new-project-description" className="sr-only">
+          Description (optional)
+        </label>
         <textarea
+          id="new-project-description"
           className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           placeholder="Description (optional)"
           value={description}
@@ -61,12 +69,20 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
   const [description, setDescription] = useState(project.description ?? "");
   return (
     <li className="flex flex-col gap-2 border-b pb-4">
+      <label htmlFor={`project-${project.id}-title`} className="sr-only">
+        Project title
+      </label>
       <input
+        id={`project-${project.id}-title`}
         className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
+      <label htmlFor={`project-${project.id}-description`} className="sr-only">
+        Description
+      </label>
       <textarea
+        id={`project-${project.id}-description`}
         className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
