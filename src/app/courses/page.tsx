@@ -1,7 +1,8 @@
 "use client";
 import React, { useState } from "react";
-import { api } from "@/server/api/react";
 import { Button } from "@/components/ui/button";
+import { api } from "@/server/api/react";
+import { toast } from "@/lib/toast";
 
 export default function CoursesPage() {
   const utils = api.useUtils();
@@ -15,7 +16,11 @@ export default function CoursesPage() {
     isPending: isCreating,
     error: createError,
   } = api.course.create.useMutation({
-    onSuccess: () => utils.course.list.invalidate(),
+    onSuccess: async () => {
+      await utils.course.list.invalidate();
+      toast.success("Course added.");
+    },
+    onError: (e) => toast.error(e.message || "Create failed."),
   });
   const [title, setTitle] = useState("");
   const [term, setTerm] = useState("");
@@ -98,14 +103,22 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
     isPending: isUpdating,
     error: updateError,
   } = api.course.update.useMutation({
-    onSuccess: () => utils.course.list.invalidate(),
+    onSuccess: async () => {
+      await utils.course.list.invalidate();
+      toast.success("Course updated.");
+    },
+    onError: (e) => toast.error(e.message || "Update failed."),
   });
   const {
     mutate: deleteCourse,
     isPending: isDeleting,
     error: deleteError,
   } = api.course.delete.useMutation({
-    onSuccess: () => utils.course.list.invalidate(),
+    onSuccess: async () => {
+      await utils.course.list.invalidate();
+      toast.success("Course deleted.");
+    },
+    onError: (e) => toast.error(e.message || "Delete failed."),
   });
   const [title, setTitle] = useState(course.title);
   const [term, setTerm] = useState(course.term ?? "");
