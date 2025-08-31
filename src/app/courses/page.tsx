@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
@@ -26,7 +26,14 @@ export default function CoursesPage() {
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
   const [sortBy, setSortBy] = useState<"title" | "term">("title");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const isAddDisabled = isCreating || title.trim() === "";
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   if (isLoading) return <p>Loading...</p>;
   if (error) return <p className="text-red-500">{error.message}</p>;
@@ -113,11 +120,23 @@ export default function CoursesPage() {
           Sort by Term
         </Button>
       </div>
-      <ul className="space-y-4 max-w-md">
-        {sortedCourses.map((c) => (
-          <CourseItem key={c.id} course={c} />
-        ))}
-      </ul>
+      <div className="max-w-md">
+        <input
+          className="mb-4 w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          placeholder="Search courses..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <ul className="space-y-4">
+          {sortedCourses
+            .filter((c) =>
+              c.title.toLowerCase().includes(debouncedSearch.toLowerCase())
+            )
+            .map((c) => (
+              <CourseItem key={c.id} course={c} />
+            ))}
+        </ul>
+      </div>
     </main>
   );
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -96,5 +96,35 @@ describe('CoursesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /sort by term/i }));
     const itemsAfter = screen.getAllByRole('listitem');
     expect(within(itemsAfter[0]).getAllByRole('textbox')[0]).toHaveValue('B');
+  });
+
+  it('filters courses by search input', () => {
+    vi.useFakeTimers();
+    listMock.mockReturnValue({
+      data: [
+        { id: '1', title: 'Math', term: null, color: null },
+        { id: '2', title: 'History', term: null, color: null },
+      ],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+
+    render(<CoursesPage />);
+
+    expect(screen.getByDisplayValue('Math')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('History')).toBeInTheDocument();
+
+    const input = screen.getByPlaceholderText('Search courses...');
+    fireEvent.change(input, { target: { value: 'math' } });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(screen.getByDisplayValue('Math')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('History')).toBeNull();
+    vi.useRealTimers();
   });
 });
