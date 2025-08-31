@@ -77,6 +77,11 @@ describe('CalendarPage', () => {
     expect(link).toHaveAttribute('href', '/');
   });
 
+  it('does not render its own account menu', () => {
+    render(<CalendarPage />);
+    expect(screen.queryByLabelText(/account menu/i)).toBeNull();
+  });
+
   it('shows unscheduled tasks in backlog and scheduled tasks on grid', () => {
     render(<CalendarPage />);
 

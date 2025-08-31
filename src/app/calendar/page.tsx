@@ -1,5 +1,5 @@
 "use client";
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, type DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -7,8 +7,6 @@ import { api } from '@/server/api/react';
 import type { RouterOutputs } from '@/server/api/root';
 import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { AccountMenu } from '@/components/account-menu';
-// Account menu provided globally in nav bar
 
 type ViewMode = 'day' | 'week' | 'month';
 type Task = RouterOutputs['task']['list'][number];
@@ -251,9 +249,6 @@ export default function CalendarPage() {
         </div>
         <div className="flex items-center gap-2">
           {ViewTabs}
-          <Suspense fallback={null}>
-            <AccountMenu />
-          </Suspense>
         </div>
       </header>
       <DndContext
