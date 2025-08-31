@@ -5,13 +5,24 @@ import { Button } from "@/components/ui/button";
 
 export default function CoursesPage() {
   const utils = api.useUtils();
-  const { data: courses = [] } = api.course.list.useQuery();
-  const create = api.course.create.useMutation({
+  const {
+    data: courses = [],
+    isLoading,
+    error,
+  } = api.course.list.useQuery();
+  const {
+    mutate: createCourse,
+    isPending: isCreating,
+    error: createError,
+  } = api.course.create.useMutation({
     onSuccess: () => utils.course.list.invalidate(),
   });
   const [title, setTitle] = useState("");
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
+
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p className="text-red-500">{error.message}</p>;
 
   return (
     <main className="space-y-6">
@@ -36,10 +47,11 @@ export default function CoursesPage() {
           onChange={(e) => setColor(e.target.value)}
         />
         <Button
+          disabled={isCreating}
           onClick={() => {
             const t = title.trim();
             if (!t) return;
-            create.mutate({ title: t, term: term.trim() || undefined, color: color.trim() || undefined });
+            createCourse({ title: t, term: term.trim() || undefined, color: color.trim() || undefined });
             setTitle("");
             setTerm("");
             setColor("");
@@ -47,6 +59,7 @@ export default function CoursesPage() {
         >
           Add Course
         </Button>
+        {createError && <p className="text-red-500">{createError.message}</p>}
       </div>
       <ul className="space-y-4 max-w-md">
         {courses.map((c) => (
@@ -59,10 +72,18 @@ export default function CoursesPage() {
 
 function CourseItem({ course }: { course: { id: string; title: string; term: string | null; color: string | null } }) {
   const utils = api.useUtils();
-  const update = api.course.update.useMutation({
+  const {
+    mutate: updateCourse,
+    isPending: isUpdating,
+    error: updateError,
+  } = api.course.update.useMutation({
     onSuccess: () => utils.course.list.invalidate(),
   });
-  const del = api.course.delete.useMutation({
+  const {
+    mutate: deleteCourse,
+    isPending: isDeleting,
+    error: deleteError,
+  } = api.course.delete.useMutation({
     onSuccess: () => utils.course.list.invalidate(),
   });
   const [title, setTitle] = useState(course.title);
@@ -87,16 +108,28 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
       />
       <div className="flex gap-2">
         <Button
+          disabled={isUpdating}
           onClick={() =>
-            update.mutate({ id: course.id, title: title.trim(), term: term.trim() || null, color: color.trim() || null })
+            updateCourse({
+              id: course.id,
+              title: title.trim(),
+              term: term.trim() || null,
+              color: color.trim() || null,
+            })
           }
         >
           Save
         </Button>
-        <Button variant="danger" onClick={() => del.mutate({ id: course.id })}>
+        <Button
+          variant="danger"
+          disabled={isDeleting}
+          onClick={() => deleteCourse({ id: course.id })}
+        >
           Delete
         </Button>
       </div>
+      {updateError && <p className="text-red-500">{updateError.message}</p>}
+      {deleteError && <p className="text-red-500">{deleteError.message}</p>}
     </li>
   );
 }
