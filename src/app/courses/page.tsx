@@ -29,12 +29,20 @@ export default function CoursesPage() {
           value={term}
           onChange={(e) => setTerm(e.target.value)}
         />
-        <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          placeholder="Color (optional)"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            aria-label="Course color"
+            className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            value={color || "#000000"}
+            onChange={(e) => setColor(e.target.value)}
+          />
+          <div
+            data-testid="color-preview"
+            className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
+            style={{ backgroundColor: color || "#000000" }}
+          />
+        </div>
         <Button
           onClick={() => {
             const t = title.trim();
@@ -80,11 +88,19 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
         value={term}
         onChange={(e) => setTerm(e.target.value)}
       />
-      <input
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-        value={color}
-        onChange={(e) => setColor(e.target.value)}
-      />
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          aria-label="Course color"
+          className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          value={color || "#000000"}
+          onChange={(e) => setColor(e.target.value)}
+        />
+        <div
+          className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
+          style={{ backgroundColor: color || "#000000" }}
+        />
+      </div>
       <div className="flex gap-2">
         <Button
           onClick={() =>
