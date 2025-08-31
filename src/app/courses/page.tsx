@@ -40,63 +40,65 @@ export default function CoursesPage() {
           a.title.localeCompare(b.title),
     );
 
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const t = title.trim();
+    if (!t) return;
+    createCourse({ title: t, term: term.trim() || undefined, color: color.trim() || undefined });
+    setTitle("");
+    setTerm("");
+    setColor("");
+  };
+
   return (
     <main className="space-y-6">
       <h1 className="text-2xl font-semibold">Courses</h1>
-      <div className="flex flex-col gap-2 max-w-md">
-        <label htmlFor="course-title" className="flex flex-col gap-1">
-          Course title
-          <input
-            id="course-title"
+      <form onSubmit={handleSubmit}>
+        <div className="flex flex-col gap-2 max-w-md">
+          <label htmlFor="course-title" className="flex flex-col gap-1">
+            Course title
+            <input
+              id="course-title"
             className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             placeholder="Course title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
-        </label>
-        <label htmlFor="course-term" className="flex flex-col gap-1">
-          Term (optional)
-          <input
-            id="course-term"
+          </label>
+          <label htmlFor="course-term" className="flex flex-col gap-1">
+            Term (optional)
+            <input
+              id="course-term"
             className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             placeholder="Term (optional)"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
           />
-        </label>
-        <label htmlFor="course-color" className="flex flex-col gap-1">
-          Color (optional)
-          <div className="flex items-center gap-2">
-            <input
-              id="course-color"
-              type="color"
-              aria-label="Course color"
-              className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-              value={color || "#000000"}
-              onChange={(e) => setColor(e.target.value)}
-            />
-            <div
-              data-testid="color-preview"
-              className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
-              style={{ backgroundColor: color || "#000000" }}
-            />
-          </div>
-        </label>
-        <Button
-          disabled={isAddDisabled}
-          onClick={() => {
-            const t = title.trim();
-            if (!t) return;
-            createCourse({ title: t, term: term.trim() || undefined, color: color.trim() || undefined });
-            setTitle("");
-            setTerm("");
-            setColor("");
-          }}
-        >
-          Add Course
-        </Button>
-        {createError && <p className="text-red-500">{createError.message}</p>}
-      </div>
+          </label>
+          <label htmlFor="course-color" className="flex flex-col gap-1">
+            Color (optional)
+            <div className="flex items-center gap-2">
+              <input
+                id="course-color"
+                type="color"
+                aria-label="Course color"
+                className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                value={color || "#000000"}
+                onChange={(e) => setColor(e.target.value)}
+              />
+              <div
+                data-testid="color-preview"
+                className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
+                style={{ backgroundColor: color || "#000000" }}
+              />
+            </div>
+          </label>
+          <Button type="submit" disabled={isAddDisabled}>
+            Add Course
+          </Button>
+          {createError && <p className="text-red-500">{createError.message}</p>}
+        </div>
+      </form>
       <div className="flex gap-2">
         <Button
           variant={sortBy === "title" ? "primary" : "secondary"}
