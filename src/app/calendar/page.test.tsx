@@ -93,6 +93,12 @@ describe('CalendarPage', () => {
     expect(main).toHaveClass('md:grid-cols-4');
   });
 
+  it('aligns backlog section to the top', () => {
+    render(<CalendarPage />);
+    const backlogSection = screen.getByRole('heading', { name: /backlog/i }).parentElement;
+    expect(backlogSection).toHaveClass('self-start');
+  });
+
   it('focus mode toggles on with Space on a task', () => {
     render(<CalendarPage />);
     const backlogItem = screen.getByRole('button', { name: /focus Unscheduled task/i });

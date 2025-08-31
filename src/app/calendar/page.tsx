@@ -316,7 +316,7 @@ export default function CalendarPage() {
           }
         }}
       >
-      <div className="w-full space-y-3 md:col-span-1">
+      <div className="w-full space-y-3 self-start md:col-span-1">
         <h2 className="font-semibold">Backlog</h2>
         <ul className="space-y-2">
           {backlog.map((t) => (
