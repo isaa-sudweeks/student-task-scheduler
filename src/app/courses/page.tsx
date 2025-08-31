@@ -13,41 +13,42 @@ export default function CoursesPage() {
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
 
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const t = title.trim();
+    if (!t) return;
+    create.mutate({ title: t, term: term.trim() || undefined, color: color.trim() || undefined });
+    setTitle("");
+    setTerm("");
+    setColor("");
+  };
+
   return (
     <main className="space-y-6">
       <h1 className="text-2xl font-semibold">Courses</h1>
-      <div className="flex flex-col gap-2 max-w-md">
-        <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          placeholder="Course title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          placeholder="Term (optional)"
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-        />
-        <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          placeholder="Color (optional)"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
-        <Button
-          onClick={() => {
-            const t = title.trim();
-            if (!t) return;
-            create.mutate({ title: t, term: term.trim() || undefined, color: color.trim() || undefined });
-            setTitle("");
-            setTerm("");
-            setColor("");
-          }}
-        >
-          Add Course
-        </Button>
-      </div>
+      <form onSubmit={handleSubmit}>
+        <div className="flex flex-col gap-2 max-w-md">
+          <input
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            placeholder="Course title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          <input
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            placeholder="Term (optional)"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+          />
+          <input
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            placeholder="Color (optional)"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+          />
+          <Button type="submit">Add Course</Button>
+        </div>
+      </form>
       <ul className="space-y-4 max-w-md">
         {courses.map((c) => (
           <CourseItem key={c.id} course={c} />
