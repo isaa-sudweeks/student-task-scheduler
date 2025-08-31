@@ -37,10 +37,11 @@ function SettingsContent() {
   }, [defaultDuration]);
 
   // Google Calendar sync toggle (localStorage)
-  const [syncEnabled, setSyncEnabled] = React.useState(false);
+  const [syncEnabled, setSyncEnabled] = React.useState(true);
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    setSyncEnabled(window.localStorage.getItem("googleSyncEnabled") === "true");
+    const stored = window.localStorage.getItem("googleSyncEnabled");
+    setSyncEnabled(stored !== "false");
   }, []);
   React.useEffect(() => {
     if (typeof window === "undefined") return;

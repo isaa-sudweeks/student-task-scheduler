@@ -36,7 +36,10 @@ export const eventRouter = router({
       const userId = ctx.session?.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
 
-      const task = await db.task.findFirst({ where: { id: input.taskId, userId } });
+      const task = await db.task.findFirst({
+        where: { id: input.taskId, userId },
+        select: { id: true, title: true },
+      });
       if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
 
       const sameDayStart = new Date(desiredStart);
@@ -70,7 +73,38 @@ export const eventRouter = router({
         throw new TRPCError({ code: 'CONFLICT', message: 'No available time slot without overlap' });
       }
 
-      return db.event.create({ data: { taskId: input.taskId, startAt: slot.startAt, endAt: slot.endAt } });
+      const created = await db.event.create({
+        data: { taskId: input.taskId, startAt: slot.startAt, endAt: slot.endAt },
+      });
+
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: { googleSyncEnabled: true },
+      });
+      if (user?.googleSyncEnabled) {
+        const account = await db.account.findFirst({
+          where: { userId, provider: 'google' },
+          select: { access_token: true, refresh_token: true },
+        });
+        if (account?.access_token) {
+          const auth = new google.auth.OAuth2();
+          auth.setCredentials({
+            access_token: account.access_token || undefined,
+            refresh_token: account.refresh_token || undefined,
+          });
+          const calendar = google.calendar({ version: 'v3', auth });
+          await calendar.events.insert({
+            calendarId: 'primary',
+            requestBody: {
+              summary: task.title,
+              start: { dateTime: created.startAt.toISOString() },
+              end: { dateTime: created.endAt.toISOString() },
+            },
+          });
+        }
+      }
+
+      return created;
     }),
   move: protectedProcedure
     .input(
@@ -164,19 +198,64 @@ export const eventRouter = router({
       lines.push('END:VCALENDAR');
       return lines.join('\r\n');
     }),
-  syncGoogle: protectedProcedure
-    .input(
-      z.object({ accessToken: z.string(), refreshToken: z.string().optional() })
-    )
-    .mutation(async ({ input }) => {
-      const auth = new google.auth.OAuth2();
-      auth.setCredentials({
-        access_token: input.accessToken,
-        refresh_token: input.refreshToken,
+  syncGoogle: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session?.user?.id;
+    if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
+
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { googleSyncEnabled: true },
+    });
+    if (!user?.googleSyncEnabled) return [];
+
+    const account = await db.account.findFirst({
+      where: { userId, provider: 'google' },
+      select: { access_token: true, refresh_token: true },
+    });
+    if (!account?.access_token) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Missing Google auth' });
+    }
+
+    const auth = new google.auth.OAuth2();
+    auth.setCredentials({
+      access_token: account.access_token || undefined,
+      refresh_token: account.refresh_token || undefined,
+    });
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    const res = await calendar.events.list({ calendarId: 'primary', maxResults: 10 });
+    const items = res.data.items ?? [];
+    for (const item of items) {
+      const summary = item.summary;
+      const start = item.start?.dateTime;
+      const end = item.end?.dateTime;
+      if (!summary || !start || !end) continue;
+      const task = await db.task.create({ data: { title: summary, userId } });
+      await db.event.create({
+        data: {
+          taskId: task.id,
+          startAt: new Date(start),
+          endAt: new Date(end),
+        },
       });
-      const calendar = google.calendar({ version: 'v3', auth });
-      const res = await calendar.events.list({ calendarId: 'primary', maxResults: 10 });
-      return res.data.items ?? [];
-    }),
+    }
+
+    const locals = await db.event.findMany({
+      where: { task: { userId } },
+      include: { task: true },
+    });
+    for (const e of locals) {
+      await calendar.events.insert({
+        calendarId: 'primary',
+        requestBody: {
+          summary: e.task?.title ?? '',
+          start: { dateTime: e.startAt.toISOString() },
+          end: { dateTime: e.endAt.toISOString() },
+        },
+      });
+    }
+
+    return items;
+  }),
 });
 

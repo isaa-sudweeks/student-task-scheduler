@@ -24,7 +24,7 @@ model User {
   dayWindowStartHour   Int     @default(8)
   dayWindowEndHour     Int     @default(18)
   defaultDurationMinutes Int   @default(30)
-  googleSyncEnabled    Boolean @default(false)
+  googleSyncEnabled    Boolean @default(true)
 
   tasks    Task[]
   projects Project[]
