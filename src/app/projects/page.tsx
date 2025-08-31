@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { api } from "@/server/api/react";
 import { Button } from "@/components/ui/button";
 
@@ -57,8 +57,17 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
   const del = api.project.delete.useMutation({
     onSuccess: () => utils.project.list.invalidate(),
   });
-  const [title, setTitle] = useState(project.title);
-  const [description, setDescription] = useState(project.description ?? "");
+  const initialTitle = useRef(project.title);
+  const initialDescription = useRef(project.description ?? "");
+  const [title, setTitle] = useState(initialTitle.current);
+  const [description, setDescription] = useState(initialDescription.current);
+
+  useEffect(() => {
+    initialTitle.current = project.title;
+    initialDescription.current = project.description ?? "";
+    setTitle(project.title);
+    setDescription(project.description ?? "");
+  }, [project.title, project.description]);
   return (
     <li className="flex flex-col gap-2 border-b pb-4">
       <input
@@ -78,6 +87,15 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
           }
         >
           Save
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setTitle(initialTitle.current);
+            setDescription(initialDescription.current);
+          }}
+        >
+          Cancel
         </Button>
         <Button variant="danger" onClick={() => del.mutate({ id: project.id })}>
           Delete
