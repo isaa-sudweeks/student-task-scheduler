@@ -19,6 +19,9 @@ export default function ProjectsPage() {
   const [titleError, setTitleError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
 
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"createdAt" | "title">("createdAt");
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const t = title.trim();
@@ -37,6 +40,16 @@ export default function ProjectsPage() {
     setTitle("");
     setDescription("");
   };
+
+  const displayed = [...projects]
+    .filter((p) => p.title.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      if (sort === "title") return a.title.localeCompare(b.title);
+      return (
+        new Date((b as any).createdAt ?? 0).getTime() -
+        new Date((a as any).createdAt ?? 0).getTime()
+      );
+    });
 
   return (
     <main className="space-y-6">
@@ -76,11 +89,28 @@ export default function ProjectsPage() {
           {create.isPending ? "Saving..." : "Add Project"}
         </Button>
       </form>
+      <div className="flex flex-col gap-2 max-w-md">
+        <input
+          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          placeholder="Search projects..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select
+          aria-label="Sort by"
+          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          value={sort}
+          onChange={(e) => setSort(e.target.value as "createdAt" | "title")}
+        >
+          <option value="createdAt">Creation date</option>
+          <option value="title">Title</option>
+        </select>
+      </div>
       {projects.length === 0 ? (
         <p className="text-sm text-muted-foreground">No projects yet—add one above.</p>
       ) : (
         <ul className="space-y-4 max-w-md">
-          {projects.map((p) => (
+          {displayed.map((p) => (
             <ProjectItem key={p.id} project={p} />
           ))}
         </ul>

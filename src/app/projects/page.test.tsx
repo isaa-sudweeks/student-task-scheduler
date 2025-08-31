@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -9,7 +9,7 @@ import ProjectsPage from './page';
 
 const createMock = vi.fn();
 const updateMock = vi.fn();
-let listData: Array<{ id: string; title: string; description: string | null }> = [];
+let listData: Array<{ id: string; title: string; description: string | null; createdAt?: string } > = [];
 let createIsPending = false;
 let updateIsPending = false;
 let deleteIsPending = false;
@@ -25,6 +25,7 @@ vi.mock('@/server/api/react', () => ({
   },
 }));
 
+<<<<<<< HEAD
 beforeEach(() => {
   createMock.mockReset();
   updateMock.mockReset();
@@ -111,5 +112,35 @@ describe('ProjectsPage', () => {
 
     expect(titleInput.value).toBe('Initial Title');
     expect(descInput.value).toBe('Initial Description');
+  });
+
+  it('filters and sorts projects', () => {
+    listData = [
+      { id: '1', title: 'Alpha', description: '', createdAt: '2023-01-01T00:00:00Z' },
+      { id: '2', title: 'Beta', description: '', createdAt: '2023-02-01T00:00:00Z' },
+    ];
+    render(<ProjectsPage />);
+    const list = screen.getByRole('list');
+    const titles = within(list)
+      .getAllByRole('textbox')
+      .filter((el) => el.tagName === 'INPUT')
+      .map((i) => (i as HTMLInputElement).value);
+    expect(titles).toEqual(['Beta', 'Alpha']);
+
+    const sortSelect = screen.getByRole('combobox', { name: /sort by/i });
+    fireEvent.change(sortSelect, { target: { value: 'title' } });
+    const titlesSorted = within(list)
+      .getAllByRole('textbox')
+      .filter((el) => el.tagName === 'INPUT')
+      .map((i) => (i as HTMLInputElement).value);
+    expect(titlesSorted).toEqual(['Alpha', 'Beta']);
+
+    const searchInput = screen.getByPlaceholderText('Search projects...');
+    fireEvent.change(searchInput, { target: { value: 'Alpha' } });
+    const filtered = within(list)
+      .getAllByRole('textbox')
+      .filter((el) => el.tagName === 'INPUT')
+      .map((i) => (i as HTMLInputElement).value);
+    expect(filtered).toEqual(['Alpha']);
   });
 });
