@@ -12,6 +12,7 @@ export default function CoursesPage() {
   const [title, setTitle] = useState("");
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
+  const isAddDisabled = create.isPending || title.trim() === "";
 
   return (
     <main className="space-y-6">
@@ -36,6 +37,7 @@ export default function CoursesPage() {
           onChange={(e) => setColor(e.target.value)}
         />
         <Button
+          disabled={isAddDisabled}
           onClick={() => {
             const t = title.trim();
             if (!t) return;
@@ -68,6 +70,14 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
   const [title, setTitle] = useState(course.title);
   const [term, setTerm] = useState(course.term ?? "");
   const [color, setColor] = useState(course.color ?? "");
+  const trimmedTitle = title.trim();
+  const trimmedTerm = term.trim();
+  const trimmedColor = color.trim();
+  const hasChanges =
+    trimmedTitle !== course.title ||
+    trimmedTerm !== (course.term ?? "") ||
+    trimmedColor !== (course.color ?? "");
+  const isSaveDisabled = update.isPending || !hasChanges;
   return (
     <li className="flex flex-col gap-2 border-b pb-4">
       <input
@@ -87,8 +97,9 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
       />
       <div className="flex gap-2">
         <Button
+          disabled={isSaveDisabled}
           onClick={() =>
-            update.mutate({ id: course.id, title: title.trim(), term: term.trim() || null, color: color.trim() || null })
+            update.mutate({ id: course.id, title: trimmedTitle, term: trimmedTerm || null, color: trimmedColor || null })
           }
         >
           Save
