@@ -13,7 +13,6 @@ let listData: Array<{ id: string; title: string; description: string | null }> =
 let createIsPending = false;
 let updateIsPending = false;
 let deleteIsPending = false;
-
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ project: { list: { invalidate: vi.fn() } } }),
@@ -87,5 +86,22 @@ describe('ProjectsPage loading states', () => {
     render(<ProjectsPage />);
     const btn = screen.getByRole('button', { name: /deleting/i });
     expect(btn).toBeDisabled();
+  });
+});
+describe('ProjectsPage', () => {
+  it('resets fields to initial values when Cancel is clicked', () => {
+    listData = [{ id: '1', title: 'Initial Title', description: 'Initial Description' }];
+    render(<ProjectsPage />);
+    const inputs = screen.getAllByRole('textbox');
+    const titleInput = inputs[2] as HTMLInputElement;
+    const descInput = inputs[3] as HTMLTextAreaElement;
+
+    fireEvent.change(titleInput, { target: { value: 'Changed Title' } });
+    fireEvent.change(descInput, { target: { value: 'Changed Description' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(titleInput.value).toBe('Initial Title');
+    expect(descInput.value).toBe('Initial Description');
   });
 });

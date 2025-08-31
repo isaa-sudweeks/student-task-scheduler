@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
@@ -101,10 +101,19 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
     },
     onError: (e) => toast.error(e.message || "Delete failed."),
   });
-  const [title, setTitle] = useState(project.title);
-  const [description, setDescription] = useState(project.description ?? "");
+  const initialTitle = useRef(project.title);
+  const initialDescription = useRef(project.description ?? "");
+  const [title, setTitle] = useState(initialTitle.current);
+  const [description, setDescription] = useState(initialDescription.current);
   const [titleError, setTitleError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
+
+  useEffect(() => {
+    initialTitle.current = project.title;
+    initialDescription.current = project.description ?? "";
+    setTitle(project.title);
+    setDescription(project.description ?? "");
+  }, [project.title, project.description]);
   return (
     <li className="flex flex-col gap-2 border-b pb-4">
       <label htmlFor={`project-${project.id}-title`} className="sr-only">
@@ -155,6 +164,17 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
           }}
         >
           {update.isPending ? "Saving..." : "Save"}
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setTitle(initialTitle.current);
+            setDescription(initialDescription.current);
+            setTitleError("");
+            setDescriptionError("");
+          }}
+        >
+          Cancel
         </Button>
         <Button
           variant="danger"
