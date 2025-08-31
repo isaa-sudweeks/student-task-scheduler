@@ -1,13 +1,15 @@
 "use client";
 import React, { useState } from "react";
-import { api } from "@/server/api/react";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/lib/toast";
+import { api } from "@/server/api/react";
 
 export default function ProjectsPage() {
   const utils = api.useUtils();
   const { data: projects = [] } = api.project.list.useQuery();
   const create = api.project.create.useMutation({
     onSuccess: () => utils.project.list.invalidate(),
+    onError: (e) => toast.error(e.message || "Create failed."),
   });
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -84,9 +86,11 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
   const utils = api.useUtils();
   const update = api.project.update.useMutation({
     onSuccess: () => utils.project.list.invalidate(),
+    onError: (e) => toast.error(e.message || "Update failed."),
   });
   const del = api.project.delete.useMutation({
     onSuccess: () => utils.project.list.invalidate(),
+    onError: (e) => toast.error(e.message || "Delete failed."),
   });
   const [title, setTitle] = useState(project.title);
   const [description, setDescription] = useState(project.description ?? "");
