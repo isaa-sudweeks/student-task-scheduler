@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -78,5 +78,23 @@ describe('CoursesPage', () => {
     expect(swatch).toHaveStyle({ backgroundColor: '#000000' });
     fireEvent.change(input, { target: { value: '#123456' } });
     expect(swatch).toHaveStyle({ backgroundColor: '#123456' });
+  });
+
+  it('sorts courses by title by default and toggles to term', () => {
+    const mockCourses = [
+      { id: '1', title: 'B', term: 'Summer', color: null },
+      { id: '2', title: 'A', term: 'Winter', color: null },
+    ];
+    listMock.mockReturnValue({ data: mockCourses, isLoading: false, error: undefined });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+
+    render(<CoursesPage />);
+    const items = screen.getAllByRole('listitem');
+    expect(within(items[0]).getAllByRole('textbox')[0]).toHaveValue('A');
+    fireEvent.click(screen.getByRole('button', { name: /sort by term/i }));
+    const itemsAfter = screen.getAllByRole('listitem');
+    expect(within(itemsAfter[0]).getAllByRole('textbox')[0]).toHaveValue('B');
   });
 });

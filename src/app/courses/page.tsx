@@ -25,10 +25,20 @@ export default function CoursesPage() {
   const [title, setTitle] = useState("");
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
+  const [sortBy, setSortBy] = useState<"title" | "term">("title");
   const isAddDisabled = isCreating || title.trim() === "";
 
   if (isLoading) return <p>Loading...</p>;
   if (error) return <p className="text-red-500">{error.message}</p>;
+
+  const sortedCourses = courses
+    .slice()
+    .sort((a, b) =>
+      sortBy === "title"
+        ? a.title.localeCompare(b.title)
+        : (a.term ?? "").localeCompare(b.term ?? "") ||
+          a.title.localeCompare(b.title),
+    );
 
   return (
     <main className="space-y-6">
@@ -87,8 +97,22 @@ export default function CoursesPage() {
         </Button>
         {createError && <p className="text-red-500">{createError.message}</p>}
       </div>
+      <div className="flex gap-2">
+        <Button
+          variant={sortBy === "title" ? "primary" : "secondary"}
+          onClick={() => setSortBy("title")}
+        >
+          Sort by Title
+        </Button>
+        <Button
+          variant={sortBy === "term" ? "primary" : "secondary"}
+          onClick={() => setSortBy("term")}
+        >
+          Sort by Term
+        </Button>
+      </div>
       <ul className="space-y-4 max-w-md">
-        {courses.map((c) => (
+        {sortedCourses.map((c) => (
           <CourseItem key={c.id} course={c} />
         ))}
       </ul>
