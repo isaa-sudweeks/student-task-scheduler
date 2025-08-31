@@ -66,12 +66,20 @@ export default function CalendarPage() {
     }
   }, [eventsData]);
 
-  const baseMonday = new Date(baseDate);
-  const day = baseMonday.getDay();
-  const diff = (day + 6) % 7;
-  baseMonday.setDate(baseMonday.getDate() - diff);
-  // For day view we want to anchor to "today" rather than the week's Monday
-  const todayDate = new Date();
+  const changeDate = React.useCallback((delta: number) => {
+    setBaseDate((prev) => {
+      const d = new Date(prev);
+      if (view === 'day') {
+        d.setDate(d.getDate() + delta);
+      } else if (view === 'week') {
+        d.setDate(d.getDate() + delta * 7);
+      } else {
+        d.setDate(1);
+        d.setMonth(d.getMonth() + delta);
+      }
+      return d;
+    });
+  }, [view]);
 
   const focusStart = api.focus.start.useMutation({
     onSuccess: async () => {
@@ -234,18 +242,36 @@ export default function CalendarPage() {
           >
             Home
           </a>
-          <button
-            type="button"
-            className={`rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${
-              baseDate.toDateString() === new Date().toDateString()
-                ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
-                : ''
-            }`}
-            onClick={() => setBaseDate(new Date())}
-            aria-current={baseDate.toDateString() === new Date().toDateString() ? 'date' : undefined}
-          >
-            Today
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Previous"
+              className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+              onClick={() => changeDate(-1)}
+            >
+              Prev
+            </button>
+            <button
+              type="button"
+              className={`rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${
+                baseDate.toDateString() === new Date().toDateString()
+                  ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                  : ''
+              }`}
+              onClick={() => setBaseDate(new Date())}
+              aria-current={baseDate.toDateString() === new Date().toDateString() ? 'date' : undefined}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              aria-label="Next"
+              className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+              onClick={() => changeDate(1)}
+            >
+              Next
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {ViewTabs}
@@ -352,7 +378,7 @@ export default function CalendarPage() {
         <div data-testid="calendar-grid">
           <CalendarGrid
             view={view}
-            startOfWeek={view === 'day' ? todayDate : baseMonday}
+            startOfWeek={baseDate}
             workStartHour={dayStart}
             workEndHour={dayEnd}
             onDropTask={(taskId, startAt) => {
