@@ -93,7 +93,14 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
         >
           Save
         </Button>
-        <Button variant="danger" onClick={() => del.mutate({ id: course.id })}>
+        <Button
+          variant="danger"
+          onClick={() => {
+            if (window.confirm("Delete this course?")) {
+              del.mutate({ id: course.id });
+            }
+          }}
+        >
           Delete
         </Button>
       </div>
