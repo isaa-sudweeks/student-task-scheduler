@@ -179,4 +179,19 @@ describe('CalendarPage', () => {
     expect(screen.getByText(fmt(todayMonday))).toBeInTheDocument();
     vi.useRealTimers();
   });
+
+  it('Day tab focuses today (not Monday of week)', () => {
+    vi.useFakeTimers();
+    const today = new Date('2024-05-15T12:00:00Z'); // Wednesday
+    vi.setSystemTime(today);
+    render(<CalendarPage />);
+    // Switch to Day view
+    const tabs = screen.getByRole('tablist', { name: /calendar view/i });
+    const dayTab = within(tabs).getByRole('tab', { name: /day/i });
+    fireEvent.click(dayTab);
+    // Expect header to show today's exact date, not Monday
+    const fmt = (d: Date) => d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
+    expect(screen.getByText(fmt(new Date(today)))).toBeInTheDocument();
+    vi.useRealTimers();
+  });
 });

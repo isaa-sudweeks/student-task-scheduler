@@ -72,6 +72,8 @@ export default function CalendarPage() {
   const day = baseMonday.getDay();
   const diff = (day + 6) % 7;
   baseMonday.setDate(baseMonday.getDate() - diff);
+  // For day view we want to anchor to "today" rather than the week's Monday
+  const todayDate = new Date();
 
   const focusStart = api.focus.start.useMutation({
     onSuccess: async () => {
@@ -355,7 +357,7 @@ export default function CalendarPage() {
         <div data-testid="calendar-grid">
           <CalendarGrid
             view={view}
-            startOfWeek={baseMonday}
+            startOfWeek={view === 'day' ? todayDate : baseMonday}
             workStartHour={dayStart}
             workEndHour={dayEnd}
             onDropTask={(taskId, startAt) => {
