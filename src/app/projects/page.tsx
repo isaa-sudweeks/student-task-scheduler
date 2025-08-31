@@ -40,11 +40,15 @@ export default function ProjectsPage() {
           Add Project
         </Button>
       </div>
-      <ul className="space-y-4 max-w-md">
-        {projects.map((p) => (
-          <ProjectItem key={p.id} project={p} />
-        ))}
-      </ul>
+      {projects.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No projects yet—add one above.</p>
+      ) : (
+        <ul className="space-y-4 max-w-md">
+          {projects.map((p) => (
+            <ProjectItem key={p.id} project={p} />
+          ))}
+        </ul>
+      )}
     </main>
   );
 }
