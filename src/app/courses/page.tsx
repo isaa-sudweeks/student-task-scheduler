@@ -50,13 +50,21 @@ export default function CoursesPage() {
         </label>
         <label htmlFor="course-color" className="flex flex-col gap-1">
           Color (optional)
-          <input
-            id="course-color"
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            placeholder="Color (optional)"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            <input
+              id="course-color"
+              type="color"
+              aria-label="Course color"
+              className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              value={color || "#000000"}
+              onChange={(e) => setColor(e.target.value)}
+            />
+            <div
+              data-testid="color-preview"
+              className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
+              style={{ backgroundColor: color || "#000000" }}
+            />
+          </div>
         </label>
         <Button
           disabled={isCreating}
@@ -126,12 +134,20 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
       </label>
       <label htmlFor={colorId} className="flex flex-col gap-1">
         Color
-        <input
-          id={colorId}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
+        <div className="flex items-center gap-2">
+          <input
+            id={colorId}
+            type="color"
+            aria-label="Course color"
+            className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            value={color || "#000000"}
+            onChange={(e) => setColor(e.target.value)}
+          />
+          <div
+            className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
+            style={{ backgroundColor: color || "#000000" }}
+          />
+        </div>
       </label>
       <div className="flex gap-2">
         <Button
@@ -160,4 +176,3 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
     </li>
   );
 }
-

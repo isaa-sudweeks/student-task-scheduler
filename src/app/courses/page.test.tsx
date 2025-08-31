@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -68,5 +68,15 @@ describe('CoursesPage', () => {
     expect(screen.getByText('Update failed')).toBeInTheDocument();
     expect(screen.getByText('Delete failed')).toBeInTheDocument();
   });
-});
 
+  it('shows swatch preview when color changes', () => {
+    listMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    render(<CoursesPage />);
+    const input = screen.getByLabelText('Course color') as HTMLInputElement;
+    const swatch = screen.getByTestId('color-preview');
+    expect(swatch).toHaveStyle({ backgroundColor: '#000000' });
+    fireEvent.change(input, { target: { value: '#123456' } });
+    expect(swatch).toHaveStyle({ backgroundColor: '#123456' });
+  });
+});
