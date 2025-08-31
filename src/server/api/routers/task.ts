@@ -158,6 +158,15 @@ export const taskRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
       const userId = requireUserId(ctx);
+      // Validate foreign keys to avoid FK violations and cross-user links
+      if (input.projectId) {
+        const project = await db.project.findFirst({ where: { id: input.projectId, userId } });
+        if (!project) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid projectId' });
+      }
+      if (input.courseId) {
+        const course = await db.course.findFirst({ where: { id: input.courseId, userId } });
+        if (!course) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid courseId' });
+      }
       const created = await db.task.create({
         data: {
           userId,
@@ -190,8 +199,9 @@ export const taskRouter = router({
         recurrenceInterval: z.number().int().min(1).optional(),
         recurrenceCount: z.number().int().min(1).nullable().optional(),
         recurrenceUntil: z.date().nullable().optional(),
-        projectId: z.string().nullable().optional(),
-        courseId: z.string().nullable().optional(),
+        // Disallow empty strings; allow explicit null to clear
+        projectId: z.string().min(1).nullable().optional(),
+        courseId: z.string().min(1).nullable().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -205,6 +215,22 @@ export const taskRouter = router({
       const data: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(rest)) {
         if (typeof value !== 'undefined') data[key] = value;
+      }
+
+      // Validate foreign keys belong to the user before updating, to avoid FK errors
+      if (Object.prototype.hasOwnProperty.call(data, 'projectId')) {
+        const pid = data.projectId as string | null | undefined;
+        if (pid && typeof pid === 'string') {
+          const project = await db.project.findFirst({ where: { id: pid, userId } });
+          if (!project) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid projectId' });
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(data, 'courseId')) {
+        const cid = data.courseId as string | null | undefined;
+        if (cid && typeof cid === 'string') {
+          const course = await db.course.findFirst({ where: { id: cid, userId } });
+          if (!course) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid courseId' });
+        }
       }
       let result: Task;
       if (Object.keys(data).length === 0) {

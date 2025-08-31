@@ -4,8 +4,9 @@ import { publicProcedure, protectedProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 
 export const projectRouter = router({
-  list: publicProcedure.query(async () => {
-    return db.project.findMany();
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    return db.project.findMany({ where: { userId } });
   }),
   create: protectedProcedure
     .input(

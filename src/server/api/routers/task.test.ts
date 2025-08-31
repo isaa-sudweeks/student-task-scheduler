@@ -11,6 +11,8 @@ const hoisted = vi.hoisted(() => {
   const reminderDeleteMany = vi.fn().mockResolvedValue({});
   const eventDeleteMany = vi.fn().mockResolvedValue({});
   const findFirst = vi.fn().mockResolvedValue({});
+  const projectFindFirst = vi.fn().mockResolvedValue({ id: 'p1', userId: 'user1' });
+  const courseFindFirst = vi.fn().mockResolvedValue({ id: 'c1', userId: 'user1' });
   const $transaction = vi.fn(async (ops: any[]) =>
     Promise.all(ops.map((op) => (typeof op === 'function' ? op() : op))),
   );
@@ -23,6 +25,8 @@ const hoisted = vi.hoisted(() => {
     reminderDeleteMany,
     eventDeleteMany,
     findFirst,
+    projectFindFirst,
+    courseFindFirst,
     $transaction,
   };
 });
@@ -39,6 +43,8 @@ vi.mock('@/server/db', () => ({
     },
     reminder: { deleteMany: hoisted.reminderDeleteMany },
     event: { deleteMany: hoisted.eventDeleteMany },
+    project: { findFirst: hoisted.projectFindFirst },
+    course: { findFirst: hoisted.courseFindFirst },
     $transaction: hoisted.$transaction,
   },
 }));
