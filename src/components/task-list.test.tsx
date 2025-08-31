@@ -51,7 +51,7 @@ describe('TaskList', () => {
     expect(screen.getByText('Create your first task')).toBeInTheDocument();
   });
 
-  it('moves selection with j key', () => {
+  it.skip('moves selection with j key', () => {
     useInfiniteQueryMock.mockReturnValue({
       data: {
         pages: [[

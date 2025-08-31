@@ -88,6 +88,7 @@ describe('TaskModal due date editing', () => {
 describe('TaskModal project and course selection', () => {
   beforeEach(() => {
     mutateCreate.mockReset();
+    createMutation.error = undefined;
   });
   it('sends selected project and course when creating', () => {
     render(<TaskModal open mode="create" onClose={() => {}} />);
@@ -102,6 +103,9 @@ describe('TaskModal project and course selection', () => {
 });
 
 describe('TaskModal accessibility', () => {
+  beforeEach(() => {
+    createMutation.error = undefined;
+  });
   it('traps focus within the modal and focuses the first element initially', () => {
     const onClose = vi.fn();
     render(<TaskModal open mode="create" onClose={onClose} />);

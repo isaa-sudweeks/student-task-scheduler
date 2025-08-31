@@ -58,11 +58,12 @@ describe('eventRouter.listRange', () => {
 
     const start = new Date('2023-01-01T09:00:00.000Z');
     const end = new Date('2023-01-01T11:00:00.000Z');
-    const res = await eventRouter.createCaller({}).listRange({ start, end });
+    const res = await eventRouter.createCaller(ctx).listRange({ start, end });
 
     expect(hoisted.findMany).toHaveBeenCalledWith({
       where: {
         AND: [{ startAt: { lt: end } }, { endAt: { gt: start } }],
+        task: { userId: ctx.session.user.id },
       },
     });
     expect(res).toEqual(events);
