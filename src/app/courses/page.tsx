@@ -28,24 +28,36 @@ export default function CoursesPage() {
     <main className="space-y-6">
       <h1 className="text-2xl font-semibold">Courses</h1>
       <div className="flex flex-col gap-2 max-w-md">
-        <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          placeholder="Course title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          placeholder="Term (optional)"
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-        />
-        <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          placeholder="Color (optional)"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
+        <label htmlFor="course-title" className="flex flex-col gap-1">
+          Course title
+          <input
+            id="course-title"
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            placeholder="Course title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </label>
+        <label htmlFor="course-term" className="flex flex-col gap-1">
+          Term (optional)
+          <input
+            id="course-term"
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            placeholder="Term (optional)"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+          />
+        </label>
+        <label htmlFor="course-color" className="flex flex-col gap-1">
+          Color (optional)
+          <input
+            id="course-color"
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            placeholder="Color (optional)"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+          />
+        </label>
         <Button
           disabled={isCreating}
           onClick={() => {
@@ -89,23 +101,38 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
   const [title, setTitle] = useState(course.title);
   const [term, setTerm] = useState(course.term ?? "");
   const [color, setColor] = useState(course.color ?? "");
+  const titleId = `course-${course.id}-title`;
+  const termId = `course-${course.id}-term`;
+  const colorId = `course-${course.id}-color`;
   return (
     <li className="flex flex-col gap-2 border-b pb-4">
-      <input
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
-      <input
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-        value={term}
-        onChange={(e) => setTerm(e.target.value)}
-      />
-      <input
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-        value={color}
-        onChange={(e) => setColor(e.target.value)}
-      />
+      <label htmlFor={titleId} className="flex flex-col gap-1">
+        Title
+        <input
+          id={titleId}
+          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </label>
+      <label htmlFor={termId} className="flex flex-col gap-1">
+        Term
+        <input
+          id={termId}
+          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+        />
+      </label>
+      <label htmlFor={colorId} className="flex flex-col gap-1">
+        Color
+        <input
+          id={colorId}
+          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+        />
+      </label>
       <div className="flex gap-2">
         <Button
           disabled={isUpdating}
