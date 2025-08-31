@@ -8,7 +8,10 @@ export default function ProjectsPage() {
   const utils = api.useUtils();
   const { data: projects = [] } = api.project.list.useQuery();
   const create = api.project.create.useMutation({
-    onSuccess: () => utils.project.list.invalidate(),
+    onSuccess: () => {
+      toast.success("Saved!");
+      utils.project.list.invalidate();
+    },
     onError: (e) => toast.error(e.message || "Create failed."),
   });
   const [title, setTitle] = useState("");
@@ -85,11 +88,17 @@ export default function ProjectsPage() {
 function ProjectItem({ project }: { project: { id: string; title: string; description: string | null } }) {
   const utils = api.useUtils();
   const update = api.project.update.useMutation({
-    onSuccess: () => utils.project.list.invalidate(),
+    onSuccess: () => {
+      toast.success("Saved!");
+      utils.project.list.invalidate();
+    },
     onError: (e) => toast.error(e.message || "Update failed."),
   });
   const del = api.project.delete.useMutation({
-    onSuccess: () => utils.project.list.invalidate(),
+    onSuccess: () => {
+      toast.success("Saved!");
+      utils.project.list.invalidate();
+    },
     onError: (e) => toast.error(e.message || "Delete failed."),
   });
   const [title, setTitle] = useState(project.title);
