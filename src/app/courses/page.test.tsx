@@ -1,0 +1,72 @@
+// @vitest-environment jsdom
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as matchers from '@testing-library/jest-dom/matchers';
+expect.extend(matchers);
+
+import CoursesPage from './page';
+
+const { listMock, createMock, updateMock, deleteMock } = vi.hoisted(() => ({
+  listMock: vi.fn(),
+  createMock: vi.fn(),
+  updateMock: vi.fn(),
+  deleteMock: vi.fn(),
+}));
+
+vi.mock('@/server/api/react', () => ({
+  api: {
+    useUtils: () => ({ course: { list: { invalidate: vi.fn() } } }),
+    course: {
+      list: { useQuery: listMock },
+      create: { useMutation: createMock },
+      update: { useMutation: updateMock },
+      delete: { useMutation: deleteMock },
+    },
+  },
+}));
+
+describe('CoursesPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders loading state', () => {
+    listMock.mockReturnValue({ data: [], isLoading: true, error: undefined });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    render(<CoursesPage />);
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+  });
+
+  it('shows error message', () => {
+    listMock.mockReturnValue({ data: [], isLoading: false, error: { message: 'Failed' } });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    render(<CoursesPage />);
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+  });
+
+  it('disables add button and shows create error', () => {
+    listMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: true, error: { message: 'Create failed' } });
+    render(<CoursesPage />);
+    expect(screen.getByRole('button', { name: /add course/i })).toBeDisabled();
+    expect(screen.getByText('Create failed')).toBeInTheDocument();
+  });
+
+  it('disables save and delete buttons and shows errors', () => {
+    listMock.mockReturnValue({
+      data: [{ id: '1', title: 'Course', term: null, color: null }],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: true, error: { message: 'Update failed' } });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: true, error: { message: 'Delete failed' } });
+    render(<CoursesPage />);
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
+    expect(screen.getByText('Update failed')).toBeInTheDocument();
+    expect(screen.getByText('Delete failed')).toBeInTheDocument();
+  });
+});
+
