@@ -88,7 +88,15 @@ describe('ProjectsPage loading states', () => {
     expect(btn).toBeDisabled();
   });
 });
+
 describe('ProjectsPage', () => {
+  it('shows empty state message when no projects', () => {
+    render(<ProjectsPage />);
+    expect(
+      screen.getByText('No projects yet—add one above.')
+    ).toBeInTheDocument();
+  });
+
   it('resets fields to initial values when Cancel is clicked', () => {
     listData = [{ id: '1', title: 'Initial Title', description: 'Initial Description' }];
     render(<ProjectsPage />);
