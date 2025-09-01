@@ -157,15 +157,23 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
     setDescription(project.description ?? "");
   }, [project.title, project.description]);
   return (
+<<<<<<< HEAD
     <div
       role="listitem"
       className="flex h-full flex-col gap-2 rounded-xl border shadow-sm p-4"
     >
+=======
+    <li className="flex flex-col gap-2 border-b border-zinc-200 pb-4 dark:border-white/10">
+>>>>>>> origin/codex/replace-color-utilities-with-theme-aware-classes
       <label htmlFor={`project-${project.id}-title`} className="sr-only">
         Project title
       </label>
       <Input
         id={`project-${project.id}-title`}
+<<<<<<< HEAD
+=======
+        className="rounded border border-zinc-200 bg-white px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900"
+>>>>>>> origin/codex/replace-color-utilities-with-theme-aware-classes
         value={title}
         onChange={(e) => {
           setTitle(e.target.value);
@@ -179,6 +187,10 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
       </label>
       <Textarea
         id={`project-${project.id}-description`}
+<<<<<<< HEAD
+=======
+        className="rounded border border-zinc-200 bg-white px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900"
+>>>>>>> origin/codex/replace-color-utilities-with-theme-aware-classes
         value={description}
         onChange={(e) => {
           setDescription(e.target.value);
