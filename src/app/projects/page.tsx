@@ -94,15 +94,16 @@ export default function ProjectsPage() {
         </form>
       </div>
       <div className="rounded-xl border bg-white dark:bg-zinc-900 shadow-sm p-4 space-y-3 max-w-md">
-        <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
           <Input
+            className="w-40 md:w-80"
             placeholder="Search projects..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           <select
             aria-label="Sort by"
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            className="h-9 rounded-md border border-black/10 bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             value={sort}
             onChange={(e) => setSort(e.target.value as "createdAt" | "title")}
           >
