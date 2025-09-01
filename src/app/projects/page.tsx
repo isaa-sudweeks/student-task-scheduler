@@ -62,7 +62,7 @@ export default function ProjectsPage() {
         </label>
         <input
           id="new-project-title"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="rounded border border-zinc-200 bg-white px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900"
           placeholder="Project title"
           value={title}
           onChange={(e) => {
@@ -77,7 +77,7 @@ export default function ProjectsPage() {
         </label>
         <textarea
           id="new-project-description"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="rounded border border-zinc-200 bg-white px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900"
           placeholder="Description (optional)"
           value={description}
           onChange={(e) => {
@@ -93,14 +93,14 @@ export default function ProjectsPage() {
       </form>
       <div className="flex flex-col gap-2 max-w-md">
         <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="rounded border border-zinc-200 bg-white px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900"
           placeholder="Search projects..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
           aria-label="Sort by"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="rounded border border-zinc-200 bg-white px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900"
           value={sort}
           onChange={(e) => setSort(e.target.value as "createdAt" | "title")}
         >
@@ -151,13 +151,13 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
     setDescription(project.description ?? "");
   }, [project.title, project.description]);
   return (
-    <li className="flex flex-col gap-2 border-b pb-4">
+    <li className="flex flex-col gap-2 border-b border-zinc-200 pb-4 dark:border-white/10">
       <label htmlFor={`project-${project.id}-title`} className="sr-only">
         Project title
       </label>
       <input
         id={`project-${project.id}-title`}
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+        className="rounded border border-zinc-200 bg-white px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900"
         value={title}
         onChange={(e) => {
           setTitle(e.target.value);
@@ -171,7 +171,7 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
       </label>
       <textarea
         id={`project-${project.id}-description`}
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+        className="rounded border border-zinc-200 bg-white px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900"
         value={description}
         onChange={(e) => {
           setDescription(e.target.value);
