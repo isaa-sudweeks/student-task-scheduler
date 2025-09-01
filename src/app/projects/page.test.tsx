@@ -44,7 +44,9 @@ describe('ProjectsPage validation', () => {
     fireEvent.change(screen.getByPlaceholderText('Project title'), {
       target: { value: 'a'.repeat(201) },
     });
-    fireEvent.click(screen.getByRole('button', { name: /add project/i }));
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /add project/i })[0],
+    );
     expect(
       screen.getByText(/title must be between 1 and 200 characters/i),
     ).toBeInTheDocument();
@@ -90,11 +92,15 @@ describe('ProjectsPage loading states', () => {
 });
 
 describe('ProjectsPage', () => {
-  it('shows empty state message when no projects', () => {
+  it('shows empty state and focuses input when Add Project clicked', () => {
     render(<ProjectsPage />);
-    expect(
-      screen.getByText('No projects yet—add one above.')
-    ).toBeInTheDocument();
+    expect(screen.getByText(/no projects yet/i)).toBeInTheDocument();
+    const titleInput = screen.getByPlaceholderText('Project title');
+    expect(titleInput).not.toHaveFocus();
+    const buttons = screen.getAllByRole('button', { name: /add project/i });
+    expect(buttons).toHaveLength(2);
+    fireEvent.click(buttons[1]);
+    expect(titleInput).toHaveFocus();
   });
 
   it('resets fields to initial values when Cancel is clicked', () => {
