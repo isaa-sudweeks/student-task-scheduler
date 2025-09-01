@@ -144,4 +144,15 @@ describe('ProjectsPage', () => {
       .map((i) => (i as HTMLInputElement).value);
     expect(filtered).toEqual(['Alpha']);
   });
+
+  it('shows character counters', () => {
+    listData = [{ id: '1', title: 'Proj', description: 'desc' }];
+    render(<ProjectsPage />);
+    const titleCounters = screen.getAllByText(/\/200/);
+    expect(titleCounters[0]).toHaveTextContent('0/200');
+    expect(titleCounters[1]).toHaveTextContent('4/200');
+    const descCounters = screen.getAllByText(/\/1000/);
+    expect(descCounters[0]).toHaveTextContent('0/1000');
+    expect(descCounters[1]).toHaveTextContent('4/1000');
+  });
 });

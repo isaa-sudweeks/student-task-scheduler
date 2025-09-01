@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
 import { useSession } from "next-auth/react";
@@ -60,33 +62,47 @@ export default function ProjectsPage() {
         <label htmlFor="new-project-title" className="sr-only">
           Project title
         </label>
-        <input
+        <Input
           id="new-project-title"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           placeholder="Project title"
           value={title}
           onChange={(e) => {
             setTitle(e.target.value);
             if (titleError) setTitleError("");
           }}
-          aria-invalid={!!titleError}
+          error={titleError}
+          maxLength={200}
         />
-        {titleError && <p className="text-sm text-red-500">{titleError}</p>}
+        <div className="flex justify-between text-xs text-muted-foreground">
+          {titleError ? <p className="text-sm text-red-500">{titleError}</p> : <span />}
+          <span>
+            {title.length}/200
+          </span>
+        </div>
         <label htmlFor="new-project-description" className="sr-only">
           Description (optional)
         </label>
-        <textarea
+        <Textarea
           id="new-project-description"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           placeholder="Description (optional)"
           value={description}
           onChange={(e) => {
             setDescription(e.target.value);
             if (descriptionError) setDescriptionError("");
           }}
-          aria-invalid={!!descriptionError}
+          error={descriptionError}
+          maxLength={1000}
         />
-        {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
+        <div className="flex justify-between text-xs text-muted-foreground">
+          {descriptionError ? (
+            <p className="text-sm text-red-500">{descriptionError}</p>
+          ) : (
+            <span />
+          )}
+          <span>
+            {description.length}/1000
+          </span>
+        </div>
         <Button type="submit" disabled={create.isPending}>
           {create.isPending ? "Saving..." : "Add Project"}
         </Button>
@@ -155,31 +171,45 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
       <label htmlFor={`project-${project.id}-title`} className="sr-only">
         Project title
       </label>
-      <input
+      <Input
         id={`project-${project.id}-title`}
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
         value={title}
         onChange={(e) => {
           setTitle(e.target.value);
           if (titleError) setTitleError("");
         }}
-        aria-invalid={!!titleError}
+        error={titleError}
+        maxLength={200}
       />
-      {titleError && <p className="text-sm text-red-500">{titleError}</p>}
+      <div className="flex justify-between text-xs text-muted-foreground">
+        {titleError ? <p className="text-sm text-red-500">{titleError}</p> : <span />}
+        <span>
+          {title.length}/200
+        </span>
+      </div>
       <label htmlFor={`project-${project.id}-description`} className="sr-only">
         Description
       </label>
-      <textarea
+      <Textarea
         id={`project-${project.id}-description`}
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
         value={description}
         onChange={(e) => {
           setDescription(e.target.value);
           if (descriptionError) setDescriptionError("");
         }}
-        aria-invalid={!!descriptionError}
+        error={descriptionError}
+        maxLength={1000}
       />
-      {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
+      <div className="flex justify-between text-xs text-muted-foreground">
+        {descriptionError ? (
+          <p className="text-sm text-red-500">{descriptionError}</p>
+        ) : (
+          <span />
+        )}
+        <span>
+          {description.length}/1000
+        </span>
+      </div>
       <div className="flex gap-2">
         <Button
           disabled={update.isPending}
