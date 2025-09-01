@@ -54,8 +54,9 @@ export default function ProjectsPage() {
     });
 
   return (
-    <main className="space-y-6">
-      <h1 className="text-2xl font-semibold">Projects</h1>
+    <main>
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 rounded-xl border bg-white dark:bg-zinc-900 shadow-sm p-4">
+        <h1 className="text-2xl font-semibold">Projects</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-2 max-w-md">
         <label htmlFor="new-project-title" className="sr-only">
           Project title
@@ -117,6 +118,7 @@ export default function ProjectsPage() {
           ))}
         </ul>
       )}
+      </div>
     </main>
   );
 }
