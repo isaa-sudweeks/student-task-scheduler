@@ -60,6 +60,7 @@ export default function ProjectsPage() {
   return (
     <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
       <h1 className="text-2xl font-semibold">Projects</h1>
+<<<<<<< HEAD
       <div className="rounded-xl border bg-white dark:bg-zinc-900 shadow-sm p-4 space-y-3 max-w-md">
         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           <label htmlFor="new-project-title" className="sr-only">
@@ -73,9 +74,15 @@ export default function ProjectsPage() {
               setTitle(e.target.value);
               if (titleError) setTitleError("");
             }}
-            aria-invalid={!!titleError}
+            error={titleError}
+            maxLength={200}
           />
-          {titleError && <p className="text-sm text-red-500">{titleError}</p>}
+          <div className="flex justify-between text-xs text-muted-foreground">
+            {titleError ? <p className="text-sm text-red-500">{titleError}</p> : <span />}
+            <span>
+              {title.length}/200
+            </span>
+          </div>
           <label htmlFor="new-project-description" className="sr-only">
             Description (optional)
           </label>
@@ -87,9 +94,19 @@ export default function ProjectsPage() {
               setDescription(e.target.value);
               if (descriptionError) setDescriptionError("");
             }}
-            aria-invalid={!!descriptionError}
+            error={descriptionError}
+            maxLength={1000}
           />
-          {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
+          <div className="flex justify-between text-xs text-muted-foreground">
+            {descriptionError ? (
+              <p className="text-sm text-red-500">{descriptionError}</p>
+            ) : (
+              <span />
+            )}
+            <span>
+              {description.length}/1000
+            </span>
+          </div>
           <Button type="submit" disabled={create.isPending}>
             {create.isPending ? "Saving..." : "Add Project"}
           </Button>
@@ -157,48 +174,49 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
     setDescription(project.description ?? "");
   }, [project.title, project.description]);
   return (
-<<<<<<< HEAD
-    <div
-      role="listitem"
-      className="flex h-full flex-col gap-2 rounded-xl border shadow-sm p-4"
-    >
-=======
-    <li className="flex flex-col gap-2 border-b border-zinc-200 pb-4 dark:border-white/10">
->>>>>>> origin/codex/replace-color-utilities-with-theme-aware-classes
+    <div role="listitem" className="flex h-full flex-col gap-2 rounded-xl border shadow-sm p-4">
       <label htmlFor={`project-${project.id}-title`} className="sr-only">
         Project title
       </label>
       <Input
         id={`project-${project.id}-title`}
-<<<<<<< HEAD
-=======
-        className="rounded border border-zinc-200 bg-white px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900"
->>>>>>> origin/codex/replace-color-utilities-with-theme-aware-classes
         value={title}
         onChange={(e) => {
           setTitle(e.target.value);
           if (titleError) setTitleError("");
         }}
-        aria-invalid={!!titleError}
+        error={titleError}
+        maxLength={200}
       />
-      {titleError && <p className="text-sm text-red-500">{titleError}</p>}
+      <div className="flex justify-between text-xs text-muted-foreground">
+        {titleError ? <p className="text-sm text-red-500">{titleError}</p> : <span />}
+        <span>
+          {title.length}/200
+        </span>
+      </div>
       <label htmlFor={`project-${project.id}-description`} className="sr-only">
         Description
       </label>
       <Textarea
         id={`project-${project.id}-description`}
-<<<<<<< HEAD
-=======
-        className="rounded border border-zinc-200 bg-white px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900"
->>>>>>> origin/codex/replace-color-utilities-with-theme-aware-classes
         value={description}
         onChange={(e) => {
           setDescription(e.target.value);
           if (descriptionError) setDescriptionError("");
         }}
-        aria-invalid={!!descriptionError}
+        error={descriptionError}
+        maxLength={1000}
       />
-      {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
+      <div className="flex justify-between text-xs text-muted-foreground">
+        {descriptionError ? (
+          <p className="text-sm text-red-500">{descriptionError}</p>
+        ) : (
+          <span />
+        )}
+        <span>
+          {description.length}/1000
+        </span>
+      </div>
       <div className="flex gap-2">
         <Button
           disabled={update.isPending}
