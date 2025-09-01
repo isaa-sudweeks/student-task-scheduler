@@ -117,11 +117,11 @@ export default function ProjectsPage() {
       {projects.length === 0 ? (
         <EmptyProjects onAdd={() => document.getElementById("new-project-title")?.focus()} />
       ) : (
-        <ul className="space-y-4 max-w-md">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="list">
           {displayed.map((p) => (
             <ProjectItem key={p.id} project={p} />
           ))}
-        </ul>
+        </div>
       )}
     </main>
   );
@@ -157,7 +157,10 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
     setDescription(project.description ?? "");
   }, [project.title, project.description]);
   return (
-    <li className="flex flex-col gap-2 border-b pb-4">
+    <div
+      role="listitem"
+      className="flex h-full flex-col gap-2 rounded-xl border shadow-sm p-4"
+    >
       <label htmlFor={`project-${project.id}-title`} className="sr-only">
         Project title
       </label>
@@ -228,6 +231,6 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
           {del.isPending ? "Deleting..." : "Delete"}
         </Button>
       </div>
-    </li>
+    </div>
   );
 }
