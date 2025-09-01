@@ -56,67 +56,71 @@ export default function ProjectsPage() {
   return (
     <main className="space-y-6">
       <h1 className="text-2xl font-semibold">Projects</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2 max-w-md">
-        <label htmlFor="new-project-title" className="sr-only">
-          Project title
-        </label>
-        <input
-          id="new-project-title"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          placeholder="Project title"
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value);
-            if (titleError) setTitleError("");
-          }}
-          aria-invalid={!!titleError}
-        />
-        {titleError && <p className="text-sm text-red-500">{titleError}</p>}
-        <label htmlFor="new-project-description" className="sr-only">
-          Description (optional)
-        </label>
-        <textarea
-          id="new-project-description"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          placeholder="Description (optional)"
-          value={description}
-          onChange={(e) => {
-            setDescription(e.target.value);
-            if (descriptionError) setDescriptionError("");
-          }}
-          aria-invalid={!!descriptionError}
-        />
-        {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
-        <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? "Saving..." : "Add Project"}
-        </Button>
-      </form>
-      <div className="flex flex-col gap-2 max-w-md">
-        <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          placeholder="Search projects..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select
-          aria-label="Sort by"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as "createdAt" | "title")}
-        >
-          <option value="createdAt">Creation date</option>
-          <option value="title">Title</option>
-        </select>
+      <div className="rounded-xl border bg-white dark:bg-zinc-900 shadow-sm p-4 space-y-3 max-w-md">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+          <label htmlFor="new-project-title" className="sr-only">
+            Project title
+          </label>
+          <input
+            id="new-project-title"
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            placeholder="Project title"
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (titleError) setTitleError("");
+            }}
+            aria-invalid={!!titleError}
+          />
+          {titleError && <p className="text-sm text-red-500">{titleError}</p>}
+          <label htmlFor="new-project-description" className="sr-only">
+            Description (optional)
+          </label>
+          <textarea
+            id="new-project-description"
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            placeholder="Description (optional)"
+            value={description}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              if (descriptionError) setDescriptionError("");
+            }}
+            aria-invalid={!!descriptionError}
+          />
+          {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
+          <Button type="submit" disabled={create.isPending}>
+            {create.isPending ? "Saving..." : "Add Project"}
+          </Button>
+        </form>
       </div>
-      {projects.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No projects yet—add one above.</p>
-      ) : (
-        <ul className="space-y-4 max-w-md">
-          {displayed.map((p) => (
-            <ProjectItem key={p.id} project={p} />
-          ))}
-        </ul>
-      )}
+      <div className="rounded-xl border bg-white dark:bg-zinc-900 shadow-sm p-4 space-y-3 max-w-md">
+        <div className="flex flex-col gap-2">
+          <input
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            placeholder="Search projects..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select
+            aria-label="Sort by"
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as "createdAt" | "title")}
+          >
+            <option value="createdAt">Creation date</option>
+            <option value="title">Title</option>
+          </select>
+        </div>
+        {projects.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No projects yet—add one above.</p>
+        ) : (
+          <ul className="space-y-4">
+            {displayed.map((p) => (
+              <ProjectItem key={p.id} project={p} />
+            ))}
+          </ul>
+        )}
+      </div>
     </main>
   );
 }
