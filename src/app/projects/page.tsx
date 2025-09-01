@@ -1,9 +1,11 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
+
+import { EmptyProjects } from "@/components/empty-projects";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
-import { useSession } from "next-auth/react";
 
 export default function ProjectsPage() {
   const utils = api.useUtils();
@@ -109,7 +111,7 @@ export default function ProjectsPage() {
         </select>
       </div>
       {projects.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No projects yet—add one above.</p>
+        <EmptyProjects onAdd={() => document.getElementById("new-project-title")?.focus()} />
       ) : (
         <ul className="space-y-4 max-w-md">
           {displayed.map((p) => (
