@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
 import { useSession } from "next-auth/react";
@@ -61,9 +63,8 @@ export default function ProjectsPage() {
         <label htmlFor="new-project-title" className="sr-only">
           Project title
         </label>
-        <input
+        <Input
           id="new-project-title"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           placeholder="Project title"
           value={title}
           onChange={(e) => {
@@ -76,9 +77,8 @@ export default function ProjectsPage() {
         <label htmlFor="new-project-description" className="sr-only">
           Description (optional)
         </label>
-        <textarea
+        <Textarea
           id="new-project-description"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           placeholder="Description (optional)"
           value={description}
           onChange={(e) => {
@@ -93,8 +93,7 @@ export default function ProjectsPage() {
         </Button>
       </form>
       <div className="flex flex-col gap-2 max-w-md">
-        <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+        <Input
           placeholder="Search projects..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -157,9 +156,8 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
       <label htmlFor={`project-${project.id}-title`} className="sr-only">
         Project title
       </label>
-      <input
+      <Input
         id={`project-${project.id}-title`}
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
         value={title}
         onChange={(e) => {
           setTitle(e.target.value);
@@ -171,9 +169,8 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
       <label htmlFor={`project-${project.id}-description`} className="sr-only">
         Description
       </label>
-      <textarea
+      <Textarea
         id={`project-${project.id}-description`}
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
         value={description}
         onChange={(e) => {
           setDescription(e.target.value);
