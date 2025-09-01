@@ -1,9 +1,10 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
-import { useSession } from "next-auth/react";
 
 export default function ProjectsPage() {
   const utils = api.useUtils();
@@ -91,16 +92,16 @@ export default function ProjectsPage() {
           {create.isPending ? "Saving..." : "Add Project"}
         </Button>
       </form>
-      <div className="flex flex-col gap-2 max-w-md">
-        <input
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+      <div className="flex items-center gap-2 max-w-md">
+        <Input
+          className="w-40 md:w-80"
           placeholder="Search projects..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
           aria-label="Sort by"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="h-9 rounded-md border border-black/10 bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           value={sort}
           onChange={(e) => setSort(e.target.value as "createdAt" | "title")}
         >
