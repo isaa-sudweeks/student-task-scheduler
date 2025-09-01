@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Loader2, Save, X, Trash } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
 import { useSession } from "next-auth/react";
@@ -151,78 +152,96 @@ function ProjectItem({ project }: { project: { id: string; title: string; descri
     setDescription(project.description ?? "");
   }, [project.title, project.description]);
   return (
-    <li className="flex flex-col gap-2 border-b pb-4">
-      <label htmlFor={`project-${project.id}-title`} className="sr-only">
-        Project title
-      </label>
-      <input
-        id={`project-${project.id}-title`}
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-        value={title}
-        onChange={(e) => {
-          setTitle(e.target.value);
-          if (titleError) setTitleError("");
-        }}
-        aria-invalid={!!titleError}
-      />
-      {titleError && <p className="text-sm text-red-500">{titleError}</p>}
-      <label htmlFor={`project-${project.id}-description`} className="sr-only">
-        Description
-      </label>
-      <textarea
-        id={`project-${project.id}-description`}
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-        value={description}
-        onChange={(e) => {
-          setDescription(e.target.value);
-          if (descriptionError) setDescriptionError("");
-        }}
-        aria-invalid={!!descriptionError}
-      />
-      {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
-      <div className="flex gap-2">
-        <Button
-          disabled={update.isPending}
-          onClick={() => {
-            const t = title.trim();
-            const d = description.trim();
-            let hasError = false;
-            if (t.length < 1 || t.length > 200) {
-              setTitleError("Title must be between 1 and 200 characters.");
-              hasError = true;
-            }
-            if (d.length > 1000) {
-              setDescriptionError("Description must be at most 1000 characters.");
-              hasError = true;
-            }
-            if (hasError) return;
-            update.mutate({ id: project.id, title: t, description: d || null });
-          }}
-        >
-          {update.isPending ? "Saving..." : "Save"}
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setTitle(initialTitle.current);
-            setDescription(initialDescription.current);
-            setTitleError("");
-            setDescriptionError("");
-          }}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="danger"
-          disabled={del.isPending}
-          onClick={() => {
-            if (window.confirm("Delete this project?")) {
-              del.mutate({ id: project.id });
-            }
-          }}
-        >
-          {del.isPending ? "Deleting..." : "Delete"}
-        </Button>
+    <li className="border-b pb-4">
+      <div className="flex justify-between items-start gap-2">
+        <div className="flex flex-col gap-2 flex-1">
+          <label htmlFor={`project-${project.id}-title`} className="sr-only">
+            Project title
+          </label>
+          <input
+            id={`project-${project.id}-title`}
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (titleError) setTitleError("");
+            }}
+            aria-invalid={!!titleError}
+          />
+          {titleError && <p className="text-sm text-red-500">{titleError}</p>}
+          <label htmlFor={`project-${project.id}-description`} className="sr-only">
+            Description
+          </label>
+          <textarea
+            id={`project-${project.id}-description`}
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            value={description}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              if (descriptionError) setDescriptionError("");
+            }}
+            aria-invalid={!!descriptionError}
+          />
+          {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            aria-label={update.isPending ? "Saving..." : "Save"}
+            className="h-9 w-9 p-0"
+            disabled={update.isPending}
+            onClick={() => {
+              const t = title.trim();
+              const d = description.trim();
+              let hasError = false;
+              if (t.length < 1 || t.length > 200) {
+                setTitleError("Title must be between 1 and 200 characters.");
+                hasError = true;
+              }
+              if (d.length > 1000) {
+                setDescriptionError("Description must be at most 1000 characters.");
+                hasError = true;
+              }
+              if (hasError) return;
+              update.mutate({ id: project.id, title: t, description: d || null });
+            }}
+          >
+            {update.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            variant="secondary"
+            aria-label="Cancel"
+            className="h-9 w-9 p-0"
+            onClick={() => {
+              setTitle(initialTitle.current);
+              setDescription(initialDescription.current);
+              setTitleError("");
+              setDescriptionError("");
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="danger"
+            aria-label={del.isPending ? "Deleting..." : "Delete"}
+            className="h-9 w-9 p-0"
+            disabled={del.isPending}
+            onClick={() => {
+              if (window.confirm("Delete this project?")) {
+                del.mutate({ id: project.id });
+              }
+            }}
+          >
+            {del.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </li>
   );
