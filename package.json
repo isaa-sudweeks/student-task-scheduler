@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.46.0",
-    "@rollup/rollup-linux-x64-gnu": "^4.50.0",
+    "rollup": "^4.50.0",
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.3.0",
     "@types/bcryptjs": "^2.4.6",
