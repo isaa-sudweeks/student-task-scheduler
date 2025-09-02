@@ -70,35 +70,35 @@ describe('taskRouter.list ordering', () => {
       { dueAt: { sort: 'asc', nulls: 'last' } },
       { createdAt: 'desc' },
     ]);
-    expect(arg.where).toEqual({ userId: 'user1', parentId: null });
+    expect(arg.where).toEqual({ userId: 'user1' });
   });
 
   it('filters by subject when provided', async () => {
     await taskRouter.createCaller(ctx).list({ filter: 'all', subject: 'math' });
     expect(hoisted.findMany).toHaveBeenCalledTimes(1);
     const arg = hoisted.findMany.mock.calls[0][0];
-    expect(arg.where).toEqual({ userId: 'user1', parentId: null, subject: 'math' });
+    expect(arg.where).toEqual({ userId: 'user1', subject: 'math' });
   });
 
   it('filters by priority when provided', async () => {
     await taskRouter.createCaller(ctx).list({ filter: 'all', priority: TaskPriority.HIGH });
     expect(hoisted.findMany).toHaveBeenCalledTimes(1);
     const arg = hoisted.findMany.mock.calls[0][0];
-    expect(arg.where).toEqual({ userId: 'user1', parentId: null, priority: TaskPriority.HIGH });
+    expect(arg.where).toEqual({ userId: 'user1', priority: TaskPriority.HIGH });
   });
 
   it('filters by courseId when provided', async () => {
     await taskRouter.createCaller(ctx).list({ filter: 'all', courseId: 'c1' });
     expect(hoisted.findMany).toHaveBeenCalledTimes(1);
     const arg = hoisted.findMany.mock.calls[0][0];
-    expect(arg.where).toEqual({ userId: 'user1', parentId: null, courseId: 'c1' });
+    expect(arg.where).toEqual({ userId: 'user1', courseId: 'c1' });
   });
 
   it('filters by projectId when provided', async () => {
     await taskRouter.createCaller(ctx).list({ filter: 'all', projectId: 'p1' });
     expect(hoisted.findMany).toHaveBeenCalledTimes(1);
     const arg = hoisted.findMany.mock.calls[0][0];
-    expect(arg.where).toEqual({ userId: 'user1', parentId: null, projectId: 'p1' });
+    expect(arg.where).toEqual({ userId: 'user1', projectId: 'p1' });
   });
 
   it('filters by parentId when provided', async () => {
@@ -122,7 +122,7 @@ describe('taskRouter.list ordering', () => {
     endTz.setHours(23, 59, 59, 999);
     const startUtc = new Date(startTz.toLocaleString('en-US', { timeZone: 'UTC' }));
     const endUtc = new Date(endTz.toLocaleString('en-US', { timeZone: 'UTC' }));
-    expect(arg.where).toEqual({ userId: 'user1', parentId: null, dueAt: { gte: startUtc, lte: endUtc } });
+    expect(arg.where).toEqual({ userId: 'user1', dueAt: { gte: startUtc, lte: endUtc } });
   });
 });
 
