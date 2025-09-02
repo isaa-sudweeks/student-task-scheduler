@@ -101,7 +101,7 @@ export default function CoursesPage() {
     <div className="container mx-auto px-4">
       <main className="space-y-6">
         <h1 className="text-2xl font-semibold">Courses</h1>
-        <div className="max-w-md mx-auto rounded-lg border p-4 shadow-sm bg-card">
+        <div className="max-w-lg mx-auto rounded-lg border p-4 shadow-sm bg-card">
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <label htmlFor="course-title" className="flex flex-col gap-1">
               Course title
@@ -168,7 +168,7 @@ export default function CoursesPage() {
             <ArrowUpDownIcon className="h-4 w-4" />
           </Button>
         </div>
-        <div className="max-w-md">
+        <div className="max-w-lg">
           <div className="mb-4">
             <label htmlFor="term-filter" className="mb-2 block">
               Filter by term
