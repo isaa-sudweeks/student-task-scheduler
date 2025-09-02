@@ -71,6 +71,8 @@ export default function CalendarPage() {
     return tasksData.filter((t) => !scheduledTaskIds.has(t.id));
   }, [tasksData, eventsData]);
 
+  const ITEM_SIZE = 48;
+
   useEffect(() => {
     if (eventsData?.[0]?.startAt) {
       setBaseDate(new Date(eventsData[0].startAt));
