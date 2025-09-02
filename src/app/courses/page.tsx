@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { ArrowUpDown as ArrowUpDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { CourseSkeleton } from "@/components/CourseSkeleton";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
@@ -203,7 +204,11 @@ export default function CoursesPage() {
                   (termFilter === "" || c.term === termFilter),
               )
               .map((c) => (
-                <CourseItem key={c.id} course={c} />
+                <CourseItem
+                  key={c.id}
+                  course={c}
+                  onPendingChange={() => {}}
+                />
               ))}
           </ul>
         </div>
@@ -212,7 +217,7 @@ export default function CoursesPage() {
   );
 }
 
-function CourseItem({
+export function CourseItem({
   course,
   onPendingChange,
 }: {
@@ -246,6 +251,7 @@ function CourseItem({
   const [term, setTerm] = useState(course.term ?? "");
   const [color, setColor] = useState(course.color ?? "");
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const titleId = `course-${course.id}-title`;
   const termId = `course-${course.id}-term`;
   const colorId = `course-${course.id}-color`;
@@ -330,15 +336,22 @@ function CourseItem({
           <Button
             variant="danger"
             disabled={isDeleting}
-            onClick={() => {
-              if (window.confirm("Delete this course?")) {
-                deleteCourse({ id: course.id });
-              }
-            }}
+            onClick={() => setShowDeleteDialog(true)}
           >
             Delete
           </Button>
         </div>
+        <AlertDialog
+          open={showDeleteDialog}
+          title="Delete this course?"
+          onCancel={() => setShowDeleteDialog(false)}
+          onConfirm={() => {
+            deleteCourse({ id: course.id });
+            setShowDeleteDialog(false);
+          }}
+          confirmText="Delete"
+          confirmDisabled={isDeleting}
+        />
         {updateError && <p className="text-red-500">{updateError.message}</p>}
         {deleteError && <p className="text-red-500">{deleteError.message}</p>}
       </div>

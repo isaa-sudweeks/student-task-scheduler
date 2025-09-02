@@ -204,4 +204,24 @@ describe('CoursesPage', () => {
     expect(screen.getByDisplayValue('History')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Math')).toBeNull();
   });
+
+  it('confirms before deleting a course', () => {
+    listMock.mockReturnValue({
+      data: [{ id: '1', title: 'Course', term: null, color: null }],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    const mutate = vi.fn();
+    deleteMock.mockReturnValue({ mutate, isPending: false, error: undefined });
+
+    render(<CoursesPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: /^delete$/i }));
+    expect(mutate).toHaveBeenCalledWith({ id: '1' });
+  });
 });
