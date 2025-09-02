@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
+import { TrashIcon, CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
 
 export default function CoursesPage() {
   const utils = api.useUtils();
@@ -101,6 +102,7 @@ export default function CoursesPage() {
             </div>
           </label>
           <Button type="submit" disabled={isAddDisabled}>
+            <CheckIcon className="mr-1" />
             Add Course
           </Button>
           {createError && <p className="text-red-500">{createError.message}</p>}
@@ -111,12 +113,14 @@ export default function CoursesPage() {
           variant={sortBy === "title" ? "primary" : "secondary"}
           onClick={() => setSortBy("title")}
         >
+          <CaretSortIcon className="mr-1" />
           Sort by Title
         </Button>
         <Button
           variant={sortBy === "term" ? "primary" : "secondary"}
           onClick={() => setSortBy("term")}
         >
+          <CaretSortIcon className="mr-1" />
           Sort by Term
         </Button>
       </div>
@@ -228,6 +232,7 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
             })
           }
         >
+          <CheckIcon className="mr-1" />
           Save
         </Button>
         <Button
@@ -239,6 +244,7 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
             }
           }}
         >
+          <TrashIcon className="mr-1" />
           Delete
         </Button>
       </div>
