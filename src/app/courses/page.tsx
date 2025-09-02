@@ -68,6 +68,42 @@ export default function CoursesPage() {
   };
 
   useEffect(() => {
+    const storedSortBy = localStorage.getItem("coursesSortBy");
+    const storedSortDir = localStorage.getItem("coursesSortDir");
+    const storedSearch = localStorage.getItem("coursesSearch");
+    const storedTermFilter = localStorage.getItem("coursesTermFilter");
+    if (storedSortBy === "title" || storedSortBy === "term") {
+      setSortBy(storedSortBy);
+    }
+    if (storedSortDir === "asc" || storedSortDir === "desc") {
+      setSortDir(storedSortDir);
+    }
+    if (storedSearch) {
+      setSearch(storedSearch);
+      setDebouncedSearch(storedSearch);
+    }
+    if (storedTermFilter) {
+      setTermFilter(storedTermFilter);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("coursesSortBy", sortBy);
+  }, [sortBy]);
+
+  useEffect(() => {
+    localStorage.setItem("coursesSortDir", sortDir);
+  }, [sortDir]);
+
+  useEffect(() => {
+    localStorage.setItem("coursesSearch", search);
+  }, [search]);
+
+  useEffect(() => {
+    localStorage.setItem("coursesTermFilter", termFilter);
+  }, [termFilter]);
+
+  useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
