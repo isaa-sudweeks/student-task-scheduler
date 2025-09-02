@@ -40,6 +40,7 @@ export default function CoursesPage() {
   const [title, setTitle] = useState("");
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
+  const [description, setDescription] = useState("");
   const [sortBy, setSortBy] = useState<"title" | "term">("title");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [search, setSearch] = useState("");
@@ -89,10 +90,16 @@ export default function CoursesPage() {
       toast.error("Course already exists.");
       return;
     }
-    createCourse({ title: t, term: term.trim() || undefined, color: color.trim() || undefined });
+    createCourse({
+      title: t,
+      term: term.trim() || undefined,
+      color: color.trim() || undefined,
+      description: description.trim() || undefined,
+    });
     setTitle("");
     setTerm("");
     setColor("");
+    setDescription("");
   };
 
   const query = debouncedSearch.toLowerCase();
@@ -121,6 +128,16 @@ export default function CoursesPage() {
                 placeholder="Term (optional)"
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
+              />
+            </label>
+            <label htmlFor="course-description" className="flex flex-col gap-1">
+              Description (optional)
+              <textarea
+                id="course-description"
+                className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                placeholder="Description (optional)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </label>
             <label htmlFor="course-color" className="flex flex-col gap-1">
@@ -193,20 +210,20 @@ export default function CoursesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <ul className="space-y-4">
-            {sortedCourses
-              .filter(
-                (c) =>
-                  c.title
-                    .toLowerCase()
-                    .includes(debouncedSearch.toLowerCase()) &&
-                  (termFilter === "" || c.term === termFilter),
-              )
-              .map((c) => (
-                <CourseItem key={c.id} course={c} />
-              ))}
-          </ul>
-        </div>
+            <ul className="space-y-4">
+              {sortedCourses
+                .filter(
+                  (c) =>
+                    [c.title, c.term ?? "", c.color ?? "", c.description ?? ""].some((f) =>
+                      f.toLowerCase().includes(query),
+                    ) &&
+                    (termFilter === "" || c.term === termFilter),
+                )
+                .map((c) => (
+                  <CourseItem key={c.id} course={c} />
+                ))}
+            </ul>
+          </div>
       </main>
     </div>
   );
@@ -214,10 +231,10 @@ export default function CoursesPage() {
 
 function CourseItem({
   course,
-  onPendingChange,
+  onPendingChange = () => {},
 }: {
-  course: { id: string; title: string; term: string | null; color: string | null };
-  onPendingChange: (id: string, pending: boolean) => void;
+  course: { id: string; title: string; term: string | null; color: string | null; description: string | null };
+  onPendingChange?: (id: string, pending: boolean) => void;
 }) {
   const utils = api.useUtils();
   const {
@@ -245,17 +262,21 @@ function CourseItem({
   const [title, setTitle] = useState(course.title);
   const [term, setTerm] = useState(course.term ?? "");
   const [color, setColor] = useState(course.color ?? "");
+  const [description, setDescription] = useState(course.description ?? "");
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const titleId = `course-${course.id}-title`;
   const termId = `course-${course.id}-term`;
   const colorId = `course-${course.id}-color`;
+  const descriptionId = `course-${course.id}-description`;
   const trimmedTitle = title.trim();
   const trimmedTerm = term.trim();
   const trimmedColor = color.trim();
+  const trimmedDescription = description.trim();
   const hasChanges =
     trimmedTitle !== course.title ||
     trimmedTerm !== (course.term ?? "") ||
-    trimmedColor !== (course.color ?? "");
+    trimmedColor !== (course.color ?? "") ||
+    trimmedDescription !== (course.description ?? "");
 
   useEffect(() => {
     setHasPendingChanges(hasChanges);
@@ -296,6 +317,15 @@ function CourseItem({
             onChange={(e) => setTerm(e.target.value)}
           />
         </label>
+        <label htmlFor={descriptionId} className="flex flex-col gap-1">
+          Description
+          <textarea
+            id={descriptionId}
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </label>
         <label htmlFor={colorId} className="flex flex-col gap-1">
           Color
           <div className="flex items-center gap-2">
@@ -322,6 +352,7 @@ function CourseItem({
                 title: trimmedTitle,
                 term: trimmedTerm || null,
                 color: trimmedColor || null,
+                description: trimmedDescription || null,
               })
             }
           >

@@ -76,6 +76,7 @@ model Course {
   title  String
   term   String?
   color  String?
+  description String?
 
   tasks Task[]
 }

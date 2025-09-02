@@ -26,6 +26,7 @@ export const courseRouter = router({
         title: z.string().min(1).max(200),
         term: z.string().max(100).optional(),
         color: z.string().max(50).optional(),
+        description: z.string().max(1000).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -45,6 +46,7 @@ export const courseRouter = router({
           userId,
           term: input.term ?? null,
           color: input.color ?? null,
+          description: input.description ?? null,
         },
       });
     }),
@@ -55,6 +57,7 @@ export const courseRouter = router({
         title: z.string().min(1).max(200).optional(),
         term: z.string().max(100).nullable().optional(),
         color: z.string().max(50).nullable().optional(),
+        description: z.string().max(1000).nullable().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
