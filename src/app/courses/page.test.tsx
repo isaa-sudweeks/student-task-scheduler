@@ -31,6 +31,7 @@ vi.mock('@/server/api/react', () => ({
 describe('CoursesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('renders loading state', () => {
@@ -201,6 +202,56 @@ describe('CoursesPage', () => {
     const select = screen.getByLabelText('Filter by term');
     fireEvent.change(select, { target: { value: 'Spring' } });
 
+    expect(screen.getByDisplayValue('History')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Math')).toBeNull();
+  });
+
+  it('persists sort and filter settings to localStorage', () => {
+    listMock.mockReturnValue({
+      data: [{ id: '1', title: 'Math', term: 'Fall', color: null }],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    render(<CoursesPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sort by term/i }));
+    fireEvent.click(screen.getByRole('button', { name: /toggle sort direction/i }));
+    fireEvent.change(screen.getByPlaceholderText('Search courses...'), {
+      target: { value: 'math' },
+    });
+    fireEvent.change(screen.getByLabelText('Filter by term'), {
+      target: { value: 'Fall' },
+    });
+
+    expect(localStorage.getItem('coursesSortBy')).toBe('term');
+    expect(localStorage.getItem('coursesSortDir')).toBe('desc');
+    expect(localStorage.getItem('coursesSearch')).toBe('math');
+    expect(localStorage.getItem('coursesTermFilter')).toBe('Fall');
+  });
+
+  it('initializes sort and filter from localStorage', () => {
+    localStorage.setItem('coursesSortBy', 'term');
+    localStorage.setItem('coursesSortDir', 'desc');
+    localStorage.setItem('coursesSearch', 'history');
+    localStorage.setItem('coursesTermFilter', 'Spring');
+
+    listMock.mockReturnValue({
+      data: [
+        { id: '1', title: 'Math', term: 'Fall', color: null },
+        { id: '2', title: 'History', term: 'Spring', color: null },
+      ],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+
+    render(<CoursesPage />);
+
+    expect(screen.getByPlaceholderText('Search courses...')).toHaveValue('history');
+    expect(screen.getByLabelText('Filter by term')).toHaveValue('Spring');
     expect(screen.getByDisplayValue('History')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Math')).toBeNull();
   });

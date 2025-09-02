@@ -48,6 +48,42 @@ export default function CoursesPage() {
   const isAddDisabled = isCreating || title.trim() === "";
 
   useEffect(() => {
+    const storedSortBy = localStorage.getItem("coursesSortBy");
+    const storedSortDir = localStorage.getItem("coursesSortDir");
+    const storedSearch = localStorage.getItem("coursesSearch");
+    const storedTermFilter = localStorage.getItem("coursesTermFilter");
+    if (storedSortBy === "title" || storedSortBy === "term") {
+      setSortBy(storedSortBy);
+    }
+    if (storedSortDir === "asc" || storedSortDir === "desc") {
+      setSortDir(storedSortDir);
+    }
+    if (storedSearch) {
+      setSearch(storedSearch);
+      setDebouncedSearch(storedSearch);
+    }
+    if (storedTermFilter) {
+      setTermFilter(storedTermFilter);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("coursesSortBy", sortBy);
+  }, [sortBy]);
+
+  useEffect(() => {
+    localStorage.setItem("coursesSortDir", sortDir);
+  }, [sortDir]);
+
+  useEffect(() => {
+    localStorage.setItem("coursesSearch", search);
+  }, [search]);
+
+  useEffect(() => {
+    localStorage.setItem("coursesTermFilter", termFilter);
+  }, [termFilter]);
+
+  useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
@@ -197,9 +233,13 @@ export default function CoursesPage() {
             {sortedCourses
               .filter(
                 (c) =>
-                  c.title
-                    .toLowerCase()
-                    .includes(debouncedSearch.toLowerCase()) &&
+                  (c.title.toLowerCase().includes(query) ||
+                    (c.term ?? "")
+                      .toLowerCase()
+                      .includes(query) ||
+                    (c.color ?? "")
+                      .toLowerCase()
+                      .includes(query)) &&
                   (termFilter === "" || c.term === termFilter),
               )
               .map((c) => (
@@ -214,10 +254,10 @@ export default function CoursesPage() {
 
 function CourseItem({
   course,
-  onPendingChange,
+  onPendingChange = () => {},
 }: {
   course: { id: string; title: string; term: string | null; color: string | null };
-  onPendingChange: (id: string, pending: boolean) => void;
+  onPendingChange?: (id: string, pending: boolean) => void;
 }) {
   const utils = api.useUtils();
   const {
