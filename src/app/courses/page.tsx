@@ -6,6 +6,7 @@ import { CourseSkeleton } from "@/components/CourseSkeleton";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
 import { TrashIcon, CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
+import { Alert } from "@/components/ui/alert";
 
 const COLOR_OPTIONS = [
   "#000000",
@@ -46,6 +47,7 @@ export default function CoursesPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [termFilter, setTermFilter] = useState("");
   const isAddDisabled = isCreating || title.trim() === "";
+  const handlePendingChange = () => {};
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -63,7 +65,7 @@ export default function CoursesPage() {
         ))}
       </ul>
     );
-  if (error) return <p className="text-red-500">{error.message}</p>;
+  if (error) return <Alert variant="error">{error.message}</Alert>;
 
   const sortedCourses = [...courses].sort((a, b) =>
     sortBy === "title"
@@ -144,7 +146,9 @@ export default function CoursesPage() {
             <Button type="submit" disabled={isAddDisabled}>
               Add Course
             </Button>
-            {createError && <p className="text-red-500">{createError.message}</p>}
+            {createError && (
+              <Alert variant="error">{createError.message}</Alert>
+            )}
           </form>
         </div>
         <div className="flex gap-2">
@@ -197,13 +201,17 @@ export default function CoursesPage() {
             {sortedCourses
               .filter(
                 (c) =>
-                  c.title
-                    .toLowerCase()
-                    .includes(debouncedSearch.toLowerCase()) &&
+                  (c.title.toLowerCase().includes(query) ||
+                    (c.term ?? "").toLowerCase().includes(query) ||
+                    (c.color ?? "").toLowerCase().includes(query)) &&
                   (termFilter === "" || c.term === termFilter),
               )
               .map((c) => (
-                <CourseItem key={c.id} course={c} />
+                <CourseItem
+                  key={c.id}
+                  course={c}
+                  onPendingChange={handlePendingChange}
+                />
               ))}
           </ul>
         </div>
@@ -339,8 +347,12 @@ function CourseItem({
             Delete
           </Button>
         </div>
-        {updateError && <p className="text-red-500">{updateError.message}</p>}
-        {deleteError && <p className="text-red-500">{deleteError.message}</p>}
+        {updateError && (
+          <Alert variant="error">{updateError.message}</Alert>
+        )}
+        {deleteError && (
+          <Alert variant="error">{deleteError.message}</Alert>
+        )}
       </div>
     </li>
   );
