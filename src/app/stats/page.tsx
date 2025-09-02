@@ -3,6 +3,7 @@
 import React from "react";
 import { useTheme } from "next-themes";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   BarChart,
   Bar,
@@ -22,6 +23,7 @@ type Task = RouterOutputs["task"]["list"][number];
 
 export default function StatsPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const { data, isLoading, error } = api.task.list.useQuery(undefined, {
     enabled: !!session,
   });
@@ -124,7 +126,16 @@ export default function StatsPage() {
               tick={{ fill: chartColors.text }}
             />
             <Tooltip />
-            <Bar dataKey="count" fill={chartColors.bar} />
+            <Bar
+              dataKey="count"
+              fill={chartColors.bar}
+              onClick={(data: any) =>
+                router.push(
+                  `/tasks?status=${encodeURIComponent(data.status as string)}`
+                )
+              }
+              className="cursor-pointer"
+            />
           </BarChart>
         </section>
         <section className="space-y-2">
@@ -137,7 +148,18 @@ export default function StatsPage() {
             ))}
           </ul>
           <PieChart width={400} height={200}>
-            <Pie data={subjectData} dataKey="count" nameKey="subject" outerRadius={80}>
+            <Pie
+              data={subjectData}
+              dataKey="count"
+              nameKey="subject"
+              outerRadius={80}
+              onClick={(data: any) =>
+                router.push(
+                  `/tasks?subject=${encodeURIComponent(data.subject as string)}`
+                )
+              }
+              className="cursor-pointer"
+            >
               {subjectData.map((_, index) => (
                 <Cell
                   key={`cell-${index}`}
