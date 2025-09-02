@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { api } from '@/server/api/react';
 import type { RouterOutputs } from '@/server/api/root';
+import { calculateDurationMinutes } from '@/lib/datetime';
 import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
 import { ErrorBoundary } from '@/components/error-boundary';
 
@@ -309,7 +310,7 @@ export default function CalendarPage() {
             const startAt = new Date(iso);
             const ev = eventsLocal.find((e) => e.id === eventId);
             if (!ev) return;
-            const durationMin = Math.max(1, Math.round((new Date(ev.endAt).getTime() - new Date(ev.startAt).getTime()) / 60000));
+            const durationMin = calculateDurationMinutes(ev.startAt, ev.endAt);
             const endAt = new Date(startAt.getTime() + durationMin * 60000);
             // optimistic update
             setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt, endAt } : x));
@@ -378,7 +379,7 @@ export default function CalendarPage() {
             onClick={() => {
               const ev = eventsData[0];
               const newStart = new Date(new Date(ev.startAt).getTime() + 60 * 60000);
-              const durationMin = Math.max(1, Math.round((new Date(ev.endAt).getTime() - new Date(ev.startAt).getTime()) / 60000));
+              const durationMin = calculateDurationMinutes(ev.startAt, ev.endAt);
               const newEnd = new Date(newStart.getTime() + durationMin * 60000);
               moveWithPrefs({ eventId: ev.id, startAt: newStart, endAt: newEnd });
             }}
@@ -398,7 +399,7 @@ export default function CalendarPage() {
             onMoveEvent={(eventId, startAt) => {
               const ev = eventsData.find((e) => e.id === eventId);
               if (!ev) return;
-              const durationMin = Math.max(1, Math.round((new Date(ev.endAt).getTime() - new Date(ev.startAt).getTime()) / 60000));
+              const durationMin = calculateDurationMinutes(ev.startAt, ev.endAt);
               const endAt = new Date(startAt.getTime() + durationMin * 60000);
               moveWithPrefs({ eventId, startAt, endAt });
             }}

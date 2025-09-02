@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import { useDraggable, useDroppable, useDndMonitor } from '@dnd-kit/core';
+import { calculateDurationMinutes } from '@/lib/datetime';
 
 type ViewMode = 'day' | 'week' | 'month';
 
@@ -174,7 +175,7 @@ export function CalendarGrid(props: {
               const startMin = s.getHours() * 60 + s.getMinutes();
               const windowStartMin = startHour * 60;
               const topMin = Math.max(0, startMin - windowStartMin);
-              const durMin = Math.max(1, Math.round((ed.getTime() - s.getTime()) / 60000));
+              const durMin = calculateDurationMinutes(s, ed);
               const pxPerMin = rowPx / 60;
               const topPx = topMin * pxPerMin;
               const heightPx = Math.max(12, durMin * pxPerMin);
