@@ -239,7 +239,13 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
     <li>
       <div className="flex flex-col gap-2 rounded-lg border p-4 shadow-sm bg-card">
         <label htmlFor={titleId} className="flex flex-col gap-1">
-          Title
+          <span className="flex items-center gap-2">
+            Title
+            <span
+              className="h-4 w-4 rounded-full"
+              style={{ backgroundColor: color || "#000" }}
+            />
+          </span>
           <input
             id={titleId}
             className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
