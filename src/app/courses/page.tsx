@@ -85,6 +85,7 @@ export default function CoursesPage() {
       </ul>
     );
   if (error) return <p className="text-red-500">{error.message}</p>;
+  const courseCount = courses.length;
 
   const sortedCourses = [...courses].sort((a, b) =>
     sortBy === "title"

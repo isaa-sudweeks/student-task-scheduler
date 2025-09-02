@@ -53,6 +53,20 @@ describe('CoursesPage', () => {
     expect(screen.getByText('Failed')).toBeInTheDocument();
   });
 
+  it('displays course count in heading', () => {
+    listMock.mockReturnValue({
+      data: [
+        { id: '1', title: 'Math', term: null, color: null },
+        { id: '2', title: 'History', term: null, color: null },
+      ],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    render(<CoursesPage />);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Courses (2)');
+  });
+
     it('disables add button and shows create error', () => {
       listMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
       createMock.mockReturnValue({ mutate: vi.fn(), isPending: true, error: { message: 'Create failed' } });
