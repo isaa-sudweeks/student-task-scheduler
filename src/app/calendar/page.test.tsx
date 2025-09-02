@@ -24,31 +24,46 @@ const events = [
 let tasksLoading = false;
 let eventsLoading = false;
 
+const tasksQueryMock = {
+  data: tasks,
+  isLoading: false,
+  error: null as Error | null,
+  refetch: vi.fn(),
+};
+const eventsQueryMock = {
+  data: events,
+  isLoading: false,
+  error: null as Error | null,
+  refetch: vi.fn(),
+};
+
 vi.mock('@/server/api/react', () => ({
-  api: {
-    useUtils: () => ({
-      task: { list: { invalidate: vi.fn() } },
-      event: { listRange: { invalidate: vi.fn() } },
-      focus: { status: { invalidate: vi.fn() } },
-    }),
-    task: {
-      list: {
+    api: {
+      useUtils: () => ({
+        task: { list: { invalidate: vi.fn() } },
+        event: { listRange: { invalidate: vi.fn() } },
+        focus: { status: { invalidate: vi.fn() } },
+      }),
+      task: {
+        list: {
         useQuery: () => ({
-          data: tasksLoading ? undefined : tasks,
+          ...tasksQueryMock,
+          data: tasksLoading ? undefined : tasksQueryMock.data,
           isLoading: tasksLoading,
         }),
+        },
       },
-    },
-    event: {
-      listRange: {
+      event: {
+        listRange: {
         useQuery: () => ({
-          data: eventsLoading ? undefined : events,
+          ...eventsQueryMock,
+          data: eventsLoading ? undefined : eventsQueryMock.data,
           isLoading: eventsLoading,
         }),
+        },
+        schedule: { useMutation: () => ({ mutate: (...a: unknown[]) => scheduleMutate(...a) }) },
+        move: { useMutation: () => ({ mutate: (...a: unknown[]) => moveMutate(...a) }) },
       },
-      schedule: { useMutation: () => ({ mutate: (...a: unknown[]) => scheduleMutate(...a) }) },
-      move: { useMutation: () => ({ mutate: (...a: unknown[]) => moveMutate(...a) }) },
-    },
     focus: {
       start: { useMutation: () => ({ mutate: (...a: unknown[]) => focusStart(...a) }) },
       stop: { useMutation: () => ({ mutate: (...a: unknown[]) => focusStop(...a) }) },
@@ -64,6 +79,10 @@ describe('CalendarPage', () => {
     moveMutate.mockReset();
     tasksLoading = false;
     eventsLoading = false;
+    tasksQueryMock.error = null;
+    tasksQueryMock.refetch.mockReset();
+    eventsQueryMock.error = null;
+    eventsQueryMock.refetch.mockReset();
     window.localStorage.clear();
     window.localStorage.setItem('dayWindowStartHour', '6');
     window.localStorage.setItem('dayWindowEndHour', '20');
@@ -133,10 +152,10 @@ describe('CalendarPage', () => {
 
   it('focus mode toggles on with Space on a task', () => {
     render(<CalendarPage />);
-    const backlogItem = screen.getByRole('button', { name: /Unscheduled task/i });
+    const backlogItem = screen.getByRole('button', { name: /^Unscheduled task$/i });
 
     backlogItem.focus();
-    fireEvent.keyDown(backlogItem, { key: ' ' });
+    fireEvent.keyDown(backlogItem, { key: 'Space' });
     expect(focusStart).toHaveBeenCalledWith({ taskId: 't1' });
     expect(screen.getByText(/Focusing:/i)).toBeInTheDocument();
   });
@@ -145,9 +164,8 @@ describe('CalendarPage', () => {
     vi.useFakeTimers();
     render(<CalendarPage />);
 
-    const backlogItem = screen.getByRole('button', { name: /focus Unscheduled task/i });
-    backlogItem.focus();
-    fireEvent.keyDown(backlogItem, { key: ' ' });
+    const focusBtn = screen.getByRole('button', { name: /focus Unscheduled task/i });
+    fireEvent.click(focusBtn);
 
     const timer = screen.getByRole('timer', { name: /elapsed focus time/i });
     expect(timer).toHaveAttribute('aria-live', 'polite');

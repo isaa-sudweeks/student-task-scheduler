@@ -193,7 +193,7 @@ export default function CalendarPage() {
   // Global key handler to support Space toggling focus on a focused backlog task button
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
+      if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Space') {
         const el = document.activeElement as HTMLElement | null;
         const id = el?.getAttribute?.('data-task-id');
         if (id) {
@@ -406,7 +406,7 @@ export default function CalendarPage() {
             const labelId = `backlog-task-${t.id}-label`;
             const descId = t.notes ? `backlog-task-${t.id}-desc` : undefined;
             return (
-              <li key={t.id}>
+              <li key={t.id} className="flex items-center gap-2">
                 <DraggableTask
                   id={t.id}
                   title={t.title}
@@ -415,6 +415,14 @@ export default function CalendarPage() {
                   description={t.notes ?? undefined}
                   descriptionId={descId}
                 />
+                <button
+                  type="button"
+                  aria-label={`focus ${t.title}`}
+                  className="rounded border px-2 py-1 text-sm"
+                  onClick={() => toggleFocus(t.id)}
+                >
+                  Focus
+                </button>
               </li>
             );
           })}
