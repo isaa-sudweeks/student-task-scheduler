@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { ArrowUpDown as ArrowUpDownIcon } from "lucide-react";
+import { TrashIcon, CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CourseSkeleton } from "@/components/CourseSkeleton";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
-import { TrashIcon, CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
 
 const COLOR_OPTIONS = [
   "#000000",
@@ -105,9 +106,8 @@ export default function CoursesPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <label htmlFor="course-title" className="flex flex-col gap-1">
               Course title
-              <input
+              <Input
                 id="course-title"
-                className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
                 placeholder="Course title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -115,9 +115,8 @@ export default function CoursesPage() {
             </label>
             <label htmlFor="course-term" className="flex flex-col gap-1">
               Term (optional)
-              <input
+              <Input
                 id="course-term"
-                className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
                 placeholder="Term (optional)"
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
@@ -126,11 +125,11 @@ export default function CoursesPage() {
             <label htmlFor="course-color" className="flex flex-col gap-1">
               Color (optional)
               <div className="flex items-center gap-2">
-                <input
+                <Input
                   id="course-color"
                   type="color"
                   aria-label="Course color"
-                  className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                  className="h-10 w-10 p-0"
                   value={color || "#000000"}
                   onChange={(e) => setColor(e.target.value)}
                 />
@@ -187,8 +186,8 @@ export default function CoursesPage() {
               ))}
             </select>
           </div>
-          <input
-            className="mb-4 w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          <Input
+            className="mb-4"
             placeholder="Search courses..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -203,7 +202,7 @@ export default function CoursesPage() {
                   (termFilter === "" || c.term === termFilter),
               )
               .map((c) => (
-                <CourseItem key={c.id} course={c} />
+                <CourseItem key={c.id} course={c} onPendingChange={() => {}} />
               ))}
           </ul>
         </div>
@@ -280,18 +279,16 @@ function CourseItem({
               style={{ backgroundColor: color || "#000" }}
             />
           </span>
-          <input
+          <Input
             id={titleId}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
         </label>
         <label htmlFor={termId} className="flex flex-col gap-1">
           Term
-          <input
+          <Input
             id={termId}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
           />
@@ -299,11 +296,11 @@ function CourseItem({
         <label htmlFor={colorId} className="flex flex-col gap-1">
           Color
           <div className="flex items-center gap-2">
-            <input
+            <Input
               id={colorId}
               type="color"
               aria-label="Course color"
-              className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              className="h-10 w-10 p-0"
               value={color || "#000000"}
               onChange={(e) => setColor(e.target.value)}
             />
