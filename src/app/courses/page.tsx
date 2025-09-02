@@ -96,6 +96,13 @@ export default function CoursesPage() {
   };
 
   const query = debouncedSearch.toLowerCase();
+  const filteredCourses = sortedCourses.filter(
+    (c) =>
+      (c.title.toLowerCase().includes(query) ||
+        (c.term ?? "").toLowerCase().includes(query) ||
+        (c.color ?? "").toLowerCase().includes(query)) &&
+      (termFilter === "" || c.term === termFilter),
+  );
 
   return (
     <div className="container mx-auto px-4">
@@ -194,17 +201,17 @@ export default function CoursesPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
           <ul className="space-y-4">
-            {sortedCourses
-              .filter(
-                (c) =>
-                  c.title
-                    .toLowerCase()
-                    .includes(debouncedSearch.toLowerCase()) &&
-                  (termFilter === "" || c.term === termFilter),
-              )
-              .map((c) => (
-                <CourseItem key={c.id} course={c} />
-              ))}
+            {filteredCourses.length > 0 ? (
+              filteredCourses.map((c) => (
+                <CourseItem
+                  key={c.id}
+                  course={c}
+                  onPendingChange={() => {}}
+                />
+              ))
+            ) : (
+              <li>No courses found</li>
+            )}
           </ul>
         </div>
       </main>

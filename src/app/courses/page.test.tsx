@@ -204,4 +204,26 @@ describe('CoursesPage', () => {
     expect(screen.getByDisplayValue('History')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Math')).toBeNull();
   });
+
+  it('shows message when no courses match search', () => {
+    vi.useFakeTimers();
+    listMock.mockReturnValue({
+      data: [{ id: '1', title: 'Math', term: 'Fall', color: '#ABCDEF' }],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+
+    render(<CoursesPage />);
+
+    const input = screen.getByPlaceholderText('Search courses...');
+    fireEvent.change(input, { target: { value: 'History' } });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.getByText('No courses found')).toBeInTheDocument();
+    vi.useRealTimers();
+  });
 });
