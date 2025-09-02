@@ -48,13 +48,13 @@ describe('CoursesPage', () => {
     expect(screen.getByText('Failed')).toBeInTheDocument();
   });
 
-  it('disables add button and shows create error', () => {
-    listMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
-    createMock.mockReturnValue({ mutate: vi.fn(), isPending: true, error: { message: 'Create failed' } });
-    render(<CoursesPage />);
-    expect(screen.getByRole('button', { name: /add course/i })).toBeDisabled();
-    expect(screen.getByText('Create failed')).toBeInTheDocument();
-  });
+    it('disables add button and shows create error', () => {
+      listMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+      createMock.mockReturnValue({ mutate: vi.fn(), isPending: true, error: { message: 'Create failed' } });
+      render(<CoursesPage />);
+      expect(screen.getByRole('button', { name: /add course/i })).toBeDisabled();
+      expect(screen.getByText('Create failed')).toBeInTheDocument();
+    });
 
   it('disables save and delete buttons and shows errors', () => {
     listMock.mockReturnValue({

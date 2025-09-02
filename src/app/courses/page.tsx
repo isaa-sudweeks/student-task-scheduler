@@ -9,11 +9,13 @@ import { TrashIcon, CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
 
 export default function CoursesPage() {
   const utils = api.useUtils();
+  const [page, setPage] = useState(1);
+  const limit = 10;
   const {
     data: courses = [],
     isLoading,
     error,
-  } = api.course.list.useQuery();
+  } = api.course.list.useQuery({ page, limit });
   const {
     mutate: createCourse,
     isPending: isCreating,

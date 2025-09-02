@@ -30,9 +30,9 @@ describe('courseRouter.list', () => {
   beforeEach(() => {
     hoisted.findMany.mockClear();
   });
-  it('lists courses for user', async () => {
-    await courseRouter.createCaller(ctx).list();
-    expect(hoisted.findMany).toHaveBeenCalledWith({ where: { userId: 'user1' } });
+  it('lists courses for user with pagination', async () => {
+    await courseRouter.createCaller(ctx).list({ page: 2, limit: 5 });
+    expect(hoisted.findMany).toHaveBeenCalledWith({ where: { userId: 'user1' }, skip: 5, take: 5 });
   });
 });
 

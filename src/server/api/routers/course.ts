@@ -4,10 +4,22 @@ import { db } from '@/server/db';
 import { TRPCError } from '@trpc/server';
 
 export const courseRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.session.user.id;
-    return db.course.findMany({ where: { userId } });
-  }),
+  list: protectedProcedure
+    .input(
+      z.object({
+        page: z.number().int().min(1).default(1),
+        limit: z.number().int().min(1).max(100).default(10),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const { page, limit } = input;
+      return db.course.findMany({
+        where: { userId },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+    }),
   create: protectedProcedure
     .input(
       z.object({
