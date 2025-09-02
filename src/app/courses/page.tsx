@@ -8,6 +8,7 @@ import { CourseSkeleton } from "@/components/CourseSkeleton";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
 import { TrashIcon, CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
+import { Alert } from "@/components/ui/alert";
 
 const COLOR_OPTIONS = [
   "#000000",
@@ -44,6 +45,7 @@ export default function CoursesPage() {
   const [termFilter, setTermFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const isAddDisabled = isCreating || title.trim() === "";
+  const handlePendingChange = () => {};
 
   const {
     mutate: deleteMany,
@@ -171,7 +173,9 @@ export default function CoursesPage() {
             <Button type="submit" disabled={isAddDisabled}>
               Add Course
             </Button>
-            {createError && <p className="text-red-500">{createError.message}</p>}
+            {createError && (
+              <Alert variant="error">{createError.message}</Alert>
+            )}
           </form>
         </div>
         <div className="space-y-4">
