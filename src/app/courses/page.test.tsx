@@ -193,15 +193,23 @@ describe('CoursesPage', () => {
     expect(screen.getByDisplayValue('History')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Math')).toBeNull();
 
-    // filter by color
-    fireEvent.change(input, { target: { value: '#abcdef' } });
-    act(() => {
-      vi.advanceTimersByTime(400);
-    });
-    expect(screen.getByDisplayValue('Math')).toBeInTheDocument();
-    expect(screen.queryByDisplayValue('History')).toBeNull();
+      // filter by color
+      fireEvent.change(input, { target: { value: '#abcdef' } });
+      act(() => {
+        vi.advanceTimersByTime(400);
+      });
+      expect(screen.getByDisplayValue('Math')).toBeInTheDocument();
+      expect(screen.queryByDisplayValue('History')).toBeNull();
 
-    vi.useRealTimers();
+      // filter by description
+      fireEvent.change(input, { target: { value: 'world' } });
+      act(() => {
+        vi.advanceTimersByTime(400);
+      });
+      expect(screen.getByDisplayValue('History')).toBeInTheDocument();
+      expect(screen.queryByDisplayValue('Math')).toBeNull();
+
+      vi.useRealTimers();
   });
 
   it('filters courses by selected term', () => {

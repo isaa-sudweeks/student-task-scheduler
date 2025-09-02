@@ -38,6 +38,7 @@ export default function CoursesPage() {
   const [title, setTitle] = useState("");
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
+  const [description, setDescription] = useState("");
   const [sortBy, setSortBy] = useState<"title" | "term">("title");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [search, setSearch] = useState("");
@@ -109,10 +110,16 @@ export default function CoursesPage() {
       toast.error("Course already exists.");
       return;
     }
-    createCourse({ title: t, term: term.trim() || undefined, color: color.trim() || undefined });
+    createCourse({
+      title: t,
+      term: term.trim() || undefined,
+      color: color.trim() || undefined,
+      description: description.trim() || undefined,
+    });
     setTitle("");
     setTerm("");
     setColor("");
+    setDescription("");
   };
 
   const query = debouncedSearch.toLowerCase();
@@ -314,18 +321,22 @@ export function CourseItem({
   const [title, setTitle] = useState(course.title);
   const [term, setTerm] = useState(course.term ?? "");
   const [color, setColor] = useState(course.color ?? "");
+  const [description, setDescription] = useState(course.description ?? "");
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const titleId = `course-${course.id}-title`;
   const termId = `course-${course.id}-term`;
   const colorId = `course-${course.id}-color`;
+  const descriptionId = `course-${course.id}-description`;
   const trimmedTitle = title.trim();
   const trimmedTerm = term.trim();
   const trimmedColor = color.trim();
+  const trimmedDescription = description.trim();
   const hasChanges =
     trimmedTitle !== course.title ||
     trimmedTerm !== (course.term ?? "") ||
-    trimmedColor !== (course.color ?? "");
+    trimmedColor !== (course.color ?? "") ||
+    trimmedDescription !== (course.description ?? "");
 
   useEffect(() => {
     setHasPendingChanges(hasChanges);

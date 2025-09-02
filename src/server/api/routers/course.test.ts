@@ -72,8 +72,8 @@ describe('courseRouter.create', () => {
     hoisted.findFirst.mockClear();
   });
   it('creates course with title and optional fields', async () => {
-    await courseRouter.createCaller(ctx).create({ title: 'c', term: 'fall', color: 'red' });
-    expect(hoisted.create).toHaveBeenCalledWith({ data: { title: 'c', userId: 'user1', term: 'fall', color: 'red' } });
+    await courseRouter.createCaller(ctx).create({ title: 'c', term: 'fall', color: 'red', description: 'd' });
+    expect(hoisted.create).toHaveBeenCalledWith({ data: { title: 'c', userId: 'user1', term: 'fall', color: 'red', description: 'd' } });
   });
   it('throws if course title exists', async () => {
     hoisted.findFirst.mockResolvedValueOnce({ id: '1', title: 'c' });
@@ -90,8 +90,8 @@ describe('courseRouter.update', () => {
     hoisted.update.mockClear();
   });
   it('updates course fields', async () => {
-    await courseRouter.createCaller(ctx).update({ id: '1', title: 'nc', term: null, color: null });
-    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: '1', userId: 'user1' }, data: { title: 'nc', term: null, color: null } });
+    await courseRouter.createCaller(ctx).update({ id: '1', title: 'nc', term: null, color: null, description: null });
+    expect(hoisted.update).toHaveBeenCalledWith({ where: { id: '1', userId: 'user1' }, data: { title: 'nc', term: null, color: null, description: null } });
   });
 });
 
