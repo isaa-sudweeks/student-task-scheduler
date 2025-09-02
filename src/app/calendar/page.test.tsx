@@ -119,6 +119,18 @@ describe('CalendarPage', () => {
     expect(backlogSection).toHaveClass('self-start');
   });
 
+  it('shows errors from queries and retries when prompted', () => {
+    tasksQueryMock.error = new Error('oops tasks');
+    eventsQueryMock.error = new Error('oops events');
+    render(<CalendarPage />);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Failed to load tasks');
+    expect(alert).toHaveTextContent('Failed to load events');
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(tasksQueryMock.refetch).toHaveBeenCalled();
+    expect(eventsQueryMock.refetch).toHaveBeenCalled();
+  });
+
   it('focus mode toggles on with Space on a task', () => {
     render(<CalendarPage />);
     const backlogItem = screen.getByRole('button', { name: /Unscheduled task/i });

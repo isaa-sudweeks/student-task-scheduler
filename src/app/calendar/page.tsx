@@ -206,6 +206,25 @@ export default function CalendarPage() {
     return () => window.removeEventListener('keydown', onKey, true);
   }, [toggleFocus]);
 
+  if (tasksQ.error || eventsQ.error) {
+    return (
+      <main className="p-4">
+        <div role="alert" className="rounded border border-red-300 bg-red-50 p-4">
+          {tasksQ.error && <p>Failed to load tasks: {String(tasksQ.error.message)}</p>}
+          {eventsQ.error && <p>Failed to load events: {String(eventsQ.error.message)}</p>}
+          <button
+            type="button"
+            className="mt-2 rounded border px-3 py-1"
+            onClick={() => {
+              try { tasksQ.refetch(); } catch {}
+              try { eventsQ.refetch(); } catch {}
+            }}
+          >Retry</button>
+        </div>
+      </main>
+    );
+  }
+
   const ViewTabs = (
     <div role="tablist" aria-label="Calendar view" className="flex gap-2">
       {(['day', 'week', 'month'] as ViewMode[]).map((v) => (
