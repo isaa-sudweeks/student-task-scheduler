@@ -34,6 +34,7 @@ type Priority = "LOW" | "MEDIUM" | "HIGH";
 interface TaskListProps {
   filter: "all" | "overdue" | "today" | "archive";
   subject: string | null;
+  status: TaskStatus | null;
   priority: Priority | null;
   courseId: string | null;
   projectId: string | null;
@@ -44,6 +45,7 @@ interface TaskListProps {
 export function TaskList({
   filter,
   subject,
+  status,
   priority,
   courseId,
   projectId,
@@ -58,6 +60,7 @@ export function TaskList({
     const base: any = {
       filter,
       subject: subject ?? undefined,
+      status: status ?? undefined,
       priority: priority ?? undefined,
       courseId: courseId ?? undefined,
       projectId: projectId ?? undefined,
@@ -74,7 +77,7 @@ export function TaskList({
       base.todayEnd = endLocal;
     }
     return base;
-  }, [filter, subject, priority, courseId, projectId, user.data?.timezone]);
+  }, [filter, subject, status, priority, courseId, projectId, user.data?.timezone]);
 
   const PAGE_SIZE = 20;
   const tasks = api.task.list.useInfiniteQuery(

@@ -131,7 +131,7 @@ export default function StatsPage() {
               fill={chartColors.bar}
               onClick={(data: any) =>
                 router.push(
-                  `/tasks?status=${encodeURIComponent(data.status as string)}`
+                  `/?status=${encodeURIComponent(data.status as string)}`
                 )
               }
               className="cursor-pointer"
@@ -155,7 +155,9 @@ export default function StatsPage() {
               outerRadius={80}
               onClick={(data: any) =>
                 router.push(
-                  `/tasks?subject=${encodeURIComponent(data.subject as string)}`
+                  `/?subject=${encodeURIComponent(
+                    data.subject as string
+                  )}`
                 )
               }
               className="cursor-pointer"
