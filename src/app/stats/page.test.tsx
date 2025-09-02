@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach, beforeAll, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
@@ -24,12 +24,18 @@ vi.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: mockTheme }),
 }));
 
+vi.mock('@/lib/export', () => ({
+  exportStatsToCSV: vi.fn(),
+}));
+
 import { api } from '@/server/api/react';
 import StatsPage from './page';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { exportStatsToCSV } from '@/lib/export';
 
 const taskUseQueryMock = api.task.list.useQuery as ReturnType<typeof vi.fn>;
 const focusUseQueryMock = api.focus.aggregate.useQuery as ReturnType<typeof vi.fn>;
+const exportMock = exportStatsToCSV as ReturnType<typeof vi.fn>;
 
 expect.extend(matchers);
 
@@ -84,6 +90,35 @@ describe('StatsPage', () => {
     expect(screen.getByText('Math: 2')).toBeInTheDocument();
     expect(screen.getByText('Science: 1')).toBeInTheDocument();
     expect(screen.getByText('Task 2: 2m')).toBeInTheDocument();
+  });
+
+  it('exports stats as csv when button clicked', () => {
+    const taskData = [
+      { id: '1', status: 'TODO', subject: 'Math', title: 'Task 1' },
+      { id: '2', status: 'DONE', subject: 'Science', title: 'Task 2' },
+    ];
+    taskUseQueryMock.mockReturnValue({ data: taskData, isLoading: false });
+    focusUseQueryMock.mockReturnValue({
+      data: [{ taskId: '2', durationMs: 120000 }],
+      isLoading: false,
+    });
+
+    render(<StatsPage />);
+    fireEvent.click(screen.getByText('Export CSV'));
+    expect(exportMock).toHaveBeenCalledWith({
+      tasks: taskData,
+      statusData: [
+        { status: 'TODO', count: 1 },
+        { status: 'DONE', count: 1 },
+      ],
+      subjectData: [
+        { subject: 'Math', count: 1 },
+        { subject: 'Science', count: 1 },
+      ],
+      focusByTask: [
+        { id: '2', title: 'Task 2', minutes: 2 },
+      ],
+    });
   });
 
   it('renders focus stats for tasks with duplicate titles without key warnings', () => {

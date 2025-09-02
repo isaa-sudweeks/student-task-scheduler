@@ -16,7 +16,9 @@ import {
 } from "recharts";
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
+import { exportStatsToCSV } from "@/lib/export";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { Button } from "@/components/ui/button";
 
 type Task = RouterOutputs["task"]["list"][number];
 
@@ -93,11 +95,16 @@ export default function StatsPage() {
       count: Number(count),
     }));
 
+  const handleExport = () => {
+    exportStatsToCSV({ tasks, statusData, subjectData, focusByTask });
+  };
+
   return (
     <ErrorBoundary fallback={<main>Failed to load stats</main>}>
       <main className="space-y-6 text-neutral-900 dark:text-neutral-100">
-        <header>
+        <header className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Task Statistics</h1>
+          <Button onClick={handleExport}>Export CSV</Button>
         </header>
         <section className="space-y-2">
           <p>Total Tasks: {total}</p>
