@@ -127,4 +127,27 @@ describe('CoursesPage', () => {
     expect(screen.queryByDisplayValue('History')).toBeNull();
     vi.useRealTimers();
   });
+
+  it('prompts before unload if there are pending changes', () => {
+    listMock.mockReturnValue({
+      data: [{ id: '1', title: 'Course', term: null, color: null }],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+
+    render(<CoursesPage />);
+
+    const noChangeEvent = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(noChangeEvent);
+    expect(noChangeEvent.defaultPrevented).toBe(false);
+
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'New Title' } });
+
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
 });

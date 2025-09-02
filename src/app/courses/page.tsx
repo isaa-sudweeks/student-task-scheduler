@@ -28,12 +28,32 @@ export default function CoursesPage() {
   const [sortBy, setSortBy] = useState<"title" | "term">("title");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [pendingChanges, setPendingChanges] = useState<Record<string, boolean>>({});
   const isAddDisabled = isCreating || title.trim() === "";
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  const handlePendingChange = (id: string, pending: boolean) => {
+    setPendingChanges((prev) => ({ ...prev, [id]: pending }));
+  };
+
+  const hasPendingChanges = Object.values(pendingChanges).some(Boolean);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    if (hasPendingChanges) {
+      window.addEventListener("beforeunload", handleBeforeUnload);
+    } else {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    }
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasPendingChanges]);
 
   if (isLoading) return <p>Loading...</p>;
   if (error) return <p className="text-red-500">{error.message}</p>;
@@ -133,7 +153,11 @@ export default function CoursesPage() {
               c.title.toLowerCase().includes(debouncedSearch.toLowerCase())
             )
             .map((c) => (
-              <CourseItem key={c.id} course={c} />
+              <CourseItem
+                key={c.id}
+                course={c}
+                onPendingChange={handlePendingChange}
+              />
             ))}
         </ul>
       </div>
@@ -141,7 +165,13 @@ export default function CoursesPage() {
   );
 }
 
-function CourseItem({ course }: { course: { id: string; title: string; term: string | null; color: string | null } }) {
+function CourseItem({
+  course,
+  onPendingChange,
+}: {
+  course: { id: string; title: string; term: string | null; color: string | null };
+  onPendingChange: (id: string, pending: boolean) => void;
+}) {
   const utils = api.useUtils();
   const {
     mutate: updateCourse,
@@ -168,6 +198,7 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
   const [title, setTitle] = useState(course.title);
   const [term, setTerm] = useState(course.term ?? "");
   const [color, setColor] = useState(course.color ?? "");
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const titleId = `course-${course.id}-title`;
   const termId = `course-${course.id}-term`;
   const colorId = `course-${course.id}-color`;
@@ -178,7 +209,19 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
     trimmedTitle !== course.title ||
     trimmedTerm !== (course.term ?? "") ||
     trimmedColor !== (course.color ?? "");
-  const isSaveDisabled = isUpdating || !hasChanges;
+
+  useEffect(() => {
+    setHasPendingChanges(hasChanges);
+    onPendingChange(course.id, hasChanges);
+  }, [course.id, hasChanges, onPendingChange]);
+
+  useEffect(() => {
+    return () => {
+      onPendingChange(course.id, false);
+    };
+  }, [course.id, onPendingChange]);
+
+  const isSaveDisabled = isUpdating || !hasPendingChanges;
   return (
     <li className="flex flex-col gap-2 border-b pb-4">
       <label htmlFor={titleId} className="flex flex-col gap-1">
