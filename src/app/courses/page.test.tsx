@@ -152,9 +152,7 @@ describe('CoursesPage', () => {
     render(<CoursesPage />);
     const items = screen.getAllByRole('listitem');
     expect(within(items[0]).getAllByRole('textbox')[0]).toHaveValue('A');
-    fireEvent.click(
-      screen.getByRole('button', { name: /toggle sort direction/i }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: /sort by title/i }));
     const itemsAfter = screen.getAllByRole('listitem');
     expect(within(itemsAfter[0]).getAllByRole('textbox')[0]).toHaveValue('B');
   });
