@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CourseSkeleton } from "@/components/CourseSkeleton";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
+import { TrashIcon, CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
 
 export default function CoursesPage() {
   const utils = api.useUtils();
