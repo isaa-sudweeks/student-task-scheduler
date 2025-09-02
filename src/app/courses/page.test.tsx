@@ -204,4 +204,26 @@ describe('CoursesPage', () => {
     expect(screen.getByDisplayValue('History')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Math')).toBeNull();
   });
+
+  it('navigates pages with Previous and Next buttons', () => {
+    const mockCourses = Array.from({ length: 10 }, (_, i) => ({
+      id: `${i}`,
+      title: `Course ${i}`,
+      term: null,
+      color: null,
+    }));
+    listMock.mockReturnValue({ data: mockCourses, isLoading: false, error: undefined });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+
+    render(<CoursesPage />);
+    expect(listMock).toHaveBeenLastCalledWith({ page: 1, limit: 10 });
+
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    expect(listMock).toHaveBeenLastCalledWith({ page: 2, limit: 10 });
+
+    fireEvent.click(screen.getByRole('button', { name: /previous/i }));
+    expect(listMock).toHaveBeenLastCalledWith({ page: 1, limit: 10 });
+  });
 });

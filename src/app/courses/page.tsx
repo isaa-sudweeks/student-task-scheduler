@@ -197,15 +197,35 @@ export default function CoursesPage() {
             {sortedCourses
               .filter(
                 (c) =>
-                  c.title
-                    .toLowerCase()
-                    .includes(debouncedSearch.toLowerCase()) &&
+                  (c.title.toLowerCase().includes(query) ||
+                    (c.term ?? "").toLowerCase().includes(query) ||
+                    (c.color ?? "").toLowerCase().includes(query)) &&
                   (termFilter === "" || c.term === termFilter),
               )
               .map((c) => (
-                <CourseItem key={c.id} course={c} />
+                <CourseItem
+                  key={c.id}
+                  course={c}
+                  onPendingChange={() => {}}
+                />
               ))}
           </ul>
+          <div className="mt-4 flex justify-between">
+            <Button
+              variant="secondary"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={courses.length < limit}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </main>
     </div>
