@@ -57,6 +57,8 @@ export default function CoursesPage() {
     setColor("");
   };
 
+  const query = debouncedSearch.toLowerCase();
+
   return (
     <main className="space-y-6">
       <h1 className="text-2xl font-semibold">Courses</h1>
@@ -129,9 +131,16 @@ export default function CoursesPage() {
         />
         <ul className="space-y-4">
           {sortedCourses
-            .filter((c) =>
-              c.title.toLowerCase().includes(debouncedSearch.toLowerCase())
-            )
+            .filter((c) => {
+              const title = c.title.toLowerCase();
+              const term = c.term?.toLowerCase() ?? "";
+              const color = c.color?.toLowerCase() ?? "";
+              return (
+                title.includes(query) ||
+                term.includes(query) ||
+                color.includes(query)
+              );
+            })
             .map((c) => (
               <CourseItem key={c.id} course={c} />
             ))}

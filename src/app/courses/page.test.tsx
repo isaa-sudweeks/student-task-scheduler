@@ -98,12 +98,12 @@ describe('CoursesPage', () => {
     expect(within(itemsAfter[0]).getAllByRole('textbox')[0]).toHaveValue('B');
   });
 
-  it('filters courses by search input', () => {
+  it('filters courses by title, term, and color', () => {
     vi.useFakeTimers();
     listMock.mockReturnValue({
       data: [
-        { id: '1', title: 'Math', term: null, color: null },
-        { id: '2', title: 'History', term: null, color: null },
+        { id: '1', title: 'Math', term: 'Fall', color: '#ABCDEF' },
+        { id: '2', title: 'History', term: 'Spring', color: '#123456' },
       ],
       isLoading: false,
       error: undefined,
@@ -114,17 +114,32 @@ describe('CoursesPage', () => {
 
     render(<CoursesPage />);
 
-    expect(screen.getByDisplayValue('Math')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('History')).toBeInTheDocument();
-
     const input = screen.getByPlaceholderText('Search courses...');
+
+    // filter by title (case insensitive)
     fireEvent.change(input, { target: { value: 'math' } });
     act(() => {
       vi.advanceTimersByTime(400);
     });
-
     expect(screen.getByDisplayValue('Math')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('History')).toBeNull();
+
+    // filter by term
+    fireEvent.change(input, { target: { value: 'SPRING' } });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.getByDisplayValue('History')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Math')).toBeNull();
+
+    // filter by color
+    fireEvent.change(input, { target: { value: '#abcdef' } });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.getByDisplayValue('Math')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('History')).toBeNull();
+
     vi.useRealTimers();
   });
 });
