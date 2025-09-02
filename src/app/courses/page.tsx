@@ -3,12 +3,14 @@ import React, { useState, useEffect } from "react";
 import { ArrowUpDown as ArrowUpDownIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { CourseSkeleton } from "@/components/CourseSkeleton";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
 import { TrashIcon, CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
 import { Alert } from "@/components/ui/alert";
+import { clsx } from "clsx";
 
 const COLOR_OPTIONS = [
   "#000000",
