@@ -38,6 +38,7 @@ export function TaskModal({
   const apiAny = api as any;
 
   const [title, setTitle] = useState("");
+  const [titleError, setTitleError] = useState<string | null>(null);
   const [subject, setSubject] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [due, setDue] = useState<string>(""); // datetime-local
@@ -95,6 +96,7 @@ export function TaskModal({
         setDueEnabled(false);
       }
     }
+    setTitleError(null);
   }, [open, isEdit, task, initialTitle, initialDueAt, initialProjectId]);
 
   const create = api.task.create.useMutation({
@@ -176,6 +178,7 @@ export function TaskModal({
             });
           } else {
             if (!title.trim()) {
+              setTitleError("Title is required");
               return;
             }
             create.mutate({
@@ -218,13 +221,21 @@ export function TaskModal({
           <label htmlFor="title" className="w-28 text-sm font-medium">
             Title
           </label>
-          <input
-            id="title"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            placeholder="Task title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+          <div className="flex-1">
+            <input
+              id="title"
+              className="w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              placeholder="Task title"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                if (titleError) setTitleError(null);
+              }}
+            />
+            {titleError && (
+              <p className="mt-1 text-sm text-red-600">{titleError}</p>
+            )}
+          </div>
         </div>
   
         <div className="flex items-center gap-4">

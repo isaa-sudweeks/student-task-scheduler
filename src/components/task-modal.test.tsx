@@ -86,6 +86,20 @@ describe('TaskModal due date editing', () => {
   });
 });
 
+describe('TaskModal validation', () => {
+  beforeEach(() => {
+    mutateCreate.mockReset();
+    createMutation.error = undefined;
+  });
+
+  it('shows an error when title is missing', () => {
+    render(<TaskModal open mode="create" onClose={() => {}} />);
+    fireEvent.click(screen.getByText('Create'));
+    expect(screen.getByText('Title is required')).toBeInTheDocument();
+    expect(mutateCreate).not.toHaveBeenCalled();
+  });
+});
+
   describe('TaskModal project and course selection', () => {
   beforeEach(() => {
     mutateCreate.mockReset();
