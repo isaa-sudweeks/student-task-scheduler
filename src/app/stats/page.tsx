@@ -49,7 +49,12 @@ export default function StatsPage() {
     () => ({
       text: isDark ? "#ffffff" : "#000000",
       axis: isDark ? "#ffffff" : "#000000",
-      bar: isDark ? "#34d399" : "#8884d8",
+      bar: {
+        TODO: isDark ? "#60a5fa" : "#8884d8",
+        IN_PROGRESS: isDark ? "#fbbf24" : "#ffc658",
+        DONE: isDark ? "#34d399" : "#82ca9d",
+      } as Record<Task["status"], string>,
+      focusBar: isDark ? "#34d399" : "#8884d8",
       pie: isDark
         ? ["#34d399", "#60a5fa", "#fbbf24", "#fb923c"]
         : ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"],
@@ -124,7 +129,14 @@ export default function StatsPage() {
               tick={{ fill: chartColors.text }}
             />
             <Tooltip />
-            <Bar dataKey="count" fill={chartColors.bar} />
+            <Bar dataKey="count">
+              {statusData.map((s) => (
+                <Cell
+                  key={s.status}
+                  fill={chartColors.bar[s.status as keyof typeof chartColors.bar]}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </section>
         <section className="space-y-2">
@@ -169,7 +181,7 @@ export default function StatsPage() {
               tick={{ fill: chartColors.text }}
             />
             <Tooltip />
-            <Bar dataKey="minutes" fill={chartColors.bar} />
+            <Bar dataKey="minutes" fill={chartColors.focusBar} />
           </BarChart>
         </section>
       </main>
