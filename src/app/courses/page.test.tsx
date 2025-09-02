@@ -9,12 +9,15 @@ vi.mock('@/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn(), info:
 import { toast } from '@/lib/toast';
 import CoursesPage from './page';
 
-const { listMock, createMock, updateMock, deleteMock } = vi.hoisted(() => ({
-  listMock: vi.fn(),
-  createMock: vi.fn(),
-  updateMock: vi.fn(),
-  deleteMock: vi.fn(),
-}));
+const { listMock, createMock, updateMock, deleteMock, deleteManyMock } = vi.hoisted(
+  () => ({
+    listMock: vi.fn(),
+    createMock: vi.fn(),
+    updateMock: vi.fn(),
+    deleteMock: vi.fn(),
+    deleteManyMock: vi.fn(),
+  }),
+);
 
 vi.mock('@/server/api/react', () => ({
   api: {
@@ -24,6 +27,7 @@ vi.mock('@/server/api/react', () => ({
       create: { useMutation: createMock },
       update: { useMutation: updateMock },
       delete: { useMutation: deleteMock },
+      deleteMany: { useMutation: deleteManyMock },
     },
   },
 }));
@@ -31,6 +35,7 @@ vi.mock('@/server/api/react', () => ({
 describe('CoursesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    deleteManyMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
   });
 
   it('renders loading state', () => {
@@ -65,9 +70,11 @@ describe('CoursesPage', () => {
     createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
     updateMock.mockReturnValue({ mutate: vi.fn(), isPending: true, error: { message: 'Update failed' } });
     deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: true, error: { message: 'Delete failed' } });
+    deleteManyMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
     render(<CoursesPage />);
-    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
+    const item = screen.getAllByRole('listitem')[0];
+    expect(within(item).getByRole('button', { name: /save/i })).toBeDisabled();
+    expect(within(item).getByRole('button', { name: /delete/i })).toBeDisabled();
     expect(screen.getByText('Update failed')).toBeInTheDocument();
     expect(screen.getByText('Delete failed')).toBeInTheDocument();
   });
@@ -203,5 +210,29 @@ describe('CoursesPage', () => {
 
     expect(screen.getByDisplayValue('History')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Math')).toBeNull();
+  });
+
+  it('deletes selected courses', () => {
+    listMock.mockReturnValue({
+      data: [
+        { id: '1', title: 'Math', term: null, color: null },
+        { id: '2', title: 'History', term: null, color: null },
+      ],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    const mutateMany = vi.fn();
+    deleteManyMock.mockReturnValue({ mutate: mutateMany, isPending: false, error: undefined });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(<CoursesPage />);
+
+    fireEvent.click(screen.getByLabelText('Select Math'));
+    fireEvent.click(screen.getByRole('button', { name: /delete selected/i }));
+
+    expect(mutateMany).toHaveBeenCalledWith({ ids: ['1'] });
   });
 });

@@ -7,7 +7,8 @@ const hoisted = vi.hoisted(() => {
   const create = vi.fn().mockResolvedValue({});
   const update = vi.fn().mockResolvedValue({});
   const del = vi.fn().mockResolvedValue({});
-  return { findMany, findFirst, create, update, delete: del };
+  const delMany = vi.fn().mockResolvedValue({});
+  return { findMany, findFirst, create, update, delete: del, deleteMany: delMany };
 });
 
 vi.mock('@/server/db', () => ({
@@ -18,6 +19,7 @@ vi.mock('@/server/db', () => ({
       create: hoisted.create,
       update: hoisted.update,
       delete: hoisted.delete,
+      deleteMany: hoisted.deleteMany,
     },
   },
 }));
@@ -72,6 +74,18 @@ describe('courseRouter.delete', () => {
   it('deletes course by id for user', async () => {
     await courseRouter.createCaller(ctx).delete({ id: '1' });
     expect(hoisted.delete).toHaveBeenCalledWith({ where: { id: '1', userId: 'user1' } });
+  });
+});
+
+describe('courseRouter.deleteMany', () => {
+  beforeEach(() => {
+    hoisted.deleteMany.mockClear();
+  });
+  it('deletes courses by ids for user', async () => {
+    await courseRouter.createCaller(ctx).deleteMany({ ids: ['1', '2'] });
+    expect(hoisted.deleteMany).toHaveBeenCalledWith({
+      where: { id: { in: ['1', '2'] }, userId: 'user1' },
+    });
   });
 });
 
