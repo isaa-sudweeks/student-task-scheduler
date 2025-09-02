@@ -28,7 +28,26 @@ export default function StatsPage() {
   const { data: session } = useSession();
   const [filter, setFilter] = React.useState<TaskFilter>("all");
   const [subject, setSubject] = React.useState<string | null>(null);
-  const { data, isLoading, error } = api.task.list.useQuery(undefined, {
+  const user = api.user.get.useQuery(undefined, { enabled: !!session });
+  const queryInput = React.useMemo(() => {
+    const base: Record<string, unknown> = {
+      filter,
+      subject: subject ?? undefined,
+    };
+    if (!user.data?.timezone) {
+      const tzOffsetMinutes = new Date().getTimezoneOffset();
+      const now = new Date();
+      const startLocal = new Date(now);
+      startLocal.setHours(0, 0, 0, 0);
+      const endLocal = new Date(now);
+      endLocal.setHours(23, 59, 59, 999);
+      base.tzOffsetMinutes = tzOffsetMinutes;
+      base.todayStart = startLocal;
+      base.todayEnd = endLocal;
+    }
+    return base;
+  }, [filter, subject, user.data?.timezone]);
+  const { data, isLoading, error } = api.task.list.useQuery(queryInput, {
     enabled: !!session,
   });
   const tasks: RouterOutputs["task"]["list"] = React.useMemo(
@@ -44,31 +63,7 @@ export default function StatsPage() {
     }
     return map;
   }, [focusData]);
-  const filteredTasks = React.useMemo(() => {
-    let result = tasks;
-    const now = new Date();
-    if (filter === "overdue") {
-      result = result.filter((t) => t.dueAt && new Date(t.dueAt) < now);
-    } else if (filter === "today") {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      const end = new Date();
-      end.setHours(23, 59, 59, 999);
-      result = result.filter((t) => {
-        if (!t.dueAt) return false;
-        const due = new Date(t.dueAt);
-        return due >= start && due <= end;
-      });
-    } else if (filter === "archive") {
-      result = result.filter((t) => t.status === "DONE");
-    }
-    if (subject) {
-      result = result.filter((t) => t.subject === subject);
-    }
-    return result;
-  }, [tasks, filter, subject]);
-
-  const focusByTask = filteredTasks
+  const focusByTask = tasks
     .map((t) => ({
       id: t.id,
       title: t.title,
@@ -93,11 +88,11 @@ export default function StatsPage() {
   if (error) throw error;
   if (isLoading) return <main>Loading...</main>;
 
-  const total = filteredTasks.length;
-  const completed = filteredTasks.filter((t: Task) => t.status === "DONE").length;
+  const total = tasks.length;
+  const completed = tasks.filter((t: Task) => t.status === "DONE").length;
   const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
 
-  const statusCounts = filteredTasks.reduce(
+  const statusCounts = tasks.reduce(
     (acc: Record<string, number>, task: Task) => {
       acc[task.status] = (acc[task.status] ?? 0) + 1;
       return acc;
@@ -111,7 +106,7 @@ export default function StatsPage() {
       count: Number(count),
     }));
 
-  const subjectCounts = filteredTasks.reduce(
+  const subjectCounts = tasks.reduce(
     (acc: Record<string, number>, task: Task) => {
       const subject = task.subject ?? "Uncategorized";
       acc[subject] = (acc[subject] ?? 0) + 1;

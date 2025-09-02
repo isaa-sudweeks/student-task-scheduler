@@ -26,6 +26,11 @@ vi.mock('@/server/api/react', () => ({
         useQuery: vi.fn(() => ({ data: [] })),
       },
     },
+    user: {
+      get: {
+        useQuery: vi.fn(() => ({ data: {} })),
+      },
+    },
   },
 }));
 
@@ -141,10 +146,13 @@ describe('StatsPage', () => {
   });
 
   it('filters tasks by subject', () => {
-    taskUseQueryMock.mockReturnValue({
-      data: sampleTasks,
+    taskUseQueryMock.mockImplementation((input) => ({
+      data:
+        input?.subject === 'Math'
+          ? sampleTasks.filter((t) => t.subject === 'Math')
+          : sampleTasks,
       isLoading: false,
-    });
+    }));
     focusUseQueryMock.mockReturnValue({ data: [], isLoading: false });
 
     render(<StatsPage />);
@@ -157,10 +165,13 @@ describe('StatsPage', () => {
   });
 
   it('filters tasks by status', () => {
-    taskUseQueryMock.mockReturnValue({
-      data: sampleTasks,
+    taskUseQueryMock.mockImplementation((input) => ({
+      data:
+        input?.filter === 'archive'
+          ? sampleTasks.filter((t) => t.status === 'DONE')
+          : sampleTasks,
       isLoading: false,
-    });
+    }));
     focusUseQueryMock.mockReturnValue({ data: [], isLoading: false });
 
     render(<StatsPage />);
