@@ -28,7 +28,7 @@ test.describe('calendar', () => {
 
     await page.goto('/calendar');
 
-    const task = page.getByRole('button', { name: new RegExp(`focus ${title}`, 'i') });
+    const task = page.getByRole('button', { name: new RegExp(`${title}`, 'i') });
     const targetCell = page.locator('[id^="cell-"]').first();
 
     const taskBox = await task.boundingBox();
@@ -94,7 +94,7 @@ test.describe('calendar', () => {
 
     await page.goto('/calendar');
 
-    const task = page.getByRole('button', { name: new RegExp(`focus ${title}`, 'i') });
+    const task = page.getByRole('button', { name: new RegExp(`${title}`, 'i') });
     const targetCell = page.locator('[id^="cell-"]').first();
 
     const taskBox = await task.boundingBox();
@@ -123,7 +123,7 @@ test.describe('calendar', () => {
 
     await page.goto('/calendar');
 
-    const backlogItem = page.getByRole('button', { name: new RegExp(`focus ${title}`, 'i') });
+    const backlogItem = page.getByRole('button', { name: new RegExp(`${title}`, 'i') });
     await backlogItem.focus();
     await page.keyboard.press(' ');
 

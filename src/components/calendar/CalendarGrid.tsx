@@ -227,9 +227,24 @@ function GridCell({ day, hour }: { day: Date; hour: number }) {
   );
 }
 
-export function DraggableTask({ id, title, onSpaceKey }: { id: string; title: string; onSpaceKey?: () => void }) {
+export function DraggableTask({
+  id,
+  title,
+  onSpaceKey,
+  labelId,
+  description,
+  descriptionId,
+}: {
+  id: string;
+  title: string;
+  onSpaceKey?: () => void;
+  labelId?: string;
+  description?: string;
+  descriptionId?: string;
+}) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: `task-${id}` });
   const style: React.CSSProperties = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : {};
+  const descId = description ? descriptionId ?? `${id}-desc` : undefined;
   return (
     <button
       ref={setNodeRef}
@@ -237,7 +252,8 @@ export function DraggableTask({ id, title, onSpaceKey }: { id: string; title: st
       {...listeners}
       className="w-full text-left px-2 py-1 rounded border"
       style={style}
-      aria-label={`focus ${title}`}
+      aria-labelledby={labelId}
+      aria-describedby={descId}
       data-task-id={id}
       onKeyDown={(e) => {
         if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Space') {
@@ -267,7 +283,12 @@ export function DraggableTask({ id, title, onSpaceKey }: { id: string; title: st
         onSpaceKey?.();
       }}
     >
-      {title}
+      <span id={labelId}>{title}</span>
+      {description && (
+        <span id={descId} className="sr-only">
+          {description}
+        </span>
+      )}
     </button>
   );
 }

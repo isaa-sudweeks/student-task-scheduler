@@ -340,11 +340,22 @@ export default function CalendarPage() {
       <div className="w-full space-y-3 self-start md:col-span-1">
         <h2 className="font-semibold">Backlog</h2>
         <ul className="space-y-2">
-          {backlog.map((t) => (
-            <li key={t.id}>
-              <DraggableTask id={t.id} title={t.title} onSpaceKey={() => toggleFocus(t.id)} />
-            </li>
-          ))}
+          {backlog.map((t) => {
+            const labelId = `backlog-task-${t.id}-label`;
+            const descId = t.notes ? `backlog-task-${t.id}-desc` : undefined;
+            return (
+              <li key={t.id}>
+                <DraggableTask
+                  id={t.id}
+                  title={t.title}
+                  onSpaceKey={() => toggleFocus(t.id)}
+                  labelId={labelId}
+                  description={t.notes ?? undefined}
+                  descriptionId={descId}
+                />
+              </li>
+            );
+          })}
         </ul>
 
         {/* Test-only helper to simulate a drop action */}
