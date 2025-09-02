@@ -1,11 +1,14 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ArrowUpDown as ArrowUpDownIcon } from "lucide-react";
+import {
+  ArrowUp as ArrowUpIcon,
+  ArrowDown as ArrowDownIcon,
+} from "lucide-react";
+import { CaretSortIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
 import { CourseSkeleton } from "@/components/CourseSkeleton";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
-import { TrashIcon, CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
 
 const COLOR_OPTIONS = [
   "#000000",
@@ -149,23 +152,48 @@ export default function CoursesPage() {
         </div>
         <div className="flex gap-2">
           <Button
-            variant={sortBy === "title" ? "primary" : "secondary"}
-            onClick={() => setSortBy("title")}
+            variant={sortBy === "title" ? "secondary" : "tertiary"}
+            onClick={() => {
+              if (sortBy === "title") {
+                setSortDir(sortDir === "asc" ? "desc" : "asc");
+              } else {
+                setSortBy("title");
+                setSortDir("asc");
+              }
+            }}
           >
             Sort by Title
+            {sortBy === "title" ? (
+              sortDir === "asc" ? (
+                <ArrowUpIcon className="ml-2 h-4 w-4" />
+              ) : (
+                <ArrowDownIcon className="ml-2 h-4 w-4" />
+              )
+            ) : (
+              <CaretSortIcon className="ml-2 h-4 w-4" />
+            )}
           </Button>
           <Button
-            variant={sortBy === "term" ? "primary" : "secondary"}
-            onClick={() => setSortBy("term")}
+            variant={sortBy === "term" ? "secondary" : "tertiary"}
+            onClick={() => {
+              if (sortBy === "term") {
+                setSortDir(sortDir === "asc" ? "desc" : "asc");
+              } else {
+                setSortBy("term");
+                setSortDir("asc");
+              }
+            }}
           >
             Sort by Term
-          </Button>
-          <Button
-            variant="tertiary"
-            onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
-            aria-label="Toggle sort direction"
-          >
-            <ArrowUpDownIcon className="h-4 w-4" />
+            {sortBy === "term" ? (
+              sortDir === "asc" ? (
+                <ArrowUpIcon className="ml-2 h-4 w-4" />
+              ) : (
+                <ArrowDownIcon className="ml-2 h-4 w-4" />
+              )
+            ) : (
+              <CaretSortIcon className="ml-2 h-4 w-4" />
+            )}
           </Button>
         </div>
         <div className="max-w-md">
@@ -203,7 +231,11 @@ export default function CoursesPage() {
                   (termFilter === "" || c.term === termFilter),
               )
               .map((c) => (
-                <CourseItem key={c.id} course={c} />
+                <CourseItem
+                  key={c.id}
+                  course={c}
+                  onPendingChange={() => {}}
+                />
               ))}
           </ul>
         </div>
