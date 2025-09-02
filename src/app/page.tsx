@@ -1,19 +1,39 @@
 "use client";
 
 import React, { useState, useEffect, Suspense, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { TaskList } from "@/components/task-list";
 import { TaskModal } from "@/components/task-modal";
 import { Button } from "@/components/ui/button";
 import { clsx } from "clsx";
+import type { TaskStatus } from "@/components/status-dropdown";
 // Controls moved to global nav bar: AccountMenu, ThemeToggle, ShortcutsPopover
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 
 export default function HomePage() {
+  return (
+    <Suspense fallback={null}>
+      <HomePageContent />
+    </Suspense>
+  );
+}
+
+function HomePageContent() {
   const [filter, setFilter] = useState<"all" | "overdue" | "today" | "archive">(
     "all"
   );
-  const [subject] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const statusParam = searchParams.get("status");
+  const subjectParam = searchParams.get("subject");
+  const status: TaskStatus | null =
+    statusParam === "TODO" ||
+    statusParam === "IN_PROGRESS" ||
+    statusParam === "DONE" ||
+    statusParam === "CANCELLED"
+      ? (statusParam as TaskStatus)
+      : null;
+  const subject = subjectParam;
   const [priority] = useState<Priority | null>(null);
   const [courseId] = useState<string | null>(null);
   const [projectId] = useState<string | null>(null);
@@ -111,6 +131,7 @@ export default function HomePage() {
           <TaskList
             filter={filter}
             subject={subject}
+            status={status}
             priority={priority}
             courseId={courseId}
             projectId={projectId}

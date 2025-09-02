@@ -171,7 +171,7 @@ describe('StatsPage', () => {
     const router = useRouter();
     expect(barHandlers.length).toBeGreaterThan(0);
     barHandlers[0]({ status: 'DONE' });
-    expect(router.push).toHaveBeenCalledWith('/tasks?status=DONE');
+    expect(router.push).toHaveBeenCalledWith('/?status=DONE');
   });
 
   it('navigates to tasks filtered by subject when a pie slice is clicked', () => {
@@ -187,7 +187,7 @@ describe('StatsPage', () => {
     const router = useRouter();
     expect(pieHandlers.length).toBeGreaterThan(0);
     pieHandlers[0]({ subject: 'Math' });
-    expect(router.push).toHaveBeenCalledWith('/tasks?subject=Math');
+    expect(router.push).toHaveBeenCalledWith('/?subject=Math');
   });
 
   describe('visual regression', () => {

@@ -43,6 +43,7 @@ describe('TaskList', () => {
       <TaskList
         filter="all"
         subject={null}
+        status={null}
         priority={null}
         courseId={null}
         projectId={null}
@@ -70,6 +71,7 @@ describe('TaskList', () => {
       <TaskList
         filter="all"
         subject={null}
+        status={null}
         priority={null}
         courseId={null}
         projectId={null}
@@ -99,6 +101,7 @@ describe('TaskList', () => {
       <TaskList
         filter="all"
         subject={null}
+        status={null}
         priority={null}
         courseId={null}
         projectId={null}
@@ -126,6 +129,7 @@ describe('TaskList', () => {
       <TaskList
         filter="all"
         subject={null}
+        status={null}
         priority={null}
         courseId={null}
         projectId={null}
@@ -153,6 +157,7 @@ describe('TaskList', () => {
       <TaskList
         filter="all"
         subject={null}
+        status={null}
         priority={null}
         courseId={null}
         projectId={null}
@@ -181,6 +186,7 @@ describe('TaskList', () => {
       <TaskList
         filter="all"
         subject={null}
+        status={null}
         priority={null}
         courseId={null}
         projectId={null}
