@@ -52,6 +52,7 @@ export const courseRouter = router({
         term: z.string().max(100).optional(),
         color: z.string().max(50).optional(),
         description: z.string().max(1000).optional(),
+        syllabusUrl: z.string().url().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -72,6 +73,7 @@ export const courseRouter = router({
           term: input.term ?? null,
           color: input.color ?? null,
           description: input.description ?? null,
+          syllabusUrl: input.syllabusUrl ?? null,
         },
       });
     }),
@@ -83,6 +85,7 @@ export const courseRouter = router({
         term: z.string().max(100).nullable().optional(),
         color: z.string().max(50).nullable().optional(),
         description: z.string().max(1000).nullable().optional(),
+        syllabusUrl: z.string().url().nullable().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
