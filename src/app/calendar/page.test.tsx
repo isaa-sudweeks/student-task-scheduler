@@ -121,7 +121,7 @@ describe('CalendarPage', () => {
 
   it('focus mode toggles on with Space on a task', () => {
     render(<CalendarPage />);
-    const backlogItem = screen.getByRole('button', { name: /focus Unscheduled task/i });
+    const backlogItem = screen.getByRole('button', { name: /Unscheduled task/i });
 
     backlogItem.focus();
     fireEvent.keyDown(backlogItem, { key: ' ' });
