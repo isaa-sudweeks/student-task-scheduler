@@ -7,6 +7,7 @@ import { api } from '@/server/api/react';
 import type { RouterOutputs } from '@/server/api/root';
 import { calculateDurationMinutes } from '@/lib/datetime';
 import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
+import { CalendarHeader } from '@/components/calendar/CalendarHeader';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
@@ -80,6 +81,10 @@ export default function CalendarPage() {
   }, [eventsData]);
 
   const changeDate = React.useCallback((delta: number) => {
+    if (delta === 0) {
+      setBaseDate(new Date());
+      return;
+    }
     setBaseDate((prev) => {
       const d = new Date(prev);
       if (view === 'day') {
