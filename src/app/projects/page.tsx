@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 import { Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { EmptyProjects } from "@/components/empty-projects";
 import { Button } from "@/components/ui/button";
@@ -95,10 +96,12 @@ export default function ProjectsPage() {
 type ProjectTileProps = { project: Project; onEdit: (p: Project) => void };
 
 function ProjectTile({ project, onEdit }: ProjectTileProps) {
+  const router = useRouter();
   return (
     <div
       role="listitem"
-      className="flex h-full flex-col justify-between rounded-xl border shadow-sm p-4"
+      className="flex h-full flex-col justify-between rounded-xl border shadow-sm p-4 cursor-pointer"
+      onClick={() => router.push(`/projects/${project.id}`)}
     >
       <div>
         <h2 className="font-medium">{project.title}</h2>
@@ -111,7 +114,10 @@ function ProjectTile({ project, onEdit }: ProjectTileProps) {
           type="button"
           aria-label="Edit project"
           className="p-1 text-neutral-400 hover:text-neutral-700"
-          onClick={() => onEdit(project)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(project);
+          }}
         >
           <Pencil className="h-4 w-4" />
         </button>

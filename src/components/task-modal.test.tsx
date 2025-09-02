@@ -85,22 +85,28 @@ describe('TaskModal due date editing', () => {
   });
 });
 
-describe('TaskModal project and course selection', () => {
+  describe('TaskModal project and course selection', () => {
   beforeEach(() => {
     mutateCreate.mockReset();
     createMutation.error = undefined;
   });
-  it('sends selected project and course when creating', () => {
-    render(<TaskModal open mode="create" onClose={() => {}} />);
-    fireEvent.change(screen.getByPlaceholderText('Task title'), { target: { value: 'T' } });
-    fireEvent.change(screen.getByLabelText('Project'), { target: { value: 'p1' } });
-    fireEvent.change(screen.getByLabelText('Course'), { target: { value: 'c1' } });
-    fireEvent.click(screen.getByText('Create'));
-    expect(mutateCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'T', projectId: 'p1', courseId: 'c1' })
-    );
+    it('sends selected project and course when creating', () => {
+      render(<TaskModal open mode="create" onClose={() => {}} />);
+      fireEvent.change(screen.getByPlaceholderText('Task title'), { target: { value: 'T' } });
+      fireEvent.change(screen.getByLabelText('Project'), { target: { value: 'p1' } });
+      fireEvent.change(screen.getByLabelText('Course'), { target: { value: 'c1' } });
+      fireEvent.click(screen.getByText('Create'));
+      expect(mutateCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'T', projectId: 'p1', courseId: 'c1' })
+      );
+    });
+
+    it('preselects initial project when provided', () => {
+      render(<TaskModal open mode="create" onClose={() => {}} initialProjectId="p1" />);
+      const select = screen.getByLabelText('Project') as HTMLSelectElement;
+      expect(select.value).toBe('p1');
+    });
   });
-});
 
 describe('TaskModal accessibility', () => {
   beforeEach(() => {
