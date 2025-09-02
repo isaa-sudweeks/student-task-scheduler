@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
@@ -116,36 +118,44 @@ export function ProjectModal({ open, mode, onClose, project }: ProjectModalProps
       title={isEdit ? "Edit Project" : "New Project"}
       footer={footer}
     >
-      <label htmlFor="project-title" className="sr-only">
-        Project title
-      </label>
-      <input
-        id="project-title"
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-        placeholder="Project title"
-        value={title}
-        onChange={(e) => {
-          setTitle(e.target.value);
-          if (titleError) setTitleError("");
-        }}
-        aria-invalid={!!titleError}
-      />
-      {titleError && <p className="text-sm text-red-500">{titleError}</p>}
-      <label htmlFor="project-description" className="sr-only">
-        Description (optional)
-      </label>
-      <textarea
-        id="project-description"
-        className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-        placeholder="Description (optional)"
-        value={description}
-        onChange={(e) => {
-          setDescription(e.target.value);
-          if (descriptionError) setDescriptionError("");
-        }}
-        aria-invalid={!!descriptionError}
-      />
-      {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
+      <div className="space-y-1">
+        <label htmlFor="project-title" className="text-sm font-medium">
+          Title
+        </label>
+        <Input
+          id="project-title"
+          placeholder="Project title"
+          value={title}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            if (titleError) setTitleError("");
+          }}
+          error={titleError}
+        />
+        {titleError && <p className="text-sm text-red-500">{titleError}</p>}
+      </div>
+      <div className="space-y-1">
+        <label
+          htmlFor="project-description"
+          className="text-sm font-medium"
+        >
+          Description (optional)
+        </label>
+        <Textarea
+          id="project-description"
+          placeholder="Description (optional)"
+          value={description}
+          onChange={(e) => {
+            setDescription(e.target.value);
+            if (descriptionError) setDescriptionError("");
+          }}
+          error={descriptionError}
+          rows={4}
+        />
+        {descriptionError && (
+          <p className="text-sm text-red-500">{descriptionError}</p>
+        )}
+      </div>
     </Modal>
   );
 }
