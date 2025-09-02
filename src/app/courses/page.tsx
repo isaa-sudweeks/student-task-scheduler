@@ -28,6 +28,7 @@ export default function CoursesPage() {
   const [sortBy, setSortBy] = useState<"title" | "term">("title");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [termFilter, setTermFilter] = useState("");
   const isAddDisabled = isCreating || title.trim() === "";
 
   useEffect(() => {
@@ -46,6 +47,14 @@ export default function CoursesPage() {
         : (a.term ?? "").localeCompare(b.term ?? "") ||
           a.title.localeCompare(b.title),
     );
+
+  const terms = Array.from(
+    new Set(
+      courses
+        .map((c) => c.term)
+        .filter((t): t is string => Boolean(t)),
+    ),
+  );
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -121,6 +130,24 @@ export default function CoursesPage() {
         </Button>
       </div>
       <div className="max-w-md">
+        <div className="mb-4">
+          <label htmlFor="term-filter" className="mb-2 block">
+            Filter by term
+          </label>
+          <select
+            id="term-filter"
+            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            value={termFilter}
+            onChange={(e) => setTermFilter(e.target.value)}
+          >
+            <option value="">All terms</option>
+            {terms.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
         <input
           className="mb-4 w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           placeholder="Search courses..."
@@ -129,8 +156,12 @@ export default function CoursesPage() {
         />
         <ul className="space-y-4">
           {sortedCourses
-            .filter((c) =>
-              c.title.toLowerCase().includes(debouncedSearch.toLowerCase())
+            .filter(
+              (c) =>
+                c.title
+                  .toLowerCase()
+                  .includes(debouncedSearch.toLowerCase()) &&
+                (termFilter === "" || c.term === termFilter),
             )
             .map((c) => (
               <CourseItem key={c.id} course={c} />

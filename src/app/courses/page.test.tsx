@@ -127,4 +127,26 @@ describe('CoursesPage', () => {
     expect(screen.queryByDisplayValue('History')).toBeNull();
     vi.useRealTimers();
   });
+
+  it('filters courses by selected term', () => {
+    listMock.mockReturnValue({
+      data: [
+        { id: '1', title: 'Math', term: 'Fall', color: null },
+        { id: '2', title: 'History', term: 'Spring', color: null },
+      ],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+
+    render(<CoursesPage />);
+
+    const select = screen.getByLabelText('Filter by term');
+    fireEvent.change(select, { target: { value: 'Spring' } });
+
+    expect(screen.getByDisplayValue('History')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Math')).toBeNull();
+  });
 });
