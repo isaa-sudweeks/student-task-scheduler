@@ -35,8 +35,12 @@ export default function CoursesPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  if (isLoading) return <p>Loading...</p>;
-  if (error) return <p className="text-red-500">{error.message}</p>;
+  if (isLoading)
+    return <p className="text-neutral-900 dark:text-neutral-100">Loading...</p>;
+  if (error)
+    return (
+      <p className="text-red-600 dark:text-red-400">{error.message}</p>
+    );
 
   const sortedCourses = courses
     .slice()
@@ -58,44 +62,53 @@ export default function CoursesPage() {
   };
 
   return (
-    <main className="space-y-6">
+    <main className="space-y-6 text-neutral-900 dark:text-neutral-100">
       <h1 className="text-2xl font-semibold">Courses</h1>
       <form onSubmit={handleSubmit}>
         <div className="flex flex-col gap-2 max-w-md">
-          <label htmlFor="course-title" className="flex flex-col gap-1">
+          <label
+            htmlFor="course-title"
+            className="flex flex-col gap-1 text-neutral-900 dark:text-neutral-100"
+          >
             Course title
             <input
               id="course-title"
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            className="rounded border border-black/10 bg-transparent px-3 py-2 text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-neutral-700 dark:text-neutral-100"
             placeholder="Course title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
           </label>
-          <label htmlFor="course-term" className="flex flex-col gap-1">
+          <label
+            htmlFor="course-term"
+            className="flex flex-col gap-1 text-neutral-900 dark:text-neutral-100"
+          >
             Term (optional)
             <input
               id="course-term"
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            className="rounded border border-black/10 bg-transparent px-3 py-2 text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-neutral-700 dark:text-neutral-100"
             placeholder="Term (optional)"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
           />
           </label>
-          <label htmlFor="course-color" className="flex flex-col gap-1">
+          <label
+            htmlFor="course-color"
+            className="flex flex-col gap-1 text-neutral-900 dark:text-neutral-100"
+          >
             Color (optional)
             <div className="flex items-center gap-2">
               <input
                 id="course-color"
                 type="color"
                 aria-label="Course color"
-                className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-neutral-700 dark:text-neutral-100"
                 value={color || "#000000"}
                 onChange={(e) => setColor(e.target.value)}
               />
               <div
                 data-testid="color-preview"
-                className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
+                className="h-6 w-6 rounded border border-black/10 dark:border-neutral-700"
                 style={{ backgroundColor: color || "#000000" }}
               />
             </div>
@@ -103,7 +116,11 @@ export default function CoursesPage() {
           <Button type="submit" disabled={isAddDisabled}>
             Add Course
           </Button>
-          {createError && <p className="text-red-500">{createError.message}</p>}
+          {createError && (
+            <p className="text-red-600 dark:text-red-400">
+              {createError.message}
+            </p>
+          )}
         </div>
       </form>
       <div className="flex gap-2">
@@ -122,7 +139,7 @@ export default function CoursesPage() {
       </div>
       <div className="max-w-md">
         <input
-          className="mb-4 w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="mb-4 w-full rounded border border-black/10 bg-transparent px-3 py-2 text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-neutral-700 dark:text-neutral-100"
           placeholder="Search courses..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -180,38 +197,47 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
     trimmedColor !== (course.color ?? "");
   const isSaveDisabled = isUpdating || !hasChanges;
   return (
-    <li className="flex flex-col gap-2 border-b pb-4">
-      <label htmlFor={titleId} className="flex flex-col gap-1">
+    <li className="flex flex-col gap-2 border-b border-black/10 pb-4 dark:border-neutral-700">
+      <label
+        htmlFor={titleId}
+        className="flex flex-col gap-1 text-neutral-900 dark:text-neutral-100"
+      >
         Title
         <input
           id={titleId}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="rounded border border-black/10 bg-transparent px-3 py-2 text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-neutral-700 dark:text-neutral-100"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
       </label>
-      <label htmlFor={termId} className="flex flex-col gap-1">
+      <label
+        htmlFor={termId}
+        className="flex flex-col gap-1 text-neutral-900 dark:text-neutral-100"
+      >
         Term
         <input
           id={termId}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="rounded border border-black/10 bg-transparent px-3 py-2 text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-neutral-700 dark:text-neutral-100"
           value={term}
           onChange={(e) => setTerm(e.target.value)}
         />
       </label>
-      <label htmlFor={colorId} className="flex flex-col gap-1">
+      <label
+        htmlFor={colorId}
+        className="flex flex-col gap-1 text-neutral-900 dark:text-neutral-100"
+      >
         Color
         <div className="flex items-center gap-2">
           <input
             id={colorId}
             type="color"
             aria-label="Course color"
-            className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-neutral-700 dark:text-neutral-100"
             value={color || "#000000"}
             onChange={(e) => setColor(e.target.value)}
           />
           <div
-            className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
+            className="h-6 w-6 rounded border border-black/10 dark:border-neutral-700"
             style={{ backgroundColor: color || "#000000" }}
           />
         </div>
@@ -242,8 +268,16 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
           Delete
         </Button>
       </div>
-      {updateError && <p className="text-red-500">{updateError.message}</p>}
-      {deleteError && <p className="text-red-500">{deleteError.message}</p>}
+      {updateError && (
+        <p className="text-red-600 dark:text-red-400">
+          {updateError.message}
+        </p>
+      )}
+      {deleteError && (
+        <p className="text-red-600 dark:text-red-400">
+          {deleteError.message}
+        </p>
+      )}
     </li>
   );
 }
