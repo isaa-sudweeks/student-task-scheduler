@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 import { Pencil } from "lucide-react";
+import Link from "next/link";
 
 import { EmptyProjects } from "@/components/empty-projects";
 import { Button } from "@/components/ui/button";
@@ -100,12 +101,12 @@ function ProjectTile({ project, onEdit }: ProjectTileProps) {
       role="listitem"
       className="flex h-full flex-col justify-between rounded-xl border shadow-sm p-4"
     >
-      <div>
+      <Link href={`/projects/${project.id}`} className="flex-1">
         <h2 className="font-medium">{project.title}</h2>
         {project.description && (
           <p className="text-sm text-muted-foreground">{project.description}</p>
         )}
-      </div>
+      </Link>
       <div className="flex justify-end">
         <button
           type="button"

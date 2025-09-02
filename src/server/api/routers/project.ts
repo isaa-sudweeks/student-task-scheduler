@@ -8,18 +8,30 @@ export const projectRouter = router({
     const userId = ctx.session.user.id;
     return db.project.findMany({ where: { userId } });
   }),
+  get: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      return db.project.findFirst({ where: { id: input.id, userId } });
+    }),
   create: protectedProcedure
     .input(
       z.object({
         title: z.string().min(1).max(200),
         description: z.string().max(1000).optional(),
+        instructionsUrl: z.string().url().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
       return db.project.create({
-        data: { title: input.title, userId, description: input.description ?? null },
+        data: {
+          title: input.title,
+          userId,
+          description: input.description ?? null,
+          instructionsUrl: input.instructionsUrl ?? null,
+        },
       });
     }),
   update: publicProcedure
@@ -28,6 +40,7 @@ export const projectRouter = router({
         id: z.string().min(1),
         title: z.string().min(1).max(200).optional(),
         description: z.string().max(1000).nullable().optional(),
+        instructionsUrl: z.string().url().nullable().optional(),
       })
     )
     .mutation(async ({ input }) => {
