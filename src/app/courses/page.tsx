@@ -66,21 +66,21 @@ export default function CoursesPage() {
             Course title
             <input
               id="course-title"
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            placeholder="Course title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+              className="rounded border border-black/10 bg-transparent px-3 py-2 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 dark:border-white/10"
+              placeholder="Course title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
           </label>
           <label htmlFor="course-term" className="flex flex-col gap-1">
             Term (optional)
             <input
               id="course-term"
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            placeholder="Term (optional)"
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-          />
+              className="rounded border border-black/10 bg-transparent px-3 py-2 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 dark:border-white/10"
+              placeholder="Term (optional)"
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+            />
           </label>
           <label htmlFor="course-color" className="flex flex-col gap-1">
             Color (optional)
@@ -89,7 +89,7 @@ export default function CoursesPage() {
                 id="course-color"
                 type="color"
                 aria-label="Course color"
-                className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 dark:border-white/10"
                 value={color || "#000000"}
                 onChange={(e) => setColor(e.target.value)}
               />
@@ -122,7 +122,7 @@ export default function CoursesPage() {
       </div>
       <div className="max-w-md">
         <input
-          className="mb-4 w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="mb-4 w-full rounded border border-black/10 bg-transparent px-3 py-2 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 dark:border-white/10"
           placeholder="Search courses..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -180,12 +180,12 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
     trimmedColor !== (course.color ?? "");
   const isSaveDisabled = isUpdating || !hasChanges;
   return (
-    <li className="flex flex-col gap-2 border-b pb-4">
+    <li className="flex flex-col gap-2 border-b pb-4 hover:bg-muted focus-visible:ring-offset-0">
       <label htmlFor={titleId} className="flex flex-col gap-1">
         Title
         <input
           id={titleId}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="rounded border border-black/10 bg-transparent px-3 py-2 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 dark:border-white/10"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
@@ -194,7 +194,7 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
         Term
         <input
           id={termId}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          className="rounded border border-black/10 bg-transparent px-3 py-2 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 dark:border-white/10"
           value={term}
           onChange={(e) => setTerm(e.target.value)}
         />
@@ -206,7 +206,7 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
             id={colorId}
             type="color"
             aria-label="Course color"
-            className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 dark:border-white/10"
             value={color || "#000000"}
             onChange={(e) => setColor(e.target.value)}
           />
