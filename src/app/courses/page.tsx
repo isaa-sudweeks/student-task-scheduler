@@ -45,7 +45,27 @@ export default function CoursesPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [termFilter, setTermFilter] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const isAddDisabled = isCreating || title.trim() === "";
+
+  const {
+    mutate: deleteMany,
+    isPending: isDeletingMany,
+    error: deleteManyError,
+  } = api.course.deleteMany.useMutation({
+    onSuccess: async () => {
+      await utils.course.list.invalidate();
+      setSelectedIds([]);
+      toast.success("Courses deleted.");
+    },
+    onError: (e) => toast.error(e.message || "Delete failed."),
+  });
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    setSelectedIds((prev) =>
+      checked ? [...prev, id] : prev.filter((x) => x !== id),
+    );
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -193,17 +213,41 @@ export default function CoursesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <div className="mb-4 flex justify-end">
+            <Button
+              variant="danger"
+              disabled={selectedIds.length === 0 || isDeletingMany}
+              onClick={() => {
+                if (window.confirm("Delete selected courses?")) {
+                  deleteMany({ ids: selectedIds });
+                }
+              }}
+            >
+              <TrashIcon className="mr-2 h-4 w-4" />
+              Delete Selected
+            </Button>
+          </div>
+          {deleteManyError && (
+            <p className="mb-4 text-red-500">{deleteManyError.message}</p>
+          )}
           <ul className="space-y-4">
             {sortedCourses
-              .filter(
-                (c) =>
-                  c.title
-                    .toLowerCase()
-                    .includes(debouncedSearch.toLowerCase()) &&
-                  (termFilter === "" || c.term === termFilter),
-              )
+              .filter((c) => {
+                const query = debouncedSearch.toLowerCase();
+                const matches =
+                  c.title.toLowerCase().includes(query) ||
+                  (c.term ?? "").toLowerCase().includes(query) ||
+                  (c.color ?? "").toLowerCase().includes(query);
+                return matches && (termFilter === "" || c.term === termFilter);
+              })
               .map((c) => (
-                <CourseItem key={c.id} course={c} />
+                <CourseItem
+                  key={c.id}
+                  course={c}
+                  onPendingChange={() => {}}
+                  selected={selectedIds.includes(c.id)}
+                  onSelect={toggleSelect}
+                />
               ))}
           </ul>
         </div>
@@ -215,9 +259,13 @@ export default function CoursesPage() {
 function CourseItem({
   course,
   onPendingChange,
+  selected,
+  onSelect,
 }: {
   course: { id: string; title: string; term: string | null; color: string | null };
   onPendingChange: (id: string, pending: boolean) => void;
+  selected: boolean;
+  onSelect: (id: string, checked: boolean) => void;
 }) {
   const utils = api.useUtils();
   const {
@@ -271,76 +319,85 @@ function CourseItem({
   const isSaveDisabled = isUpdating || !hasPendingChanges;
   return (
     <li>
-      <div className="flex flex-col gap-2 rounded-lg border p-4 shadow-sm bg-card">
-        <label htmlFor={titleId} className="flex flex-col gap-1">
-          <span className="flex items-center gap-2">
-            Title
-            <span
-              className="h-4 w-4 rounded-full"
-              style={{ backgroundColor: color || "#000" }}
-            />
-          </span>
-          <input
-            id={titleId}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </label>
-        <label htmlFor={termId} className="flex flex-col gap-1">
-          Term
-          <input
-            id={termId}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-          />
-        </label>
-        <label htmlFor={colorId} className="flex flex-col gap-1">
-          Color
-          <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          aria-label={`Select ${course.title}`}
+          className="mt-2"
+          checked={selected}
+          onChange={(e) => onSelect(course.id, e.target.checked)}
+        />
+        <div className="flex flex-col gap-2 rounded-lg border p-4 shadow-sm bg-card flex-1">
+          <label htmlFor={titleId} className="flex flex-col gap-1">
+            <span className="flex items-center gap-2">
+              Title
+              <span
+                className="h-4 w-4 rounded-full"
+                style={{ backgroundColor: color || "#000" }}
+              />
+            </span>
             <input
-              id={colorId}
-              type="color"
-              aria-label="Course color"
-              className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-              value={color || "#000000"}
-              onChange={(e) => setColor(e.target.value)}
+              id={titleId}
+              className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
             />
-            <div
-              className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
-              style={{ backgroundColor: color || "#000000" }}
+          </label>
+          <label htmlFor={termId} className="flex flex-col gap-1">
+            Term
+            <input
+              id={termId}
+              className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
             />
-          </div>
-        </label>
-        <div className="flex gap-2">
-          <Button
-            disabled={isSaveDisabled}
-            onClick={() =>
-              updateCourse({
-                id: course.id,
-                title: trimmedTitle,
-                term: trimmedTerm || null,
-                color: trimmedColor || null,
-              })
-            }
-          >
-            Save
-          </Button>
-          <Button
-            variant="danger"
-            disabled={isDeleting}
-            onClick={() => {
-              if (window.confirm("Delete this course?")) {
-                deleteCourse({ id: course.id });
+          </label>
+          <label htmlFor={colorId} className="flex flex-col gap-1">
+            Color
+            <div className="flex items-center gap-2">
+              <input
+                id={colorId}
+                type="color"
+                aria-label="Course color"
+                className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                value={color || "#000000"}
+                onChange={(e) => setColor(e.target.value)}
+              />
+              <div
+                className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
+                style={{ backgroundColor: color || "#000000" }}
+              />
+            </div>
+          </label>
+          <div className="flex gap-2">
+            <Button
+              disabled={isSaveDisabled}
+              onClick={() =>
+                updateCourse({
+                  id: course.id,
+                  title: trimmedTitle,
+                  term: trimmedTerm || null,
+                  color: trimmedColor || null,
+                })
               }
-            }}
-          >
-            Delete
-          </Button>
+            >
+              Save
+            </Button>
+            <Button
+              variant="danger"
+              disabled={isDeleting}
+              onClick={() => {
+                if (window.confirm("Delete this course?")) {
+                  deleteCourse({ id: course.id });
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+          {updateError && <p className="text-red-500">{updateError.message}</p>}
+          {deleteError && <p className="text-red-500">{deleteError.message}</p>}
         </div>
-        {updateError && <p className="text-red-500">{updateError.message}</p>}
-        {deleteError && <p className="text-red-500">{deleteError.message}</p>}
       </div>
     </li>
   );

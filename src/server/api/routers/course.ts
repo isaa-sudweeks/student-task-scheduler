@@ -75,6 +75,14 @@ export const courseRouter = router({
       const userId = ctx.session.user.id;
       return db.course.delete({ where: { id: input.id, userId } });
     }),
+  deleteMany: protectedProcedure
+    .input(z.object({ ids: z.array(z.string().min(1)) }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      return db.course.deleteMany({
+        where: { id: { in: input.ids }, userId },
+      });
+    }),
 });
 
 export default courseRouter;
