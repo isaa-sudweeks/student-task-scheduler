@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { CourseSkeleton } from "@/components/CourseSkeleton";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
 
@@ -35,7 +36,17 @@ export default function CoursesPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  if (isLoading) return <p>Loading...</p>;
+  if (isLoading)
+    return (
+      <ul aria-label="Loading courses" className="space-y-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <CourseSkeleton
+            // eslint-disable-next-line react/no-array-index-key
+            key={i}
+          />
+        ))}
+      </ul>
+    );
   if (error) return <p className="text-red-500">{error.message}</p>;
 
   const sortedCourses = courses

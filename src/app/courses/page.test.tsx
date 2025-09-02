@@ -35,7 +35,8 @@ describe('CoursesPage', () => {
     listMock.mockReturnValue({ data: [], isLoading: true, error: undefined });
     createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
     render(<CoursesPage />);
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    const list = screen.getByLabelText('Loading courses');
+    expect(within(list).getAllByRole('listitem')).toHaveLength(4);
   });
 
   it('shows error message', () => {
