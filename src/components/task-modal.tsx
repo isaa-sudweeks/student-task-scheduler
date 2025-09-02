@@ -37,7 +37,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
   const [recurrenceCount, setRecurrenceCount] = useState<number | ''>('');
   const [recurrenceUntil, setRecurrenceUntil] = useState<string>('');
   const { data: projects = [] } = api.project.list.useQuery();
-  const { data: courses = [] } = api.course.list.useQuery();
+  const { data: courses = [] } = api.course.list.useQuery({ page: 1, limit: 100 });
   const [projectId, setProjectId] = useState<string | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
 

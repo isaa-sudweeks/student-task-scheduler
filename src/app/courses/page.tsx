@@ -6,11 +6,13 @@ import { toast } from "@/lib/toast";
 
 export default function CoursesPage() {
   const utils = api.useUtils();
+  const [page, setPage] = useState(1);
+  const limit = 10;
   const {
     data: courses = [],
     isLoading,
     error,
-  } = api.course.list.useQuery();
+  } = api.course.list.useQuery({ page, limit });
   const {
     mutate: createCourse,
     isPending: isCreating,
@@ -127,19 +129,30 @@ export default function CoursesPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <ul className="space-y-4">
-          {sortedCourses
-            .filter((c) =>
-              c.title.toLowerCase().includes(debouncedSearch.toLowerCase())
-            )
-            .map((c) => (
-              <CourseItem key={c.id} course={c} />
-            ))}
-        </ul>
-      </div>
-    </main>
-  );
-}
+          <ul className="space-y-4">
+            {sortedCourses
+              .filter((c) =>
+                c.title.toLowerCase().includes(debouncedSearch.toLowerCase())
+              )
+              .map((c) => (
+                <CourseItem key={c.id} course={c} />
+              ))}
+          </ul>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+              Previous
+            </Button>
+            <Button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={courses.length < limit}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
 function CourseItem({ course }: { course: { id: string; title: string; term: string | null; color: string | null } }) {
   const utils = api.useUtils();

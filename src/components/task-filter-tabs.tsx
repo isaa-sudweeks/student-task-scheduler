@@ -43,7 +43,7 @@ export function TaskFilterTabs({
     { filter: 'all' },
     { enabled: !!session }
   );
-  const { data: courses = [] } = api.course.list.useQuery();
+  const { data: courses = [] } = api.course.list.useQuery({ page: 1, limit: 100 });
   const { data: projects = [] } = api.project.list.useQuery();
   const subjects = React.useMemo(() => {
     const set = new Set<string>();

@@ -45,13 +45,13 @@ describe('CoursesPage', () => {
     expect(screen.getByText('Failed')).toBeInTheDocument();
   });
 
-  it('disables add button and shows create error', () => {
-    listMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
-    createMock.mockReturnValue({ mutate: vi.fn(), isPending: true, error: { message: 'Create failed' } });
-    render(<CoursesPage />);
-    expect(screen.getByRole('button', { name: /add course/i })).toBeDisabled();
-    expect(screen.getByText('Create failed')).toBeInTheDocument();
-  });
+    it('disables add button and shows create error', () => {
+      listMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
+      createMock.mockReturnValue({ mutate: vi.fn(), isPending: true, error: { message: 'Create failed' } });
+      render(<CoursesPage />);
+      expect(screen.getByRole('button', { name: /add course/i })).toBeDisabled();
+      expect(screen.getByText('Create failed')).toBeInTheDocument();
+    });
 
   it('disables save and delete buttons and shows errors', () => {
     listMock.mockReturnValue({
@@ -127,4 +127,23 @@ describe('CoursesPage', () => {
     expect(screen.queryByDisplayValue('History')).toBeNull();
     vi.useRealTimers();
   });
+
+    it('fetches different pages when navigating', () => {
+      const mockCourses = Array.from({ length: 10 }, (_, i) => ({
+        id: String(i),
+        title: `C${i}`,
+        term: null,
+        color: null,
+      }));
+      listMock.mockReturnValue({ data: mockCourses, isLoading: false, error: undefined });
+      createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+      updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+      deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+      render(<CoursesPage />);
+      expect(listMock).toHaveBeenLastCalledWith({ page: 1, limit: 10 });
+      act(() => {
+        fireEvent.click(screen.getByRole('button', { name: /next/i }));
+      });
+      expect(listMock).toHaveBeenLastCalledWith({ page: 2, limit: 10 });
+    });
 });
