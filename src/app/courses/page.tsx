@@ -116,6 +116,21 @@ export default function CoursesPage() {
   };
 
   const query = debouncedSearch.toLowerCase();
+  const filteredCourses = sortedCourses.filter((c) => {
+    const q = query;
+    const matches =
+      c.title.toLowerCase().includes(q) ||
+      (c.term ?? "").toLowerCase().includes(q) ||
+      (c.color ?? "").toLowerCase().includes(q);
+    return matches && (termFilter === "" || c.term === termFilter);
+  });
+  const filteredCourses = sortedCourses.filter(
+    (c) =>
+      (c.title.toLowerCase().includes(query) ||
+        (c.term ?? "").toLowerCase().includes(query) ||
+        (c.color ?? "").toLowerCase().includes(query)) &&
+      (termFilter === "" || c.term === termFilter),
+  );
 
   return (
     <div className="container mx-auto px-4">
@@ -215,16 +230,8 @@ export default function CoursesPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
             <ul className="space-y-4">
-              {sortedCourses
-                .filter((c) => {
-                  const query = debouncedSearch.toLowerCase();
-                  const matches =
-                    c.title.toLowerCase().includes(query) ||
-                    (c.term ?? "").toLowerCase().includes(query) ||
-                    (c.color ?? "").toLowerCase().includes(query);
-                  return matches && (termFilter === "" || c.term === termFilter);
-                })
-                .map((c) => (
+              {filteredCourses.length > 0 ? (
+                filteredCourses.map((c) => (
                   <CourseItem
                     key={c.id}
                     course={c}
@@ -232,7 +239,10 @@ export default function CoursesPage() {
                     selected={selectedIds.includes(c.id)}
                     onSelect={toggleSelect}
                   />
-                ))}
+                ))
+              ) : (
+                <li>No courses found</li>
+              )}
             </ul>
           </div>
           
