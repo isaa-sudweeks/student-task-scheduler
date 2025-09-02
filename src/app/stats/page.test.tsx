@@ -4,6 +4,33 @@ import { render, screen, cleanup, fireEvent, within } from '@testing-library/rea
 import { describe, it, expect, vi, afterEach, beforeAll, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
+const barHandlers: Array<(payload: any) => void> = [];
+const pieHandlers: Array<(payload: any) => void> = [];
+vi.mock('recharts', () => {
+  const Div = (props: any) => React.createElement('div', props);
+  const Null = () => null;
+  const Bar = (props: any) => {
+    if (props.onClick) barHandlers.push(props.onClick);
+    return null;
+  };
+  const Pie = (props: any) => {
+    if (props.onClick) pieHandlers.push(props.onClick);
+    return null;
+  };
+  const Cell = () => null;
+  return {
+    BarChart: Div,
+    Bar,
+    XAxis: Null,
+    YAxis: Null,
+    Tooltip: Null,
+    PieChart: Div,
+    Pie,
+    Cell,
+    ResponsiveContainer: Div,
+  } as any;
+});
+
 vi.mock('@/server/api/react', () => ({
   api: {
     task: {
@@ -40,6 +67,7 @@ vi.mock('next-themes', () => ({
 }));
 
 import { api } from '@/server/api/react';
+import { useRouter } from 'next/navigation';
 import StatsPage from './page';
 import { ErrorBoundary } from '@/components/error-boundary';
 
@@ -80,6 +108,8 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   mockTheme = 'light';
+  barHandlers.length = 0;
+  pieHandlers.length = 0;
 });
 
 describe('StatsPage', () => {

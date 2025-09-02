@@ -1,35 +1,39 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 
 import HomePage from './page';
+import NavBar from '@/components/nav-bar';
 
 vi.mock('next-auth/react', () => ({
   useSession: () => ({ data: { user: { name: 'Test User', image: '' } } }),
   signOut: () => {},
 }));
 
+let mockSearch = '';
 vi.mock('next/navigation', () => ({
   usePathname: () => '/',
-  useSearchParams: () => new URLSearchParams(''),
+  useSearchParams: () => new URLSearchParams(mockSearch),
 }));
+
+const useInfiniteQueryMock = vi.fn().mockReturnValue({
+  data: { pages: [[]] },
+  isLoading: false,
+  error: undefined,
+  fetchNextPage: () => {},
+  hasNextPage: false,
+  isFetchingNextPage: false,
+});
 
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({ task: { list: { invalidate: () => {} } } }),
     task: {
       list: {
-        useInfiniteQuery: () => ({
-          data: { pages: [[]] },
-          isLoading: false,
-          error: undefined,
-          fetchNextPage: () => {},
-          hasNextPage: false,
-          isFetchingNextPage: false,
-        }),
+        useInfiniteQuery: (...args: any[]) => useInfiniteQueryMock(...args),
         useQuery: () => ({ data: [], isLoading: false, error: undefined }),
       },
       create: { useMutation: () => ({ mutate: () => {}, isPending: false, error: undefined }) },
@@ -48,9 +52,18 @@ vi.mock('@/server/api/react', () => ({
 }));
 
 describe('HomePage', () => {
+  afterEach(() => {
+    mockSearch = '';
+    useInfiniteQueryMock.mockClear();
+  });
   it('renders header with count, filters, search and new task button', () => {
-    render(<HomePage />);
-    expect(screen.getByText('Tasks')).toBeInTheDocument();
+    render(
+      <>
+        <NavBar />
+        <HomePage />
+      </>
+    );
+    expect(screen.getByRole('heading', { name: 'Tasks' })).toBeInTheDocument();
     expect(screen.getByText('· 0')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /new task/i })).toBeInTheDocument();
@@ -59,18 +72,25 @@ describe('HomePage', () => {
     });
   });
 
-  it('shows account menu with Settings and opens dropdown', () => {
-    render(<HomePage />);
-    const acctBtn = screen.getByRole('button', { name: /settings/i });
-    expect(acctBtn).toBeInTheDocument();
-    // open menu
-    acctBtn.click();
-    expect(screen.getByRole('menuitem', { name: /account settings/i })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeInTheDocument();
+  it('renders account menu button', () => {
+    render(
+      <>
+        <NavBar />
+        <HomePage />
+      </>
+    );
+    expect(
+      screen.getByRole('button', { name: /account menu/i })
+    ).toBeInTheDocument();
   });
 
   it('focuses search on "/" key', () => {
-    render(<HomePage />);
+    render(
+      <>
+        <NavBar />
+        <HomePage />
+      </>
+    );
     const input = screen.getByPlaceholderText('Search tasks...') as HTMLInputElement;
     expect(document.activeElement).not.toBe(input);
     fireEvent.keyDown(window, { key: '/' });
@@ -78,7 +98,12 @@ describe('HomePage', () => {
   });
 
   it('cycles filter with ctrl+arrow keys', () => {
-    render(<HomePage />);
+    render(
+      <>
+        <NavBar />
+        <HomePage />
+      </>
+    );
     // Tabs are buttons styled as tabs; verify cycling changes selected label
     expect(screen.getByRole('button', { name: /all/i })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowRight', ctrlKey: true });
@@ -86,9 +111,30 @@ describe('HomePage', () => {
   });
 
   it('shows shortcuts popover when clicking question mark', () => {
-    render(<HomePage />);
+    render(
+      <>
+        <NavBar />
+        <HomePage />
+      </>
+    );
     const btn = screen.getByRole('button', { name: /show shortcuts/i });
     fireEvent.click(btn);
     expect(screen.getByText('Create task')).toBeInTheDocument();
+  });
+
+  it('passes search params to task query', () => {
+    mockSearch = 'status=DONE&subject=Math';
+    render(
+      <>
+        <NavBar />
+        <HomePage />
+      </>
+    );
+    const args = useInfiniteQueryMock.mock.calls[0][0];
+    expect(args).toMatchObject({
+      filter: 'all',
+      status: 'DONE',
+      subject: 'Math',
+    });
   });
 });

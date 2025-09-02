@@ -26,6 +26,7 @@ export const taskRouter = router({
         .object({
           filter: z.enum(['all', 'overdue', 'today', 'archive']).optional(),
           subject: z.string().optional(),
+          status: z.nativeEnum(TaskStatus).optional(),
           priority: z.nativeEnum(TaskPriority).optional(),
           courseId: z.string().optional(),
           projectId: z.string().optional(),
@@ -46,6 +47,7 @@ export const taskRouter = router({
       const userId = requireUserId(ctx);
       const filter = input?.filter ?? 'all';
       const subject = input?.subject;
+      const status = input?.status;
       const priority = input?.priority;
       const courseId = input?.courseId;
       const projectId = input?.projectId;
@@ -99,6 +101,9 @@ export const taskRouter = router({
 
       if (subject) {
         where = { ...where, subject };
+      }
+      if (status) {
+        where = { ...where, status };
       }
       if (priority) {
         where = { ...where, priority };

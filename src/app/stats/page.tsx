@@ -3,6 +3,8 @@
 import React from "react";
 import { useTheme } from "next-themes";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   BarChart,
   Bar,
@@ -28,6 +30,8 @@ type Task = RouterOutputs["task"]["list"][number];
 
 export default function StatsPage() {
   const { data: session } = useSession();
+  const router = useRouter();
+<<<<<<< HEAD
   const [startDate, setStartDate] = React.useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -48,6 +52,10 @@ export default function StatsPage() {
     [filter, subject, range.start, range.end]
   );
   const { data, isLoading, error } = api.task.list.useQuery(queryInput, {
+=======
+  const router = useRouter();
+  const { data, isLoading, error } = api.task.list.useQuery(undefined, {
+>>>>>>> origin/codex/add-onclick-handlers-for-bar-and-pie
     enabled: !!session,
   });
   const tasks: RouterOutputs["task"]["list"] = data ?? [];
@@ -173,6 +181,7 @@ export default function StatsPage() {
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />
+<<<<<<< HEAD
           </label>
         </section>
 
@@ -194,6 +203,78 @@ export default function StatsPage() {
             label="Avg Focus (m)"
             value={averageFocusMinutes}
           />
+=======
+            <Tooltip />
+            <Bar
+              dataKey="count"
+              fill={chartColors.bar}
+              onClick={(data: any) =>
+                router.push(
+                  `/?status=${encodeURIComponent(data.status as string)}`
+                )
+              }
+              className="cursor-pointer"
+            />
+          </BarChart>
+        </section>
+        <section className="space-y-2">
+          <h2 className="text-xl font-medium">By Subject</h2>
+          <ul>
+            {subjectData.map((s) => (
+              <li key={s.subject}>
+                {s.subject}: {s.count}
+              </li>
+            ))}
+          </ul>
+          <PieChart width={400} height={200}>
+            <Pie
+              data={subjectData}
+              dataKey="count"
+              nameKey="subject"
+              outerRadius={80}
+              onClick={(data: any) =>
+                router.push(
+                  `/?subject=${encodeURIComponent(
+                    data.subject as string
+                  )}`
+                )
+              }
+              className="cursor-pointer"
+            >
+              {subjectData.map((_, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={chartColors.pie[index % chartColors.pie.length]}
+                />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </section>
+        <section className="space-y-2">
+          <h2 className="text-xl font-medium">Focus Time by Task</h2>
+          <ul>
+            {focusByTask.map((f) => (
+              <li key={f.id}>
+                {f.title}: {f.minutes}m
+              </li>
+            ))}
+          </ul>
+          <BarChart width={400} height={200} data={focusByTask}>
+            <XAxis
+              dataKey="title"
+              stroke={chartColors.axis}
+              tick={{ fill: chartColors.text }}
+            />
+            <YAxis
+              allowDecimals={false}
+              stroke={chartColors.axis}
+              tick={{ fill: chartColors.text }}
+            />
+            <Tooltip />
+            <Bar dataKey="minutes" fill={chartColors.bar} />
+          </BarChart>
+>>>>>>> origin/codex/add-onclick-handlers-for-bar-and-pie
         </section>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -230,7 +311,13 @@ export default function StatsPage() {
                   </YAxis>
                   <Tooltip />
                   <Legend wrapperStyle={{ color: chartColors.text }} />
-                  <Bar dataKey="count">
+                  <Bar
+                    dataKey="count"
+                    onClick={(data: any) =>
+                      router.push(`/?status=${encodeURIComponent(data.status as string)}`)
+                    }
+                    className="cursor-pointer"
+                  >
                     {statusData.map((s) => (
                       <Cell
                         key={s.status}
@@ -299,6 +386,12 @@ export default function StatsPage() {
                     dataKey="count"
                     nameKey="subject"
                     outerRadius={80}
+                    onClick={(data: any) =>
+                      router.push(
+                        `/?subject=${encodeURIComponent(data.subject as string)}`
+                      )
+                    }
+                    className="cursor-pointer"
                   >
                     {subjectData.map((_, index) => (
                       <Cell

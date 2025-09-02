@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TaskPriority, RecurrenceType } from '@prisma/client';
+import { TaskPriority, RecurrenceType, TaskStatus } from '@prisma/client';
 
 // Define hoisted fns for module mock
 const hoisted = vi.hoisted(() => {
@@ -119,6 +119,15 @@ describe('taskRouter.list ordering', () => {
       userId: 'user1',
       createdAt: { gte: start, lte: end },
     });
+  });
+
+  it('filters by status when provided', async () => {
+    await taskRouter
+      .createCaller(ctx)
+      .list({ filter: 'all', status: TaskStatus.DONE });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+    const arg = hoisted.findMany.mock.calls[0][0];
+    expect(arg.where).toEqual({ userId: 'user1', status: TaskStatus.DONE });
   });
 
   it('uses session timezone for today range when available', async () => {

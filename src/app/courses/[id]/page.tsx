@@ -67,6 +67,7 @@ export default function CoursePage({ params }: { params: { id: string } }) {
         <TaskList
           filter="all"
           subject={null}
+          status={null}
           priority={null}
           courseId={id}
           projectId={null}
