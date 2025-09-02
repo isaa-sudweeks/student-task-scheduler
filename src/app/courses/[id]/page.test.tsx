@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -48,5 +48,12 @@ describe('CoursePage', () => {
     expect(screen.getByText('Course 1')).toBeInTheDocument();
     expect(screen.getByLabelText(/upload syllabus/i)).toBeInTheDocument();
     expect(screen.getByText('Task 1')).toBeInTheDocument();
+  });
+
+  it('preselects course when adding new task', () => {
+    render(<CoursePage params={{ id: 'c1' }} />);
+    fireEvent.click(screen.getByText('+ Add Task'));
+    const select = screen.getByLabelText('Course') as HTMLSelectElement;
+    expect(select.value).toBe('c1');
   });
 });

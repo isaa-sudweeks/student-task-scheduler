@@ -21,6 +21,7 @@ interface TaskModalProps {
   initialDueAt?: Date | null;
   onDraftDueChange?: (dueAt: Date | null) => void;
   initialProjectId?: string | null;
+  initialCourseId?: string | null;
 }
 
 export function TaskModal({
@@ -32,6 +33,7 @@ export function TaskModal({
   initialDueAt,
   onDraftDueChange,
   initialProjectId,
+  initialCourseId,
 }: TaskModalProps) {
   const utils = api.useUtils();
   const isEdit = mode === "edit";
@@ -87,7 +89,7 @@ export function TaskModal({
       setRecurrenceCount('');
       setRecurrenceUntil('');
       setProjectId(initialProjectId ?? null);
-      setCourseId(null);
+      setCourseId(initialCourseId ?? null);
       if (initialDueAt) {
         setDueEnabled(true);
         setDue(formatLocalDateTime(new Date(initialDueAt)));
@@ -97,7 +99,7 @@ export function TaskModal({
       }
     }
     setTitleError(null);
-  }, [open, isEdit, task, initialTitle, initialDueAt, initialProjectId]);
+  }, [open, isEdit, task, initialTitle, initialDueAt, initialProjectId, initialCourseId]);
 
   const create = api.task.create.useMutation({
     onSuccess: async () => {

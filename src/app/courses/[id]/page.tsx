@@ -74,7 +74,12 @@ export default function CoursePage({ params }: { params: { id: string } }) {
         />
         <Button onClick={() => setShowModal(true)}>+ Add Task</Button>
       </div>
-      <TaskModal open={showModal} mode="create" onClose={() => setShowModal(false)} />
+      <TaskModal
+        open={showModal}
+        mode="create"
+        onClose={() => setShowModal(false)}
+        initialCourseId={id}
+      />
     </main>
   );
 }

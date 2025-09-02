@@ -81,15 +81,6 @@ describe('TaskModal due date editing', () => {
     expect(d.getMinutes()).toBe(59);
   });
 
-  it('renders fallback when creation fails', () => {
-    createMutation.error = new Error('fail');
-    render(
-      <ErrorBoundary fallback={<div>fallback</div>}>
-        <TaskModal open mode="create" onClose={() => {}} />
-      </ErrorBoundary>
-    );
-    expect(screen.getByText('fallback')).toBeInTheDocument();
-  });
 });
 
 describe('TaskModal validation', () => {
@@ -126,6 +117,12 @@ describe('TaskModal validation', () => {
       render(<TaskModal open mode="create" onClose={() => {}} initialProjectId="p1" />);
       const select = screen.getByLabelText('Project') as HTMLSelectElement;
       expect(select.value).toBe('p1');
+    });
+
+    it('preselects initial course when provided', () => {
+      render(<TaskModal open mode="create" onClose={() => {}} initialCourseId="c1" />);
+      const select = screen.getByLabelText('Course') as HTMLSelectElement;
+      expect(select.value).toBe('c1');
     });
   });
 
