@@ -24,11 +24,6 @@ export default function CoursesPage() {
   const [page, setPage] = useState(1);
   const limit = 10;
   const {
-    data: courses = [],
-    isLoading,
-    error,
-  } = api.course.list.useQuery({ page, limit });
-  const {
     mutate: createCourse,
     isPending: isCreating,
     error: createError,

@@ -50,6 +50,20 @@ describe('courseRouter.list', () => {
       { id: 'c1', title: 'c', term: null, color: null, nextDueAt: due },
     ]);
   });
+  it('applies search and term filters', async () => {
+    await courseRouter
+      .createCaller(ctx)
+      .list({ page: 1, limit: 10, search: 'math', term: 'fall' });
+    expect(hoisted.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user1',
+        title: { contains: 'math', mode: 'insensitive' },
+        term: 'fall',
+      },
+      skip: 0,
+      take: 10,
+    });
+  });
 });
 
 describe('courseRouter.create', () => {
