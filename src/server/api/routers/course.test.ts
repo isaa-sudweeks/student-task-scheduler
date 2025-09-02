@@ -54,15 +54,18 @@ describe('courseRouter.list', () => {
     await courseRouter
       .createCaller(ctx)
       .list({ page: 1, limit: 10, search: 'math', term: 'fall' });
-    expect(hoisted.findMany).toHaveBeenCalledWith({
-      where: {
-        userId: 'user1',
-        title: { contains: 'math', mode: 'insensitive' },
-        term: 'fall',
-      },
-      skip: 0,
-      take: 10,
-    });
+    expect(hoisted.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: 'user1',
+          title: { contains: 'math', mode: 'insensitive' },
+          term: 'fall',
+        },
+        skip: 0,
+        take: 10,
+        include: expect.any(Object),
+      })
+    );
   });
 });
 
@@ -116,4 +119,3 @@ describe('courseRouter.deleteMany', () => {
     });
   });
 });
-

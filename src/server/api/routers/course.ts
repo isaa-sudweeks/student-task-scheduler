@@ -16,9 +16,16 @@ export const courseRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
-      const { page, limit } = input;
+      const { page, limit, search, term } = input;
+      const where: any = { userId };
+      if (search && search.trim()) {
+        where.title = { contains: search, mode: 'insensitive' };
+      }
+      if (term) {
+        where.term = term;
+      }
       const courses = await db.course.findMany({
-        where: { userId },
+        where,
         skip: (page - 1) * limit,
         take: limit,
         include: {
