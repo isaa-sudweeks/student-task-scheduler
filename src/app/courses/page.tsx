@@ -214,10 +214,10 @@ export default function CoursesPage() {
 
 function CourseItem({
   course,
-  onPendingChange,
+  onPendingChange = () => {},
 }: {
   course: { id: string; title: string; term: string | null; color: string | null };
-  onPendingChange: (id: string, pending: boolean) => void;
+  onPendingChange?: (id: string, pending: boolean) => void;
 }) {
   const utils = api.useUtils();
   const {

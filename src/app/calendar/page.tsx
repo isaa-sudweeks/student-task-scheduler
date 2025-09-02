@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, type DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
+import { FixedSizeList as List } from 'react-window';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { api } from '@/server/api/react';
@@ -59,6 +60,8 @@ export default function CalendarPage() {
     const scheduledTaskIds = new Set(eventsData.map((e) => e.taskId));
     return tasksData.filter((t) => !scheduledTaskIds.has(t.id));
   }, [tasksData, eventsData]);
+
+  const ITEM_SIZE = 48;
 
   useEffect(() => {
     if (eventsData?.[0]?.startAt) {
@@ -339,13 +342,26 @@ export default function CalendarPage() {
       >
       <div className="w-full space-y-3 self-start md:col-span-1">
         <h2 className="font-semibold">Backlog</h2>
-        <ul className="space-y-2">
-          {backlog.map((t) => (
-            <li key={t.id}>
-              <DraggableTask id={t.id} title={t.title} onSpaceKey={() => toggleFocus(t.id)} />
-            </li>
-          ))}
-        </ul>
+        <List
+          height={Math.min(400, backlog.length * ITEM_SIZE)}
+          itemCount={backlog.length}
+          itemSize={ITEM_SIZE}
+          width="100%"
+          itemKey={(index) => backlog[index].id}
+        >
+          {({ index, style }) => {
+            const t = backlog[index];
+            return (
+              <div style={{ ...style, paddingBottom: 8 }}>
+                <DraggableTask
+                  id={t.id}
+                  title={t.title}
+                  onSpaceKey={() => toggleFocus(t.id)}
+                />
+              </div>
+            );
+          }}
+        </List>
 
         {/* Test-only helper to simulate a drop action */}
         {backlog[0] && (
