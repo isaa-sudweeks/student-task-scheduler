@@ -101,6 +101,13 @@ describe('taskRouter.list ordering', () => {
     expect(arg.where).toEqual({ userId: 'user1', projectId: 'p1' });
   });
 
+  it('filters by parentId when provided', async () => {
+    await taskRouter.createCaller(ctx).list({ filter: 'all', parentId: 't1' });
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+    const arg = hoisted.findMany.mock.calls[0][0];
+    expect(arg.where).toEqual({ userId: 'user1', parentId: 't1' });
+  });
+
   it('uses session timezone for today range when available', async () => {
     await taskRouter
       .createCaller({ session: { user: { id: 'user1', timezone: 'America/Denver' } } as any })
@@ -229,6 +236,20 @@ describe('taskRouter.create', () => {
         userId: 'user1',
         projectId: 'p1',
         courseId: 'c1',
+        title: 'a',
+        dueAt: null,
+        subject: null,
+        notes: null,
+      }),
+    });
+  });
+
+  it('passes parentId to the database', async () => {
+    await taskRouter.createCaller(ctx).create({ title: 'a', parentId: 't1' });
+    expect(hoisted.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user1',
+        parentId: 't1',
         title: 'a',
         dueAt: null,
         subject: null,

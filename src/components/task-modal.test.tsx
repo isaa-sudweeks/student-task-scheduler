@@ -27,6 +27,7 @@ vi.mock('@/server/api/react', () => ({
       update: { useMutation: () => updateMutation },
       delete: { useMutation: () => deleteMutation },
       setStatus: { useMutation: () => setStatusMutation },
+      list: { useQuery: () => ({ data: [] }) },
     },
     project: { list: { useQuery: () => ({ data: [{ id: 'p1', title: 'Project 1' }] }) } },
     course: { list: { useQuery: () => ({ data: [{ id: 'c1', title: 'Course 1' }] }) } },
@@ -128,6 +129,23 @@ describe('TaskModal accessibility', () => {
 
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('TaskModal subtasks', () => {
+  beforeEach(() => {
+    mutateCreate.mockReset();
+    createMutation.error = undefined;
+  });
+
+  it('creates a subtask for the given parent', () => {
+    const task = { id: 't1', title: 'Parent', subject: null, notes: null, dueAt: null } as Task;
+    render(<TaskModal open mode="edit" onClose={() => {}} task={task} />);
+    fireEvent.change(screen.getByPlaceholderText('New subtask'), { target: { value: 'Child' } });
+    fireEvent.click(screen.getByText('Add subtask'));
+    expect(mutateCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Child', parentId: 't1' })
+    );
   });
 });
 
