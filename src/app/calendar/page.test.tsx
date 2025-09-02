@@ -21,6 +21,19 @@ const events = [
   { id: 'e1', taskId: 't2', startAt: new Date('2099-01-01T10:00:00Z'), endAt: new Date('2099-01-01T11:00:00Z') },
 ];
 
+const tasksQueryMock = {
+  data: tasks,
+  isLoading: false,
+  error: undefined as Error | undefined,
+  refetch: vi.fn(),
+};
+const eventsQueryMock = {
+  data: events,
+  isLoading: false,
+  error: undefined as Error | undefined,
+  refetch: vi.fn(),
+};
+
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({
@@ -29,10 +42,10 @@ vi.mock('@/server/api/react', () => ({
       focus: { status: { invalidate: vi.fn() } },
     }),
     task: {
-      list: { useQuery: () => ({ data: tasks, isLoading: false }) },
+      list: { useQuery: () => tasksQueryMock },
     },
     event: {
-      listRange: { useQuery: () => ({ data: events, isLoading: false }) },
+      listRange: { useQuery: () => eventsQueryMock },
       schedule: { useMutation: () => ({ mutate: (...a: unknown[]) => scheduleMutate(...a) }) },
       move: { useMutation: () => ({ mutate: (...a: unknown[]) => moveMutate(...a) }) },
     },
@@ -49,6 +62,10 @@ describe('CalendarPage', () => {
     focusStop.mockReset();
     scheduleMutate.mockReset();
     moveMutate.mockReset();
+    tasksQueryMock.error = undefined;
+    tasksQueryMock.refetch.mockReset();
+    eventsQueryMock.error = undefined;
+    eventsQueryMock.refetch.mockReset();
     window.localStorage.clear();
     window.localStorage.setItem('dayWindowStartHour', '6');
     window.localStorage.setItem('dayWindowEndHour', '20');
@@ -102,6 +119,18 @@ describe('CalendarPage', () => {
     render(<CalendarPage />);
     const backlogSection = screen.getByRole('heading', { name: /backlog/i }).parentElement;
     expect(backlogSection).toHaveClass('self-start');
+  });
+
+  it('shows errors from queries and retries when prompted', () => {
+    tasksQueryMock.error = new Error('oops tasks');
+    eventsQueryMock.error = new Error('oops events');
+    render(<CalendarPage />);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Failed to load tasks');
+    expect(alert).toHaveTextContent('Failed to load events');
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(tasksQueryMock.refetch).toHaveBeenCalled();
+    expect(eventsQueryMock.refetch).toHaveBeenCalled();
   });
 
   it('focus mode toggles on with Space on a task', () => {
