@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, within } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach, beforeAll, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
@@ -77,8 +77,17 @@ describe('StatsPage', () => {
     });
 
     render(<StatsPage />);
-    expect(screen.getByText('Total Tasks: 3')).toBeInTheDocument();
-    expect(screen.getByText('Completion Rate: 67%')).toBeInTheDocument();
+    const totalCardLabel = screen.getByText('Total Tasks');
+    const totalCard = totalCardLabel.parentElement?.parentElement as HTMLElement;
+    expect(totalCard).toBeInTheDocument();
+    expect(within(totalCard).getByText('3')).toBeInTheDocument();
+    expect(totalCard.querySelector('svg')).toBeTruthy();
+
+    const rateCardLabel = screen.getByText('Completion Rate');
+    const rateCard = rateCardLabel.parentElement?.parentElement as HTMLElement;
+    expect(rateCard).toBeInTheDocument();
+    expect(within(rateCard).getByText('67%')).toBeInTheDocument();
+    expect(rateCard.querySelector('svg')).toBeTruthy();
     expect(screen.getByText('TODO: 1')).toBeInTheDocument();
     expect(screen.getByText('DONE: 2')).toBeInTheDocument();
     expect(screen.getByText('Math: 2')).toBeInTheDocument();

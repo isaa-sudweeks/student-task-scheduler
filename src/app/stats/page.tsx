@@ -17,6 +17,8 @@ import {
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { StatCard } from "@/components/ui/stat-card";
+import { CheckCircle, List } from "lucide-react";
 
 type Task = RouterOutputs["task"]["list"][number];
 
@@ -99,9 +101,19 @@ export default function StatsPage() {
         <header>
           <h1 className="text-2xl font-semibold">Task Statistics</h1>
         </header>
-        <section className="space-y-2">
-          <p>Total Tasks: {total}</p>
-          <p>Completion Rate: {completionRate}%</p>
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <StatCard
+            icon={<List className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
+            label="Total Tasks"
+            value={total}
+          />
+          <StatCard
+            icon={
+              <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+            }
+            label="Completion Rate"
+            value={`${completionRate}%`}
+          />
         </section>
         <div className="grid gap-6 md:grid-cols-2">
           <section>
