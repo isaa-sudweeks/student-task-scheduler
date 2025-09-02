@@ -64,6 +64,7 @@ export default function CoursesPage() {
       </ul>
     );
   if (error) return <p className="text-red-500">{error.message}</p>;
+  const courseCount = courses.length;
 
   const sortedCourses = [...courses].sort((a, b) =>
     sortBy === "title"
@@ -100,7 +101,7 @@ export default function CoursesPage() {
   return (
     <div className="container mx-auto px-4">
       <main className="space-y-6">
-        <h1 className="text-2xl font-semibold">Courses</h1>
+        <h1 className="text-2xl font-semibold">Courses ({courseCount})</h1>
         <div className="max-w-md mx-auto rounded-lg border p-4 shadow-sm bg-card">
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <label htmlFor="course-title" className="flex flex-col gap-1">
