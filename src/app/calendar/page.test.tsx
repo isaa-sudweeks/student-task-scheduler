@@ -136,6 +136,24 @@ describe('CalendarPage', () => {
     expect(arg.durationMinutes).toBe(45);
   });
 
+  it('updates settings and applies them immediately', () => {
+    render(<CalendarPage />);
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    fireEvent.change(screen.getByLabelText(/day start/i), { target: { value: '7' } });
+    fireEvent.change(screen.getByLabelText(/day end/i), { target: { value: '19' } });
+    fireEvent.change(screen.getByLabelText(/default duration/i), { target: { value: '45' } });
+    expect(window.localStorage.getItem('dayWindowStartHour')).toBe('7');
+    expect(window.localStorage.getItem('dayWindowEndHour')).toBe('19');
+    expect(window.localStorage.getItem('defaultDurationMinutes')).toBe('45');
+    expect(screen.getAllByLabelText('work-hours-7-19').length).toBeGreaterThan(0);
+    const simulateDrop = screen.getByRole('button', { name: /simulate-drop-unscheduled/i });
+    fireEvent.click(simulateDrop);
+    const arg = scheduleMutate.mock.calls.pop()![0] as any;
+    expect(arg.dayWindowStartHour).toBe(7);
+    expect(arg.dayWindowEndHour).toBe(19);
+    expect(arg.durationMinutes).toBe(45);
+  });
+
   it('reschedules an existing event when moved to a new slot', () => {
     render(<CalendarPage />);
     const simulateMove = screen.getByRole('button', { name: /simulate-move-event/i });
