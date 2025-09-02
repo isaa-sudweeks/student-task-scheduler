@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { ArrowUpDown as ArrowUpDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CourseSkeleton } from "@/components/CourseSkeleton";
 import { api } from "@/server/api/react";
@@ -27,6 +28,7 @@ export default function CoursesPage() {
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
   const [sortBy, setSortBy] = useState<"title" | "term">("title");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [termFilter, setTermFilter] = useState("");
@@ -50,14 +52,13 @@ export default function CoursesPage() {
     );
   if (error) return <p className="text-red-500">{error.message}</p>;
 
-  const sortedCourses = courses
-    .slice()
-    .sort((a, b) =>
-      sortBy === "title"
-        ? a.title.localeCompare(b.title)
-        : (a.term ?? "").localeCompare(b.term ?? "") ||
-          a.title.localeCompare(b.title),
-    );
+  const sortedCourses = [...courses].sort((a, b) =>
+    sortBy === "title"
+      ? a.title.localeCompare(b.title)
+      : (a.term ?? "").localeCompare(b.term ?? "") ||
+        a.title.localeCompare(b.title),
+  );
+  if (sortDir === "desc") sortedCourses.reverse();
 
   const terms = Array.from(
     new Set(
@@ -142,6 +143,13 @@ export default function CoursesPage() {
           onClick={() => setSortBy("term")}
         >
           Sort by Term
+        </Button>
+        <Button
+          variant="tertiary"
+          onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
+          aria-label="Toggle sort direction"
+        >
+          <ArrowUpDownIcon className="h-4 w-4" />
         </Button>
       </div>
       <div className="max-w-md">
