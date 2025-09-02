@@ -4,6 +4,16 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
 
+const COLOR_OPTIONS = [
+  "#000000",
+  "#FF0000",
+  "#00FF00",
+  "#0000FF",
+  "#FFFF00",
+  "#FF00FF",
+  "#00FFFF",
+];
+
 export default function CoursesPage() {
   const utils = api.useUtils();
   const {
@@ -85,14 +95,20 @@ export default function CoursesPage() {
           <label htmlFor="course-color" className="flex flex-col gap-1">
             Color (optional)
             <div className="flex items-center gap-2">
-              <input
+              <select
                 id="course-color"
-                type="color"
                 aria-label="Course color"
-                className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-                value={color || "#000000"}
+                className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                value={color}
                 onChange={(e) => setColor(e.target.value)}
-              />
+              >
+                <option value="">Select color</option>
+                {COLOR_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
               <div
                 data-testid="color-preview"
                 className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
@@ -202,14 +218,20 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
       <label htmlFor={colorId} className="flex flex-col gap-1">
         Color
         <div className="flex items-center gap-2">
-          <input
+          <select
             id={colorId}
-            type="color"
             aria-label="Course color"
-            className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            value={color || "#000000"}
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            value={color}
             onChange={(e) => setColor(e.target.value)}
-          />
+          >
+            <option value="">Select color</option>
+            {COLOR_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
           <div
             className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
             style={{ backgroundColor: color || "#000000" }}
