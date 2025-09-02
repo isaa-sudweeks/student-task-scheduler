@@ -12,7 +12,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  ResponsiveContainer,
 } from "recharts";
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
@@ -42,6 +41,32 @@ export default function StatsPage() {
       minutes: Math.round((focusMap[t.id] ?? 0) / 60000),
     }))
     .filter((f) => f.minutes > 0);
+
+  const totalFocusMinutes = focusByTask.reduce(
+    (sum, f) => sum + f.minutes,
+    0
+  );
+  const averageFocusMinutes =
+    focusByTask.length === 0
+      ? 0
+      : Math.round(totalFocusMinutes / focusByTask.length);
+
+  const focusSubjectTotals = tasks.reduce(
+    (acc: Record<string, number>, task: Task) => {
+      const minutes = Math.round((focusMap[task.id] ?? 0) / 60000);
+      if (minutes > 0) {
+        const subject = task.subject ?? "Uncategorized";
+        acc[subject] = (acc[subject] ?? 0) + minutes;
+      }
+      return acc;
+    },
+    {}
+  );
+  const focusBySubject: { subject: string; minutes: number }[] =
+    Object.entries(focusSubjectTotals).map(([subject, minutes]) => ({
+      subject,
+      minutes: Number(minutes),
+    }));
   const { resolvedTheme } = useTheme();
 
   const isDark = resolvedTheme === "dark";
@@ -102,6 +127,7 @@ export default function StatsPage() {
         <section className="space-y-2">
           <p>Total Tasks: {total}</p>
           <p>Completion Rate: {completionRate}%</p>
+          <p>Average Focus Time: {averageFocusMinutes}m</p>
         </section>
         <section className="space-y-2">
           <h2 className="text-xl font-medium">By Status</h2>
@@ -160,6 +186,30 @@ export default function StatsPage() {
           <BarChart width={400} height={200} data={focusByTask}>
             <XAxis
               dataKey="title"
+              stroke={chartColors.axis}
+              tick={{ fill: chartColors.text }}
+            />
+            <YAxis
+              allowDecimals={false}
+              stroke={chartColors.axis}
+              tick={{ fill: chartColors.text }}
+            />
+            <Tooltip />
+            <Bar dataKey="minutes" fill={chartColors.bar} />
+          </BarChart>
+        </section>
+        <section className="space-y-2">
+          <h2 className="text-xl font-medium">Focus Time by Subject</h2>
+          <ul>
+            {focusBySubject.map((s) => (
+              <li key={s.subject}>
+                {s.subject}: {s.minutes}m
+              </li>
+            ))}
+          </ul>
+          <BarChart width={400} height={200} data={focusBySubject}>
+            <XAxis
+              dataKey="subject"
               stroke={chartColors.axis}
               tick={{ fill: chartColors.text }}
             />

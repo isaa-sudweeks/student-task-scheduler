@@ -24,6 +24,11 @@ exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
         50
         %
       </p>
+      <p>
+        Average Focus Time: 
+        2
+        m
+      </p>
     </section>
     <section
       class="space-y-2"
@@ -104,6 +109,34 @@ exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
         width="400"
       />
     </section>
+    <section
+      class="space-y-2"
+    >
+      <h2
+        class="text-xl font-medium"
+      >
+        Focus Time by Subject
+      </h2>
+      <ul>
+        <li>
+          Math
+          : 
+          1
+          m
+        </li>
+        <li>
+          Science
+          : 
+          2
+          m
+        </li>
+      </ul>
+      <div
+        data="[object Object],[object Object]"
+        height="200"
+        width="400"
+      />
+    </section>
   </main>
 </div>
 `;
@@ -131,6 +164,11 @@ exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
         Completion Rate: 
         50
         %
+      </p>
+      <p>
+        Average Focus Time: 
+        2
+        m
       </p>
     </section>
     <section
@@ -201,6 +239,34 @@ exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
         </li>
         <li>
           Task 2
+          : 
+          2
+          m
+        </li>
+      </ul>
+      <div
+        data="[object Object],[object Object]"
+        height="200"
+        width="400"
+      />
+    </section>
+    <section
+      class="space-y-2"
+    >
+      <h2
+        class="text-xl font-medium"
+      >
+        Focus Time by Subject
+      </h2>
+      <ul>
+        <li>
+          Math
+          : 
+          1
+          m
+        </li>
+        <li>
+          Science
           : 
           2
           m

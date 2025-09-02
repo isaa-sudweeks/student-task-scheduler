@@ -79,11 +79,13 @@ describe('StatsPage', () => {
     render(<StatsPage />);
     expect(screen.getByText('Total Tasks: 3')).toBeInTheDocument();
     expect(screen.getByText('Completion Rate: 67%')).toBeInTheDocument();
+    expect(screen.getByText('Average Focus Time: 2m')).toBeInTheDocument();
     expect(screen.getByText('TODO: 1')).toBeInTheDocument();
     expect(screen.getByText('DONE: 2')).toBeInTheDocument();
     expect(screen.getByText('Math: 2')).toBeInTheDocument();
     expect(screen.getByText('Science: 1')).toBeInTheDocument();
     expect(screen.getByText('Task 2: 2m')).toBeInTheDocument();
+    expect(screen.getByText('Science: 2m')).toBeInTheDocument();
   });
 
   it('renders focus stats for tasks with duplicate titles without key warnings', () => {
@@ -108,6 +110,8 @@ describe('StatsPage', () => {
     render(<StatsPage />);
     expect(screen.getByText('Task: 1m')).toBeInTheDocument();
     expect(screen.getByText('Task: 2m')).toBeInTheDocument();
+    expect(screen.getByText('Math: 1m')).toBeInTheDocument();
+    expect(screen.getByText('Science: 2m')).toBeInTheDocument();
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });
