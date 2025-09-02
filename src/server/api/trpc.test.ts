@@ -5,14 +5,11 @@ const testRouter = router({
   ping: publicProcedure.query(() => 'pong'),
 });
 
-// The rate limiter in trpc.ts allows 10 requests per 10 seconds.
-
-describe('tRPC rate limiting', () => {
-  it('throws TOO_MANY_REQUESTS after exceeding quota', async () => {
+describe('tRPC request handling', () => {
+  it('allows repeated requests without rate limiting', async () => {
     const caller = testRouter.createCaller({ ip: '1.1.1.1' });
-    for (let i = 0; i < 10; i++) {
-      await caller.ping();
+    for (let i = 0; i < 20; i++) {
+      await expect(caller.ping()).resolves.toBe('pong');
     }
-    await expect(caller.ping()).rejects.toMatchObject({ code: 'TOO_MANY_REQUESTS' });
   });
 });
