@@ -108,6 +108,19 @@ describe('taskRouter.list ordering', () => {
     expect(arg.where).toEqual({ userId: 'user1', parentId: 't1' });
   });
 
+  it('filters by createdAt range when start and end provided', async () => {
+    const start = new Date('2023-01-01T00:00:00Z');
+    const end = new Date('2023-01-31T23:59:59Z');
+    await taskRouter
+      .createCaller(ctx)
+      .list({ filter: 'all', start, end });
+    const arg = hoisted.findMany.mock.calls[0][0];
+    expect(arg.where).toEqual({
+      userId: 'user1',
+      createdAt: { gte: start, lte: end },
+    });
+  });
+
   it('uses session timezone for today range when available', async () => {
     await taskRouter
       .createCaller({ session: { user: { id: 'user1', timezone: 'America/Denver' } } as any })

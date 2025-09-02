@@ -35,11 +35,11 @@ export default function StatsPage() {
     () => ({ start: new Date(startDate), end: new Date(endDate) }),
     [startDate, endDate],
   );
-  const { data, isLoading, error } = api.task.list.useQuery(range as any, {
+  const { data, isLoading, error } = api.task.list.useQuery(range, {
     enabled: !!session,
   });
   const tasks: RouterOutputs["task"]["list"] = data ?? [];
-  const { data: focusData } = api.focus.aggregate.useQuery(range as any);
+  const { data: focusData } = api.focus.aggregate.useQuery(range);
   const focusMap = React.useMemo(() => {
     const map: Record<string, number> = {};
     const totals = focusData ?? [];
