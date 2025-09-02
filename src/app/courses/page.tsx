@@ -180,70 +180,72 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
     trimmedColor !== (course.color ?? "");
   const isSaveDisabled = isUpdating || !hasChanges;
   return (
-    <li className="flex flex-col gap-2 border-b pb-4">
-      <label htmlFor={titleId} className="flex flex-col gap-1">
-        Title
-        <input
-          id={titleId}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </label>
-      <label htmlFor={termId} className="flex flex-col gap-1">
-        Term
-        <input
-          id={termId}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-        />
-      </label>
-      <label htmlFor={colorId} className="flex flex-col gap-1">
-        Color
-        <div className="flex items-center gap-2">
+    <li>
+      <div className="flex flex-col gap-2 rounded-lg border p-4 shadow-sm bg-card">
+        <label htmlFor={titleId} className="flex flex-col gap-1">
+          Title
           <input
-            id={colorId}
-            type="color"
-            aria-label="Course color"
-            className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            value={color || "#000000"}
-            onChange={(e) => setColor(e.target.value)}
+            id={titleId}
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
-          <div
-            className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
-            style={{ backgroundColor: color || "#000000" }}
+        </label>
+        <label htmlFor={termId} className="flex flex-col gap-1">
+          Term
+          <input
+            id={termId}
+            className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
           />
-        </div>
-      </label>
-      <div className="flex gap-2">
-        <Button
-          disabled={isSaveDisabled}
-          onClick={() =>
-            updateCourse({
-              id: course.id,
-              title: trimmedTitle,
-              term: trimmedTerm || null,
-              color: trimmedColor || null,
-            })
-          }
-        >
-          Save
-        </Button>
-        <Button
-          variant="danger"
-          disabled={isDeleting}
-          onClick={() => {
-            if (window.confirm("Delete this course?")) {
-              deleteCourse({ id: course.id });
+        </label>
+        <label htmlFor={colorId} className="flex flex-col gap-1">
+          Color
+          <div className="flex items-center gap-2">
+            <input
+              id={colorId}
+              type="color"
+              aria-label="Course color"
+              className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              value={color || "#000000"}
+              onChange={(e) => setColor(e.target.value)}
+            />
+            <div
+              className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
+              style={{ backgroundColor: color || "#000000" }}
+            />
+          </div>
+        </label>
+        <div className="flex gap-2">
+          <Button
+            disabled={isSaveDisabled}
+            onClick={() =>
+              updateCourse({
+                id: course.id,
+                title: trimmedTitle,
+                term: trimmedTerm || null,
+                color: trimmedColor || null,
+              })
             }
-          }}
-        >
-          Delete
-        </Button>
+          >
+            Save
+          </Button>
+          <Button
+            variant="danger"
+            disabled={isDeleting}
+            onClick={() => {
+              if (window.confirm("Delete this course?")) {
+                deleteCourse({ id: course.id });
+              }
+            }}
+          >
+            Delete
+          </Button>
+        </div>
+        {updateError && <p className="text-red-500">{updateError.message}</p>}
+        {deleteError && <p className="text-red-500">{deleteError.message}</p>}
       </div>
-      {updateError && <p className="text-red-500">{updateError.message}</p>}
-      {deleteError && <p className="text-red-500">{deleteError.message}</p>}
     </li>
   );
 }
