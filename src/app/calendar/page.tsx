@@ -203,6 +203,20 @@ export default function CalendarPage() {
     </div>
   );
 
+  if (tasksQ.isLoading || eventsQ.isLoading) {
+    return (
+      <ErrorBoundary fallback={<main>Failed to load calendar</main>}>
+        <main className="flex items-center justify-center p-4">
+          <div
+            aria-label="loading calendar"
+            role="status"
+            className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-black dark:border-white/10 dark:border-t-white"
+          />
+        </main>
+      </ErrorBoundary>
+    );
+  }
+
   if (focusedTaskId) {
     const task = tasksData.find((t) => t.id === focusedTaskId);
     return (
