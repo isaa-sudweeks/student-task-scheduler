@@ -141,9 +141,8 @@ export default function CoursesPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <label htmlFor="course-title" className="flex flex-col gap-1">
               Course title
-              <input
+              <Input
                 id="course-title"
-                className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
                 placeholder="Course title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -151,9 +150,8 @@ export default function CoursesPage() {
             </label>
             <label htmlFor="course-term" className="flex flex-col gap-1">
               Term (optional)
-              <input
+              <Input
                 id="course-term"
-                className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
                 placeholder="Term (optional)"
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
