@@ -206,7 +206,7 @@ export function TaskList({
   );
 
   // Apply structured filters (subject/priority/courseId/projectId) on top of search results
-  const filteredOrderedTasks = React.useMemo(
+  const flatFilteredTasks = React.useMemo(
     () =>
       fuseResults
         .map((r) => r.item)
@@ -219,6 +219,32 @@ export function TaskList({
         ),
     [fuseResults, subject, priority, courseId, projectId]
   );
+
+  // Arrange tasks so that subtasks appear directly after their parent
+  const { ordered: filteredOrderedTasks, depthById } = React.useMemo(() => {
+    const tasksByParent = new Map<string | null, Task[]>();
+    for (const t of flatFilteredTasks) {
+      const key = t.parentId ?? null;
+      const list = tasksByParent.get(key) ?? [];
+      list.push(t);
+      tasksByParent.set(key, list);
+    }
+    const topLevel = flatFilteredTasks.filter(
+      (t) => !t.parentId || !flatFilteredTasks.some((p) => p.id === t.parentId)
+    );
+    const ordered: Task[] = [];
+    const depthById = new Map<string, number>();
+    const traverse = (tasks: Task[], depth: number) => {
+      for (const task of tasks) {
+        ordered.push(task);
+        depthById.set(task.id, depth);
+        const children = tasksByParent.get(task.id) ?? [];
+        traverse(children, depth + 1);
+      }
+    };
+    traverse(topLevel, 0);
+    return { ordered, depthById };
+  }, [flatFilteredTasks]);
 
   React.useEffect(() => {
     onCountChange?.(filteredOrderedTasks.length);
@@ -338,8 +364,9 @@ export function TaskList({
       attributes?: any;
       isDragging?: boolean;
       onClick?: () => void;
+      depth?: number;
     }
-  >(({ t, style, listeners, attributes, isDragging, onClick }, ref) => {
+  >(({ t, style, listeners, attributes, isDragging, onClick, depth = 0 }, ref) => {
     const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
     const done = t.status === "DONE";
     const dueDate = t.dueAt ? new Date(t.dueAt) : null;
@@ -362,7 +389,7 @@ export function TaskList({
     return (
       <motion.li
         ref={ref}
-        style={style}
+        style={{ ...style, marginLeft: depth * 16 }}
         layout
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -454,6 +481,7 @@ export function TaskList({
     if (isDragging) {
       style.transform = `${style.transform ?? ""} translateY(-1px)`;
     }
+    const depth = depthById.get(t.id) ?? 0;
     return (
       <TaskCard
         ref={setNodeRef}
@@ -463,6 +491,7 @@ export function TaskList({
         attributes={attributes}
         isDragging={isDragging}
         onClick={() => setEditingTask(t)}
+        depth={depth}
       />
     );
   };
@@ -531,7 +560,13 @@ export function TaskList({
           )}
         </SortableContext>
         <DragOverlay dropAnimation={null}>
-          {activeTask ? <TaskCard t={activeTask} isDragging /> : null}
+          {activeTask ? (
+            <TaskCard
+              t={activeTask}
+              isDragging
+              depth={depthById.get(activeTask.id) ?? 0}
+            />
+          ) : null}
         </DragOverlay>
         {useVirtual &&
           !tasks.isLoading &&
