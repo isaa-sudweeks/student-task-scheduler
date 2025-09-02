@@ -18,6 +18,7 @@ vi.mock('@/server/api/react', () => ({
           return { data: opts?.select ? opts.select(courses) : courses };
         },
       },
+      update: { useMutation: () => ({ mutateAsync: vi.fn() }) },
     },
     task: {
       list: {
@@ -45,6 +46,7 @@ describe('CoursePage', () => {
   it('shows course details and tasks', () => {
     render(<CoursePage params={{ id: 'c1' }} />);
     expect(screen.getByText('Course 1')).toBeInTheDocument();
+    expect(screen.getByLabelText(/upload syllabus/i)).toBeInTheDocument();
     expect(screen.getByText('Task 1')).toBeInTheDocument();
   });
 });

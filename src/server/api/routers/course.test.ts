@@ -75,8 +75,25 @@ describe('courseRouter.create', () => {
     hoisted.findFirst.mockClear();
   });
   it('creates course with title and optional fields', async () => {
-    await courseRouter.createCaller(ctx).create({ title: 'c', term: 'fall', color: 'red', description: 'd' });
-    expect(hoisted.create).toHaveBeenCalledWith({ data: { title: 'c', userId: 'user1', term: 'fall', color: 'red', description: 'd' } });
+    await courseRouter
+      .createCaller(ctx)
+      .create({
+        title: 'c',
+        term: 'fall',
+        color: 'red',
+        description: 'd',
+        syllabusUrl: 'https://example.com/s.pdf',
+      });
+    expect(hoisted.create).toHaveBeenCalledWith({
+      data: {
+        title: 'c',
+        userId: 'user1',
+        term: 'fall',
+        color: 'red',
+        description: 'd',
+        syllabusUrl: 'https://example.com/s.pdf',
+      },
+    });
   });
   it('throws if course title exists', async () => {
     hoisted.findFirst.mockResolvedValueOnce({ id: '1', title: 'c' });
@@ -95,6 +112,15 @@ describe('courseRouter.update', () => {
   it('updates course fields', async () => {
     await courseRouter.createCaller(ctx).update({ id: '1', title: 'nc', term: null, color: null, description: null });
     expect(hoisted.update).toHaveBeenCalledWith({ where: { id: '1', userId: 'user1' }, data: { title: 'nc', term: null, color: null, description: null } });
+  });
+  it('updates syllabus url', async () => {
+    await courseRouter
+      .createCaller(ctx)
+      .update({ id: '1', syllabusUrl: 'https://example.com/s.pdf' });
+    expect(hoisted.update).toHaveBeenCalledWith({
+      where: { id: '1', userId: 'user1' },
+      data: { syllabusUrl: 'https://example.com/s.pdf' },
+    });
   });
 });
 
