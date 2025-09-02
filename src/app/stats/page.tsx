@@ -17,15 +17,24 @@ import {
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
 import { ErrorBoundary } from "@/components/error-boundary";
+import {
+  TaskFilterTabs,
+  type TaskFilter,
+} from "@/components/task-filter-tabs";
 
 type Task = RouterOutputs["task"]["list"][number];
 
 export default function StatsPage() {
   const { data: session } = useSession();
+  const [filter, setFilter] = React.useState<TaskFilter>("all");
+  const [subject, setSubject] = React.useState<string | null>(null);
   const { data, isLoading, error } = api.task.list.useQuery(undefined, {
     enabled: !!session,
   });
-  const tasks: RouterOutputs["task"]["list"] = data ?? [];
+  const tasks: RouterOutputs["task"]["list"] = React.useMemo(
+    () => data ?? [],
+    [data]
+  );
   const { data: focusData } = api.focus.aggregate.useQuery();
   const focusMap = React.useMemo(() => {
     const map: Record<string, number> = {};
@@ -35,7 +44,31 @@ export default function StatsPage() {
     }
     return map;
   }, [focusData]);
-  const focusByTask = tasks
+  const filteredTasks = React.useMemo(() => {
+    let result = tasks;
+    const now = new Date();
+    if (filter === "overdue") {
+      result = result.filter((t) => t.dueAt && new Date(t.dueAt) < now);
+    } else if (filter === "today") {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      result = result.filter((t) => {
+        if (!t.dueAt) return false;
+        const due = new Date(t.dueAt);
+        return due >= start && due <= end;
+      });
+    } else if (filter === "archive") {
+      result = result.filter((t) => t.status === "DONE");
+    }
+    if (subject) {
+      result = result.filter((t) => t.subject === subject);
+    }
+    return result;
+  }, [tasks, filter, subject]);
+
+  const focusByTask = filteredTasks
     .map((t) => ({
       id: t.id,
       title: t.title,
@@ -60,11 +93,11 @@ export default function StatsPage() {
   if (error) throw error;
   if (isLoading) return <main>Loading...</main>;
 
-  const total = tasks.length;
-  const completed = tasks.filter((t: Task) => t.status === "DONE").length;
+  const total = filteredTasks.length;
+  const completed = filteredTasks.filter((t: Task) => t.status === "DONE").length;
   const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
 
-  const statusCounts = tasks.reduce(
+  const statusCounts = filteredTasks.reduce(
     (acc: Record<string, number>, task: Task) => {
       acc[task.status] = (acc[task.status] ?? 0) + 1;
       return acc;
@@ -78,7 +111,7 @@ export default function StatsPage() {
       count: Number(count),
     }));
 
-  const subjectCounts = tasks.reduce(
+  const subjectCounts = filteredTasks.reduce(
     (acc: Record<string, number>, task: Task) => {
       const subject = task.subject ?? "Uncategorized";
       acc[subject] = (acc[subject] ?? 0) + 1;
@@ -96,8 +129,14 @@ export default function StatsPage() {
   return (
     <ErrorBoundary fallback={<main>Failed to load stats</main>}>
       <main className="space-y-6 text-neutral-900 dark:text-neutral-100">
-        <header>
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-semibold">Task Statistics</h1>
+          <TaskFilterTabs
+            value={filter}
+            onChange={setFilter}
+            subject={subject}
+            onSubjectChange={setSubject}
+          />
         </header>
         <section className="space-y-2">
           <p>Total Tasks: {total}</p>

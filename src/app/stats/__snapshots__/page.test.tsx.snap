@@ -5,12 +5,115 @@ exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
   <main
     class="space-y-6 text-neutral-900 dark:text-neutral-100"
   >
-    <header>
+    <header
+      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <h1
         class="text-2xl font-semibold"
       >
         Task Statistics
       </h1>
+      <div
+        aria-label="Task filter"
+        class="flex gap-2 items-center"
+        role="tablist"
+      >
+        <button
+          aria-selected="true"
+          class="bg-transparent px-3 py-1 text-sm border-b-2 transition border-black dark:border-white"
+          role="tab"
+          type="button"
+        >
+          All
+        </button>
+        <button
+          aria-selected="false"
+          class="bg-transparent px-3 py-1 text-sm border-b-2 transition border-transparent"
+          role="tab"
+          type="button"
+        >
+          Overdue
+        </button>
+        <button
+          aria-selected="false"
+          class="bg-transparent px-3 py-1 text-sm border-b-2 transition border-transparent"
+          role="tab"
+          type="button"
+        >
+          Today
+        </button>
+        <button
+          aria-selected="false"
+          class="bg-transparent px-3 py-1 text-sm border-b-2 transition border-transparent"
+          role="tab"
+          type="button"
+        >
+          Archive
+        </button>
+        <div
+          class="relative ml-2"
+        >
+          <svg
+            class="lucide lucide-tag pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+            />
+            <circle
+              cx="7.5"
+              cy="7.5"
+              fill="currentColor"
+              r=".5"
+            />
+          </svg>
+          <select
+            aria-label="Subject filter"
+            class="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            title="Filter by subject"
+          >
+            <option
+              value=""
+            >
+              All subjects
+            </option>
+            <option
+              value="Math"
+            >
+              Math
+            </option>
+            <option
+              value="Science"
+            >
+              Science
+            </option>
+          </select>
+          <svg
+            class="lucide lucide-chevron-down pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </div>
+      </div>
     </header>
     <section
       class="space-y-2"
@@ -113,12 +216,115 @@ exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
   <main
     class="space-y-6 text-neutral-900 dark:text-neutral-100"
   >
-    <header>
+    <header
+      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <h1
         class="text-2xl font-semibold"
       >
         Task Statistics
       </h1>
+      <div
+        aria-label="Task filter"
+        class="flex gap-2 items-center"
+        role="tablist"
+      >
+        <button
+          aria-selected="true"
+          class="bg-transparent px-3 py-1 text-sm border-b-2 transition border-black dark:border-white"
+          role="tab"
+          type="button"
+        >
+          All
+        </button>
+        <button
+          aria-selected="false"
+          class="bg-transparent px-3 py-1 text-sm border-b-2 transition border-transparent"
+          role="tab"
+          type="button"
+        >
+          Overdue
+        </button>
+        <button
+          aria-selected="false"
+          class="bg-transparent px-3 py-1 text-sm border-b-2 transition border-transparent"
+          role="tab"
+          type="button"
+        >
+          Today
+        </button>
+        <button
+          aria-selected="false"
+          class="bg-transparent px-3 py-1 text-sm border-b-2 transition border-transparent"
+          role="tab"
+          type="button"
+        >
+          Archive
+        </button>
+        <div
+          class="relative ml-2"
+        >
+          <svg
+            class="lucide lucide-tag pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+            />
+            <circle
+              cx="7.5"
+              cy="7.5"
+              fill="currentColor"
+              r=".5"
+            />
+          </svg>
+          <select
+            aria-label="Subject filter"
+            class="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            title="Filter by subject"
+          >
+            <option
+              value=""
+            >
+              All subjects
+            </option>
+            <option
+              value="Math"
+            >
+              Math
+            </option>
+            <option
+              value="Science"
+            >
+              Science
+            </option>
+          </select>
+          <svg
+            class="lucide lucide-chevron-down pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </div>
+      </div>
     </header>
     <section
       class="space-y-2"
