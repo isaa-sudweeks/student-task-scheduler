@@ -22,19 +22,36 @@ export const focusRouter = router({
       await db.taskTimeLog.update({ where: { id: open.id }, data: { endedAt: new Date() } });
       return { ok: true };
     }),
-  aggregate: publicProcedure.query(async () => {
-    const logs = await db.taskTimeLog.findMany();
-    const now = new Date();
-    const totals: Record<string, number> = {};
-    for (const log of logs) {
-      const end = log.endedAt ?? now;
-      totals[log.taskId] =
-        (totals[log.taskId] ?? 0) + (end.getTime() - log.startedAt.getTime());
-    }
-    return Object.entries(totals).map(([taskId, durationMs]) => ({
-      taskId,
-      durationMs,
-    }));
-  }),
+  aggregate: publicProcedure
+    .input(
+      z
+        .object({ start: z.date().optional(), end: z.date().optional() })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      const rangeStart = input?.start ?? new Date(0);
+      const rangeEnd = input?.end ?? new Date();
+      const logs = await db.taskTimeLog.findMany({
+        where: {
+          startedAt: { lte: rangeEnd },
+          OR: [{ endedAt: { gte: rangeStart } }, { endedAt: null }],
+        },
+      });
+      const now = new Date();
+      const totals: Record<string, number> = {};
+      for (const log of logs) {
+        const start = log.startedAt < rangeStart ? rangeStart : log.startedAt;
+        const rawEnd = log.endedAt ?? now;
+        const end = rawEnd > rangeEnd ? rangeEnd : rawEnd;
+        if (end > start) {
+          totals[log.taskId] =
+            (totals[log.taskId] ?? 0) + (end.getTime() - start.getTime());
+        }
+      }
+      return Object.entries(totals).map(([taskId, durationMs]) => ({
+        taskId,
+        durationMs,
+      }));
+    }),
 });
 

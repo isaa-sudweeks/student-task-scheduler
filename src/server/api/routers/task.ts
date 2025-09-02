@@ -35,6 +35,8 @@ export const taskRouter = router({
           // Optional explicit client-local day bounds as absolute instants
           todayStart: z.date().optional(),
           todayEnd: z.date().optional(),
+          start: z.date().optional(),
+          end: z.date().optional(),
           cursor: z.string().optional(),
           limit: z.number().int().min(1).max(100).optional(),
         })
@@ -109,6 +111,18 @@ export const taskRouter = router({
       }
       if (parentId !== undefined) {
         where = { ...where, parentId };
+      }
+
+      const start = input?.start;
+      const end = input?.end;
+      if (start || end) {
+        where = {
+          ...where,
+          createdAt: {
+            ...(start ? { gte: start } : {}),
+            ...(end ? { lte: end } : {}),
+          },
+        };
       }
 
       const limit = input?.limit;
