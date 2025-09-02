@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, type DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { api } from '@/server/api/react';
 import type { RouterOutputs } from '@/server/api/root';
@@ -16,7 +16,6 @@ export default function CalendarPage() {
   const [view, setView] = useState<ViewMode>('week');
   const [baseDate, setBaseDate] = useState<Date>(new Date());
   const utils = api.useUtils();
-  const router = useRouter();
   const { data: session } = useSession();
 
   const [dayStart, setDayStart] = useState(8);
@@ -209,14 +208,13 @@ export default function CalendarPage() {
     return (
       <main className="space-y-4">
         <header className="flex items-center justify-end gap-2">
-          <a
+          <Link
             href="/"
             className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
             title="Back to Home"
-            onClick={(e) => { e.preventDefault(); router.push('/'); }}
           >
             Home
-          </a>
+          </Link>
           {/* Account menu available in the global nav bar */}
         </header>
         {ViewTabs}
@@ -234,14 +232,13 @@ export default function CalendarPage() {
     <main className="grid w-full grid-cols-1 gap-4 md:grid-cols-4">
       <header className="flex items-center justify-between gap-2 md:col-span-4">
         <div className="flex items-center gap-2">
-          <a
+          <Link
             href="/"
             className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
             title="Back to Home"
-            onClick={(e) => { e.preventDefault(); router.push('/'); }}
           >
             Home
-          </a>
+          </Link>
           <div className="flex items-center gap-1">
             <button
               type="button"
