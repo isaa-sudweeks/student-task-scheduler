@@ -197,10 +197,17 @@ export default function CoursesPage() {
             {sortedCourses
               .filter(
                 (c) =>
-                  c.title
-                    .toLowerCase()
-                    .includes(debouncedSearch.toLowerCase()) &&
-                  (termFilter === "" || c.term === termFilter),
+                  (
+                    c.title
+                      .toLowerCase()
+                      .includes(debouncedSearch.toLowerCase()) ||
+                    (c.term ?? "")
+                      .toLowerCase()
+                      .includes(debouncedSearch.toLowerCase()) ||
+                    (c.color ?? "")
+                      .toLowerCase()
+                      .includes(debouncedSearch.toLowerCase())
+                  ) && (termFilter === "" || c.term === termFilter),
               )
               .map((c) => (
                 <CourseItem key={c.id} course={c} />
@@ -214,10 +221,16 @@ export default function CoursesPage() {
 
 function CourseItem({
   course,
-  onPendingChange,
+  onPendingChange = () => {},
 }: {
-  course: { id: string; title: string; term: string | null; color: string | null };
-  onPendingChange: (id: string, pending: boolean) => void;
+  course: {
+    id: string;
+    title: string;
+    term: string | null;
+    color: string | null;
+    nextDueAt: Date | null;
+  };
+  onPendingChange?: (id: string, pending: boolean) => void;
 }) {
   const utils = api.useUtils();
   const {
@@ -272,6 +285,9 @@ function CourseItem({
   return (
     <li>
       <div className="flex flex-col gap-2 rounded-lg border p-4 shadow-sm bg-card">
+        <p className="text-sm text-muted-foreground">
+          Next due: {course.nextDueAt ? new Date(course.nextDueAt).toLocaleDateString() : 'None'}
+        </p>
         <label htmlFor={titleId} className="flex flex-col gap-1">
           <span className="flex items-center gap-2">
             Title

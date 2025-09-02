@@ -58,7 +58,7 @@ describe('CoursesPage', () => {
 
   it('disables save and delete buttons and shows errors', () => {
     listMock.mockReturnValue({
-      data: [{ id: '1', title: 'Course', term: null, color: null }],
+      data: [{ id: '1', title: 'Course', term: null, color: null, nextDueAt: null }],
       isLoading: false,
       error: undefined,
     });
@@ -74,7 +74,7 @@ describe('CoursesPage', () => {
 
   it('shows error toast when course title exists', () => {
     listMock.mockReturnValue({
-      data: [{ id: '1', title: 'Math', term: null, color: null }],
+      data: [{ id: '1', title: 'Math', term: null, color: null, nextDueAt: null }],
       isLoading: false,
       error: undefined,
     });
@@ -102,8 +102,8 @@ describe('CoursesPage', () => {
 
   it('sorts courses by title by default and toggles to term', () => {
     const mockCourses = [
-      { id: '1', title: 'B', term: 'Summer', color: null },
-      { id: '2', title: 'A', term: 'Winter', color: null },
+      { id: '1', title: 'B', term: 'Summer', color: null, nextDueAt: null },
+      { id: '2', title: 'A', term: 'Winter', color: null, nextDueAt: null },
     ];
     listMock.mockReturnValue({ data: mockCourses, isLoading: false, error: undefined });
     createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
@@ -120,8 +120,8 @@ describe('CoursesPage', () => {
 
   it('toggles sort direction', () => {
     const mockCourses = [
-      { id: '1', title: 'A', term: 'Fall', color: null },
-      { id: '2', title: 'B', term: 'Spring', color: null },
+      { id: '1', title: 'A', term: 'Fall', color: null, nextDueAt: null },
+      { id: '2', title: 'B', term: 'Spring', color: null, nextDueAt: null },
     ];
     listMock.mockReturnValue({ data: mockCourses, isLoading: false, error: undefined });
     createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
@@ -142,8 +142,8 @@ describe('CoursesPage', () => {
     vi.useFakeTimers();
     listMock.mockReturnValue({
       data: [
-        { id: '1', title: 'Math', term: 'Fall', color: '#ABCDEF' },
-        { id: '2', title: 'History', term: 'Spring', color: '#123456' },
+        { id: '1', title: 'Math', term: 'Fall', color: '#ABCDEF', nextDueAt: null },
+        { id: '2', title: 'History', term: 'Spring', color: '#123456', nextDueAt: null },
       ],
       isLoading: false,
       error: undefined,
@@ -186,8 +186,8 @@ describe('CoursesPage', () => {
   it('filters courses by selected term', () => {
     listMock.mockReturnValue({
       data: [
-        { id: '1', title: 'Math', term: 'Fall', color: null },
-        { id: '2', title: 'History', term: 'Spring', color: null },
+        { id: '1', title: 'Math', term: 'Fall', color: null, nextDueAt: null },
+        { id: '2', title: 'History', term: 'Spring', color: null, nextDueAt: null },
       ],
       isLoading: false,
       error: undefined,
@@ -203,5 +203,19 @@ describe('CoursesPage', () => {
 
     expect(screen.getByDisplayValue('History')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Math')).toBeNull();
+  });
+
+  it('displays next due date when provided', () => {
+    const due = new Date('2024-02-02');
+    listMock.mockReturnValue({
+      data: [{ id: '1', title: 'Course', term: null, color: null, nextDueAt: due }],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    render(<CoursesPage />);
+    expect(screen.getByText(`Next due: ${due.toLocaleDateString()}`)).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TaskStatus } from '@prisma/client';
 import { protectedProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 import { TRPCError } from '@trpc/server';
@@ -14,11 +15,26 @@ export const courseRouter = router({
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       const { page, limit } = input;
-      return db.course.findMany({
+      const courses = await db.course.findMany({
         where: { userId },
         skip: (page - 1) * limit,
         take: limit,
+        include: {
+          tasks: {
+            select: { dueAt: true },
+            where: {
+              status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
+              dueAt: { not: null },
+            },
+            orderBy: { dueAt: 'asc' },
+            take: 1,
+          },
+        },
       });
+      return courses.map(({ tasks, ...c }) => ({
+        ...c,
+        nextDueAt: tasks[0]?.dueAt ?? null,
+      }));
     }),
   create: protectedProcedure
     .input(

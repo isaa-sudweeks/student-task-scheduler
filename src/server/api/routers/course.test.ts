@@ -30,9 +30,23 @@ describe('courseRouter.list', () => {
   beforeEach(() => {
     hoisted.findMany.mockClear();
   });
-  it('lists courses for user with pagination', async () => {
-    await courseRouter.createCaller(ctx).list({ page: 2, limit: 5 });
-    expect(hoisted.findMany).toHaveBeenCalledWith({ where: { userId: 'user1' }, skip: 5, take: 5 });
+  it('lists courses for user with pagination and returns next due task', async () => {
+    const due = new Date('2024-01-01');
+    hoisted.findMany.mockResolvedValueOnce([
+      { id: 'c1', title: 'c', term: null, color: null, tasks: [{ dueAt: due }] },
+    ]);
+    const res = await courseRouter.createCaller(ctx).list({ page: 2, limit: 5 });
+    expect(hoisted.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'user1' },
+        skip: 5,
+        take: 5,
+        include: expect.any(Object),
+      })
+    );
+    expect(res).toEqual([
+      { id: 'c1', title: 'c', term: null, color: null, nextDueAt: due },
+    ]);
   });
 });
 
