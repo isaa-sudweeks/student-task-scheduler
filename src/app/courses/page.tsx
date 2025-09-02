@@ -95,6 +95,8 @@ export default function CoursesPage() {
     setColor("");
   };
 
+  const query = debouncedSearch.toLowerCase();
+
   return (
     <div className="container mx-auto px-4">
       <main className="space-y-6">
