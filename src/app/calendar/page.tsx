@@ -8,6 +8,9 @@ import type { RouterOutputs } from '@/server/api/root';
 import { calculateDurationMinutes } from '@/lib/datetime';
 import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { Modal } from '@/components/ui/modal';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 type ViewMode = 'day' | 'week' | 'month';
 type Task = RouterOutputs['task']['list'][number];
@@ -22,6 +25,7 @@ export default function CalendarPage() {
   const [dayStart, setDayStart] = useState(8);
   const [dayEnd, setDayEnd] = useState(18);
   const [defaultDuration, setDefaultDuration] = useState(30);
+  const [showSettings, setShowSettings] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const s = window.localStorage.getItem('dayWindowStartHour');
@@ -31,6 +35,13 @@ export default function CalendarPage() {
     if (e) setDayEnd(Number(e));
     if (d) setDefaultDuration(Number(d));
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('dayWindowStartHour', String(dayStart));
+    window.localStorage.setItem('dayWindowEndHour', String(dayEnd));
+    window.localStorage.setItem('defaultDurationMinutes', String(defaultDuration));
+  }, [dayStart, dayEnd, defaultDuration]);
 
   // Make dragging/resizing more reliable across mouse/touch
   const sensors = useSensors(
@@ -287,6 +298,13 @@ export default function CalendarPage() {
         </div>
         <div className="flex items-center gap-2">
           {ViewTabs}
+          <button
+            type="button"
+            className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+            onClick={() => setShowSettings(true)}
+          >
+            Settings
+          </button>
         </div>
       </header>
       <DndContext
@@ -453,6 +471,48 @@ export default function CalendarPage() {
         >Simulate Resize</button>
       )}
       </DndContext>
+      <Modal
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        title="Calendar Settings"
+        footer={
+          <Button type="button" onClick={() => setShowSettings(false)}>
+            Close
+          </Button>
+        }
+      >
+        <div className="space-y-3">
+          <label className="block text-sm">
+            <span>Day start</span>
+            <Input
+              type="number"
+              min={0}
+              max={23}
+              value={dayStart}
+              onChange={(e) => setDayStart(Number(e.target.value))}
+            />
+          </label>
+          <label className="block text-sm">
+            <span>Day end</span>
+            <Input
+              type="number"
+              min={1}
+              max={24}
+              value={dayEnd}
+              onChange={(e) => setDayEnd(Number(e.target.value))}
+            />
+          </label>
+          <label className="block text-sm">
+            <span>Default duration (minutes)</span>
+            <Input
+              type="number"
+              min={1}
+              value={defaultDuration}
+              onChange={(e) => setDefaultDuration(Number(e.target.value))}
+            />
+          </label>
+        </div>
+      </Modal>
     </main>
     </ErrorBoundary>
   );
