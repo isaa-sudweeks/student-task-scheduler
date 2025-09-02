@@ -59,10 +59,10 @@ export default function CoursesPage() {
 
   return (
     <main className="space-y-6">
-      <h1 className="text-2xl font-semibold">Courses</h1>
+      <h1 className="text-3xl font-bold">Courses</h1>
       <form onSubmit={handleSubmit}>
         <div className="flex flex-col gap-2 max-w-md">
-          <label htmlFor="course-title" className="flex flex-col gap-1">
+          <label htmlFor="course-title" className="flex flex-col gap-1 text-sm font-medium">
             Course title
             <input
               id="course-title"
@@ -72,7 +72,7 @@ export default function CoursesPage() {
             onChange={(e) => setTitle(e.target.value)}
           />
           </label>
-          <label htmlFor="course-term" className="flex flex-col gap-1">
+          <label htmlFor="course-term" className="flex flex-col gap-1 text-sm font-medium">
             Term (optional)
             <input
               id="course-term"
@@ -82,7 +82,7 @@ export default function CoursesPage() {
             onChange={(e) => setTerm(e.target.value)}
           />
           </label>
-          <label htmlFor="course-color" className="flex flex-col gap-1">
+          <label htmlFor="course-color" className="flex flex-col gap-1 text-sm font-medium">
             Color (optional)
             <div className="flex items-center gap-2">
               <input
@@ -181,7 +181,7 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
   const isSaveDisabled = isUpdating || !hasChanges;
   return (
     <li className="flex flex-col gap-2 border-b pb-4">
-      <label htmlFor={titleId} className="flex flex-col gap-1">
+      <label htmlFor={titleId} className="flex flex-col gap-1 text-sm font-medium">
         Title
         <input
           id={titleId}
@@ -190,7 +190,7 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
           onChange={(e) => setTitle(e.target.value)}
         />
       </label>
-      <label htmlFor={termId} className="flex flex-col gap-1">
+      <label htmlFor={termId} className="flex flex-col gap-1 text-sm font-medium">
         Term
         <input
           id={termId}
@@ -199,7 +199,7 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
           onChange={(e) => setTerm(e.target.value)}
         />
       </label>
-      <label htmlFor={colorId} className="flex flex-col gap-1">
+      <label htmlFor={colorId} className="flex flex-col gap-1 text-sm font-medium">
         Color
         <div className="flex items-center gap-2">
           <input
