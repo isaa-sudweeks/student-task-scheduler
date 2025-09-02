@@ -98,6 +98,26 @@ describe('CoursesPage', () => {
     expect(within(itemsAfter[0]).getAllByRole('textbox')[0]).toHaveValue('B');
   });
 
+  it('toggles sort direction', () => {
+    const mockCourses = [
+      { id: '1', title: 'A', term: 'Fall', color: null },
+      { id: '2', title: 'B', term: 'Spring', color: null },
+    ];
+    listMock.mockReturnValue({ data: mockCourses, isLoading: false, error: undefined });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+
+    render(<CoursesPage />);
+    const items = screen.getAllByRole('listitem');
+    expect(within(items[0]).getAllByRole('textbox')[0]).toHaveValue('A');
+    fireEvent.click(
+      screen.getByRole('button', { name: /toggle sort direction/i }),
+    );
+    const itemsAfter = screen.getAllByRole('listitem');
+    expect(within(itemsAfter[0]).getAllByRole('textbox')[0]).toHaveValue('B');
+  });
+
   it('filters courses by search input', () => {
     vi.useFakeTimers();
     listMock.mockReturnValue({

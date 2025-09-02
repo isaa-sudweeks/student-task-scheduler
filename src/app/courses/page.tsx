@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { ArrowUpDown as ArrowUpDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
@@ -26,6 +27,7 @@ export default function CoursesPage() {
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("");
   const [sortBy, setSortBy] = useState<"title" | "term">("title");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const isAddDisabled = isCreating || title.trim() === "";
@@ -38,14 +40,13 @@ export default function CoursesPage() {
   if (isLoading) return <p>Loading...</p>;
   if (error) return <p className="text-red-500">{error.message}</p>;
 
-  const sortedCourses = courses
-    .slice()
-    .sort((a, b) =>
-      sortBy === "title"
-        ? a.title.localeCompare(b.title)
-        : (a.term ?? "").localeCompare(b.term ?? "") ||
-          a.title.localeCompare(b.title),
-    );
+  const sortedCourses = [...courses].sort((a, b) =>
+    sortBy === "title"
+      ? a.title.localeCompare(b.title)
+      : (a.term ?? "").localeCompare(b.term ?? "") ||
+        a.title.localeCompare(b.title),
+  );
+  if (sortDir === "desc") sortedCourses.reverse();
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -118,6 +119,13 @@ export default function CoursesPage() {
           onClick={() => setSortBy("term")}
         >
           Sort by Term
+        </Button>
+        <Button
+          variant="tertiary"
+          onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
+          aria-label="Toggle sort direction"
+        >
+          <ArrowUpDownIcon className="h-4 w-4" />
         </Button>
       </div>
       <div className="max-w-md">
