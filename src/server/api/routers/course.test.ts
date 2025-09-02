@@ -34,6 +34,20 @@ describe('courseRouter.list', () => {
     await courseRouter.createCaller(ctx).list({ page: 2, limit: 5 });
     expect(hoisted.findMany).toHaveBeenCalledWith({ where: { userId: 'user1' }, skip: 5, take: 5 });
   });
+  it('applies search and term filters', async () => {
+    await courseRouter
+      .createCaller(ctx)
+      .list({ page: 1, limit: 10, search: 'math', term: 'fall' });
+    expect(hoisted.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user1',
+        title: { contains: 'math', mode: 'insensitive' },
+        term: 'fall',
+      },
+      skip: 0,
+      take: 10,
+    });
+  });
 });
 
 describe('courseRouter.create', () => {

@@ -22,11 +22,6 @@ export default function CoursesPage() {
   const [page, setPage] = useState(1);
   const limit = 10;
   const {
-    data: courses = [],
-    isLoading,
-    error,
-  } = api.course.list.useQuery({ page, limit });
-  const {
     mutate: createCourse,
     isPending: isCreating,
     error: createError,
@@ -45,6 +40,16 @@ export default function CoursesPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [termFilter, setTermFilter] = useState("");
+  const {
+    data: courses = [],
+    isLoading,
+    error,
+  } = api.course.list.useQuery({
+    page,
+    limit,
+    search: debouncedSearch,
+    term: termFilter,
+  });
   const isAddDisabled = isCreating || title.trim() === "";
 
   useEffect(() => {
@@ -94,8 +99,6 @@ export default function CoursesPage() {
     setTerm("");
     setColor("");
   };
-
-  const query = debouncedSearch.toLowerCase();
 
   return (
     <div className="container mx-auto px-4">
@@ -194,17 +197,9 @@ export default function CoursesPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
           <ul className="space-y-4">
-            {sortedCourses
-              .filter(
-                (c) =>
-                  c.title
-                    .toLowerCase()
-                    .includes(debouncedSearch.toLowerCase()) &&
-                  (termFilter === "" || c.term === termFilter),
-              )
-              .map((c) => (
-                <CourseItem key={c.id} course={c} />
-              ))}
+            {sortedCourses.map((c) => (
+              <CourseItem key={c.id} course={c} onPendingChange={() => {}} />
+            ))}
           </ul>
         </div>
       </main>

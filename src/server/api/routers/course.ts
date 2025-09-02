@@ -9,13 +9,21 @@ export const courseRouter = router({
       z.object({
         page: z.number().int().min(1).default(1),
         limit: z.number().int().min(1).max(100).default(10),
+        search: z.string().optional(),
+        term: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
-      const { page, limit } = input;
+      const { page, limit, search, term } = input;
       return db.course.findMany({
-        where: { userId },
+        where: {
+          userId,
+          ...(search
+            ? { title: { contains: search, mode: 'insensitive' } }
+            : {}),
+          ...(term ? { term } : {}),
+        },
         skip: (page - 1) * limit,
         take: limit,
       });
