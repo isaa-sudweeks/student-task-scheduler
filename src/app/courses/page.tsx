@@ -152,24 +152,35 @@ export default function CoursesPage() {
                 onChange={(e) => setTerm(e.target.value)}
               />
             </label>
-            <label htmlFor="course-color" className="flex flex-col gap-1">
-              Color (optional)
-              <div className="flex items-center gap-2">
-                <input
-                  id="course-color"
-                  type="color"
-                  aria-label="Course color"
-                  className="h-10 w-10 rounded border border-black/10 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-                  value={color || "#000000"}
-                  onChange={(e) => setColor(e.target.value)}
-                />
+            <div className="flex flex-col gap-1">
+              <span>Color (optional)</span>
+              <div
+                role="group"
+                aria-label="Course color"
+                className="flex items-center gap-2"
+              >
+                <div className="flex flex-wrap gap-2">
+                  {COLOR_OPTIONS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      aria-label={`Select color ${c}`}
+                      className={clsx(
+                        "h-10 w-10 rounded border border-black/10 p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10",
+                        color === c && "ring-2 ring-indigo-500 ring-offset-2",
+                      )}
+                      style={{ backgroundColor: c }}
+                      onClick={() => setColor(color === c ? "" : c)}
+                    />
+                  ))}
+                </div>
                 <div
                   data-testid="color-preview"
                   className="h-6 w-6 rounded border border-black/10 dark:border-white/10"
                   style={{ backgroundColor: color || "#000000" }}
                 />
               </div>
-            </label>
+            </div>
             <Button type="submit" disabled={isAddDisabled}>
               Add Course
             </Button>
