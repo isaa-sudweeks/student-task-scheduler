@@ -25,85 +25,95 @@ exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
         %
       </p>
     </section>
-    <section
-      class="space-y-2"
+    <div
+      class="grid gap-6 md:grid-cols-2"
     >
-      <h2
-        class="text-xl font-medium"
-      >
-        By Status
-      </h2>
-      <ul>
-        <li>
-          TODO
-          : 
-          1
-        </li>
-        <li>
-          DONE
-          : 
-          1
-        </li>
-      </ul>
-      <div
-        data="[object Object],[object Object]"
-        height="200"
-        width="400"
-      />
-    </section>
-    <section
-      class="space-y-2"
-    >
-      <h2
-        class="text-xl font-medium"
-      >
-        By Subject
-      </h2>
-      <ul>
-        <li>
-          Math
-          : 
-          1
-        </li>
-        <li>
-          Science
-          : 
-          1
-        </li>
-      </ul>
-      <div
-        height="200"
-        width="400"
-      />
-    </section>
-    <section
-      class="space-y-2"
-    >
-      <h2
-        class="text-xl font-medium"
-      >
-        Focus Time by Task
-      </h2>
-      <ul>
-        <li>
-          Task 1
-          : 
-          1
-          m
-        </li>
-        <li>
-          Task 2
-          : 
-          2
-          m
-        </li>
-      </ul>
-      <div
-        data="[object Object],[object Object]"
-        height="200"
-        width="400"
-      />
-    </section>
+      <section>
+        <div
+          class="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900"
+        >
+          <h2
+            class="text-xl font-medium"
+          >
+            By Status
+          </h2>
+          <ul>
+            <li>
+              TODO
+              : 
+              1
+            </li>
+            <li>
+              DONE
+              : 
+              1
+            </li>
+          </ul>
+          <div
+            data="[object Object],[object Object]"
+            height="200"
+            width="400"
+          />
+        </div>
+      </section>
+      <section>
+        <div
+          class="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900"
+        >
+          <h2
+            class="text-xl font-medium"
+          >
+            By Subject
+          </h2>
+          <ul>
+            <li>
+              Math
+              : 
+              1
+            </li>
+            <li>
+              Science
+              : 
+              1
+            </li>
+          </ul>
+          <div
+            height="200"
+            width="400"
+          />
+        </div>
+      </section>
+      <section>
+        <div
+          class="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900"
+        >
+          <h2
+            class="text-xl font-medium"
+          >
+            Focus Time by Task
+          </h2>
+          <ul>
+            <li>
+              Task 1
+              : 
+              1
+              m
+            </li>
+            <li>
+              Task 2
+              : 
+              2
+              m
+            </li>
+          </ul>
+          <div
+            data="[object Object],[object Object]"
+            height="200"
+            width="400"
+          />
+        </div>
+      </section>
+    </div>
   </main>
 </div>
 `;
@@ -133,85 +143,95 @@ exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
         %
       </p>
     </section>
-    <section
-      class="space-y-2"
+    <div
+      class="grid gap-6 md:grid-cols-2"
     >
-      <h2
-        class="text-xl font-medium"
-      >
-        By Status
-      </h2>
-      <ul>
-        <li>
-          TODO
-          : 
-          1
-        </li>
-        <li>
-          DONE
-          : 
-          1
-        </li>
-      </ul>
-      <div
-        data="[object Object],[object Object]"
-        height="200"
-        width="400"
-      />
-    </section>
-    <section
-      class="space-y-2"
-    >
-      <h2
-        class="text-xl font-medium"
-      >
-        By Subject
-      </h2>
-      <ul>
-        <li>
-          Math
-          : 
-          1
-        </li>
-        <li>
-          Science
-          : 
-          1
-        </li>
-      </ul>
-      <div
-        height="200"
-        width="400"
-      />
-    </section>
-    <section
-      class="space-y-2"
-    >
-      <h2
-        class="text-xl font-medium"
-      >
-        Focus Time by Task
-      </h2>
-      <ul>
-        <li>
-          Task 1
-          : 
-          1
-          m
-        </li>
-        <li>
-          Task 2
-          : 
-          2
-          m
-        </li>
-      </ul>
-      <div
-        data="[object Object],[object Object]"
-        height="200"
-        width="400"
-      />
-    </section>
+      <section>
+        <div
+          class="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900"
+        >
+          <h2
+            class="text-xl font-medium"
+          >
+            By Status
+          </h2>
+          <ul>
+            <li>
+              TODO
+              : 
+              1
+            </li>
+            <li>
+              DONE
+              : 
+              1
+            </li>
+          </ul>
+          <div
+            data="[object Object],[object Object]"
+            height="200"
+            width="400"
+          />
+        </div>
+      </section>
+      <section>
+        <div
+          class="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900"
+        >
+          <h2
+            class="text-xl font-medium"
+          >
+            By Subject
+          </h2>
+          <ul>
+            <li>
+              Math
+              : 
+              1
+            </li>
+            <li>
+              Science
+              : 
+              1
+            </li>
+          </ul>
+          <div
+            height="200"
+            width="400"
+          />
+        </div>
+      </section>
+      <section>
+        <div
+          class="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900"
+        >
+          <h2
+            class="text-xl font-medium"
+          >
+            Focus Time by Task
+          </h2>
+          <ul>
+            <li>
+              Task 1
+              : 
+              1
+              m
+            </li>
+            <li>
+              Task 2
+              : 
+              2
+              m
+            </li>
+          </ul>
+          <div
+            data="[object Object],[object Object]"
+            height="200"
+            width="400"
+          />
+        </div>
+      </section>
+    </div>
   </main>
 </div>
 `;
