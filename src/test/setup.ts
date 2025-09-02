@@ -83,6 +83,8 @@ vi.mock('recharts', () => {
     XAxis: Null,
     YAxis: Null,
     Tooltip: Null,
+    Legend: Null,
+    Label: Null,
     PieChart: Div,
     Pie: Null,
     Cell: Null,

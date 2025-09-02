@@ -7,4 +7,6 @@ export const Tooltip = () => null;
 export const PieChart = (props: any) => React.createElement('div', props);
 export const Pie = () => null;
 export const Cell = () => null;
+export const Legend = () => null;
+export const Label = () => null;
 export const ResponsiveContainer = (props: any) => React.createElement('div', props);
