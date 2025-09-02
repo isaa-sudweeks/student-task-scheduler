@@ -17,16 +17,29 @@ import {
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { Input } from "@/components/ui/input";
 
 type Task = RouterOutputs["task"]["list"][number];
 
 export default function StatsPage() {
   const { data: session } = useSession();
-  const { data, isLoading, error } = api.task.list.useQuery(undefined, {
+  const [startDate, setStartDate] = React.useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().split("T")[0];
+  });
+  const [endDate, setEndDate] = React.useState(() =>
+    new Date().toISOString().split("T")[0],
+  );
+  const range = React.useMemo(
+    () => ({ start: new Date(startDate), end: new Date(endDate) }),
+    [startDate, endDate],
+  );
+  const { data, isLoading, error } = api.task.list.useQuery(range as any, {
     enabled: !!session,
   });
   const tasks: RouterOutputs["task"]["list"] = data ?? [];
-  const { data: focusData } = api.focus.aggregate.useQuery();
+  const { data: focusData } = api.focus.aggregate.useQuery(range as any);
   const focusMap = React.useMemo(() => {
     const map: Record<string, number> = {};
     const totals = focusData ?? [];
@@ -99,6 +112,24 @@ export default function StatsPage() {
         <header>
           <h1 className="text-2xl font-semibold">Task Statistics</h1>
         </header>
+        <section className="flex items-end gap-2">
+          <label className="flex flex-col text-sm">
+            <span>Start</span>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col text-sm">
+            <span>End</span>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </label>
+        </section>
         <section className="space-y-2">
           <p>Total Tasks: {total}</p>
           <p>Completion Rate: {completionRate}%</p>

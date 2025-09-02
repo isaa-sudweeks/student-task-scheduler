@@ -13,6 +13,34 @@ exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
       </h1>
     </header>
     <section
+      class="flex items-end gap-2"
+    >
+      <label
+        class="flex flex-col text-sm"
+      >
+        <span>
+          Start
+        </span>
+        <input
+          class="h-9 w-full rounded-md border border-black/10 bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          type="date"
+          value="2025-08-26"
+        />
+      </label>
+      <label
+        class="flex flex-col text-sm"
+      >
+        <span>
+          End
+        </span>
+        <input
+          class="h-9 w-full rounded-md border border-black/10 bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          type="date"
+          value="2025-09-02"
+        />
+      </label>
+    </section>
+    <section
       class="space-y-2"
     >
       <p>
@@ -120,6 +148,34 @@ exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
         Task Statistics
       </h1>
     </header>
+    <section
+      class="flex items-end gap-2"
+    >
+      <label
+        class="flex flex-col text-sm"
+      >
+        <span>
+          Start
+        </span>
+        <input
+          class="h-9 w-full rounded-md border border-black/10 bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          type="date"
+          value="2025-08-26"
+        />
+      </label>
+      <label
+        class="flex flex-col text-sm"
+      >
+        <span>
+          End
+        </span>
+        <input
+          class="h-9 w-full rounded-md border border-black/10 bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          type="date"
+          value="2025-09-02"
+        />
+      </label>
+    </section>
     <section
       class="space-y-2"
     >

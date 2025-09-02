@@ -77,6 +77,10 @@ describe('StatsPage', () => {
     });
 
     render(<StatsPage />);
+    const range = taskUseQueryMock.mock.calls[0][0];
+    expect(range.start).toBeInstanceOf(Date);
+    expect(range.end).toBeInstanceOf(Date);
+    expect(focusUseQueryMock.mock.calls[0][0]).toBe(range);
     expect(screen.getByText('Total Tasks: 3')).toBeInTheDocument();
     expect(screen.getByText('Completion Rate: 67%')).toBeInTheDocument();
     expect(screen.getByText('TODO: 1')).toBeInTheDocument();
@@ -106,6 +110,10 @@ describe('StatsPage', () => {
     });
 
     render(<StatsPage />);
+    const range = taskUseQueryMock.mock.calls[0][0];
+    expect(range.start).toBeInstanceOf(Date);
+    expect(range.end).toBeInstanceOf(Date);
+    expect(focusUseQueryMock.mock.calls[0][0]).toBe(range);
     expect(screen.getByText('Task: 1m')).toBeInTheDocument();
     expect(screen.getByText('Task: 2m')).toBeInTheDocument();
     expect(consoleErrorSpy).not.toHaveBeenCalled();
@@ -125,6 +133,10 @@ describe('StatsPage', () => {
         <StatsPage />
       </ErrorBoundary>
     );
+    const range = taskUseQueryMock.mock.calls[0][0];
+    expect(range.start).toBeInstanceOf(Date);
+    expect(range.end).toBeInstanceOf(Date);
+    expect(focusUseQueryMock.mock.calls[0][0]).toBe(range);
     expect(screen.getByText('Failed to load stats')).toBeInTheDocument();
   });
 
