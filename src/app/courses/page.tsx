@@ -7,6 +7,16 @@ import { api } from "@/server/api/react";
 import { toast } from "@/lib/toast";
 import { TrashIcon, CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
 
+const COLOR_OPTIONS = [
+  "#000000",
+  "#FF0000",
+  "#00FF00",
+  "#0000FF",
+  "#FFFF00",
+  "#FF00FF",
+  "#00FFFF",
+];
+
 export default function CoursesPage() {
   const utils = api.useUtils();
   const [page, setPage] = useState(1);
