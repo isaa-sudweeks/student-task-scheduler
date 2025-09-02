@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 
+vi.mock('@/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
+import { toast } from '@/lib/toast';
 import CoursesPage from './page';
 
 const { listMock, createMock, updateMock, deleteMock } = vi.hoisted(() => ({
@@ -67,6 +69,23 @@ describe('CoursesPage', () => {
     expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
     expect(screen.getByText('Update failed')).toBeInTheDocument();
     expect(screen.getByText('Delete failed')).toBeInTheDocument();
+  });
+
+  it('shows error toast when course title exists', () => {
+    listMock.mockReturnValue({
+      data: [{ id: '1', title: 'Math', term: null, color: null }],
+      isLoading: false,
+      error: undefined,
+    });
+    const mutate = vi.fn();
+    createMock.mockReturnValue({ mutate, isPending: false, error: undefined });
+    render(<CoursesPage />);
+    fireEvent.change(screen.getByPlaceholderText('Course title'), {
+      target: { value: 'Math' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /add course/i }));
+    expect(mutate).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith('Course already exists.');
   });
 
   it('shows swatch preview when color changes', () => {

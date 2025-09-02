@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc';
 import { db } from '@/server/db';
+import { TRPCError } from '@trpc/server';
 
 export const courseRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -17,6 +18,15 @@ export const courseRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session.user.id;
+      const existing = await db.course.findFirst({
+        where: { userId, title: input.title },
+      });
+      if (existing) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Course already exists',
+        });
+      }
       return db.course.create({
         data: {
           title: input.title,
