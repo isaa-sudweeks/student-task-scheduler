@@ -21,6 +21,9 @@ const events = [
   { id: 'e1', taskId: 't2', startAt: new Date('2099-01-01T10:00:00Z'), endAt: new Date('2099-01-01T11:00:00Z') },
 ];
 
+let tasksLoading = false;
+let eventsLoading = false;
+
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({
@@ -29,10 +32,20 @@ vi.mock('@/server/api/react', () => ({
       focus: { status: { invalidate: vi.fn() } },
     }),
     task: {
-      list: { useQuery: () => ({ data: tasks, isLoading: false }) },
+      list: {
+        useQuery: () => ({
+          data: tasksLoading ? undefined : tasks,
+          isLoading: tasksLoading,
+        }),
+      },
     },
     event: {
-      listRange: { useQuery: () => ({ data: events, isLoading: false }) },
+      listRange: {
+        useQuery: () => ({
+          data: eventsLoading ? undefined : events,
+          isLoading: eventsLoading,
+        }),
+      },
       schedule: { useMutation: () => ({ mutate: (...a: unknown[]) => scheduleMutate(...a) }) },
       move: { useMutation: () => ({ mutate: (...a: unknown[]) => moveMutate(...a) }) },
     },
@@ -49,6 +62,8 @@ describe('CalendarPage', () => {
     focusStop.mockReset();
     scheduleMutate.mockReset();
     moveMutate.mockReset();
+    tasksLoading = false;
+    eventsLoading = false;
     window.localStorage.clear();
     window.localStorage.setItem('dayWindowStartHour', '6');
     window.localStorage.setItem('dayWindowEndHour', '20');
@@ -163,6 +178,15 @@ describe('CalendarPage', () => {
     expect(arg.endAt.getTime()).toBeGreaterThan(arg.startAt.getTime());
     expect(arg.dayWindowStartHour).toBe(6);
     expect(arg.dayWindowEndHour).toBe(20);
+  });
+
+  it('renders a loading spinner while data loads', () => {
+    tasksLoading = true;
+    eventsLoading = true;
+    render(<CalendarPage />);
+    expect(screen.getByLabelText(/loading calendar/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /backlog/i })).toBeNull();
+    expect(screen.queryByTestId('calendar-grid')).toBeNull();
   });
   it('navigates between weeks and resets to today', () => {
     vi.useFakeTimers();
