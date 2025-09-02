@@ -204,4 +204,20 @@ describe('CoursesPage', () => {
     expect(screen.getByDisplayValue('History')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Math')).toBeNull();
   });
+
+  it('links course title to detail page', () => {
+    listMock.mockReturnValue({
+      data: [{ id: '1', title: 'Course', term: null, color: null }],
+      isLoading: false,
+      error: undefined,
+    });
+    createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    updateMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+    deleteMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
+
+    render(<CoursesPage />);
+
+    const link = screen.getByRole('link', { name: 'Course' });
+    expect(link).toHaveAttribute('href', '/courses/1');
+  });
 });

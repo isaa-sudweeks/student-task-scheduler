@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { ArrowUpDown as ArrowUpDownIcon } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CourseSkeleton } from "@/components/CourseSkeleton";
 import { api } from "@/server/api/react";
@@ -197,9 +198,9 @@ export default function CoursesPage() {
             {sortedCourses
               .filter(
                 (c) =>
-                  c.title
-                    .toLowerCase()
-                    .includes(debouncedSearch.toLowerCase()) &&
+                  (c.title.toLowerCase().includes(query) ||
+                    (c.term ?? "").toLowerCase().includes(query) ||
+                    (c.color ?? "").toLowerCase().includes(query)) &&
                   (termFilter === "" || c.term === termFilter),
               )
               .map((c) => (
@@ -214,10 +215,10 @@ export default function CoursesPage() {
 
 function CourseItem({
   course,
-  onPendingChange,
+  onPendingChange = () => {},
 }: {
   course: { id: string; title: string; term: string | null; color: string | null };
-  onPendingChange: (id: string, pending: boolean) => void;
+  onPendingChange?: (id: string, pending: boolean) => void;
 }) {
   const utils = api.useUtils();
   const {
@@ -272,6 +273,12 @@ function CourseItem({
   return (
     <li>
       <div className="flex flex-col gap-2 rounded-lg border p-4 shadow-sm bg-card">
+        <Link
+          href={`/courses/${course.id}`}
+          className="font-medium underline self-start"
+        >
+          {title}
+        </Link>
         <label htmlFor={titleId} className="flex flex-col gap-1">
           <span className="flex items-center gap-2">
             Title
