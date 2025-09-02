@@ -14,6 +14,7 @@ vi.mock('@/server/api/react', () => ({
     task: {
       list: {
         useInfiniteQuery: (...args: any[]) => useInfiniteQueryMock(...args),
+        useQuery: () => ({ data: [], isLoading: false, error: undefined }),
       },
       create: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       update: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
@@ -160,5 +161,35 @@ describe('TaskList', () => {
     );
     expect(screen.getByTestId('due-date')).toHaveClass('text-neutral-500');
     vi.useRealTimers();
+  });
+
+  it('renders subtasks indented under parent', () => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: {
+        pages: [[
+          { id: '1', title: 'Parent', dueAt: null, status: 'TODO' },
+          { id: '2', title: 'Child', dueAt: null, status: 'TODO', parentId: '1' },
+        ]],
+      },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    render(
+      <TaskList
+        filter="all"
+        subject={null}
+        priority={null}
+        courseId={null}
+        projectId={null}
+        query=""
+      />
+    );
+    const items = screen.getAllByRole('listitem');
+    expect(items[0]).toHaveTextContent('Parent');
+    expect(items[1]).toHaveTextContent('Child');
+    expect(items[1]).toHaveStyle({ marginLeft: '16px' });
   });
 });
