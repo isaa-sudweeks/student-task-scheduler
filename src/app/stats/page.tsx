@@ -9,6 +9,8 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  Legend,
+  Label,
   PieChart,
   Pie,
   Cell,
@@ -132,13 +134,23 @@ export default function StatsPage() {
                     dataKey="status"
                     stroke={chartColors.axis}
                     tick={{ fill: chartColors.text }}
-                  />
+                  >
+                    <Label value="Status" position="insideBottom" fill={chartColors.text} />
+                  </XAxis>
                   <YAxis
                     allowDecimals={false}
                     stroke={chartColors.axis}
                     tick={{ fill: chartColors.text }}
-                  />
+                  >
+                    <Label
+                      value="Count"
+                      angle={-90}
+                      position="insideLeft"
+                      fill={chartColors.text}
+                    />
+                  </YAxis>
                   <Tooltip />
+                  <Legend wrapperStyle={{ color: chartColors.text }} />
                   <Bar dataKey="count" fill={chartColors.bar} />
                 </BarChart>
               </ResponsiveContainer>
@@ -170,6 +182,7 @@ export default function StatsPage() {
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend wrapperStyle={{ color: chartColors.text }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -190,13 +203,23 @@ export default function StatsPage() {
                     dataKey="title"
                     stroke={chartColors.axis}
                     tick={{ fill: chartColors.text }}
-                  />
+                  >
+                    <Label value="Task" position="insideBottom" fill={chartColors.text} />
+                  </XAxis>
                   <YAxis
                     allowDecimals={false}
                     stroke={chartColors.axis}
                     tick={{ fill: chartColors.text }}
-                  />
+                  >
+                    <Label
+                      value="Minutes"
+                      angle={-90}
+                      position="insideLeft"
+                      fill={chartColors.text}
+                    />
+                  </YAxis>
                   <Tooltip />
+                  <Legend wrapperStyle={{ color: chartColors.text }} />
                   <Bar dataKey="minutes" fill={chartColors.bar} />
                 </BarChart>
               </ResponsiveContainer>
@@ -207,3 +230,4 @@ export default function StatsPage() {
     </ErrorBoundary>
   );
 }
+
