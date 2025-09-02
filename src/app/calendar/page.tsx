@@ -1,11 +1,11 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, type DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { api } from '@/server/api/react';
 import type { RouterOutputs } from '@/server/api/root';
 import { CalendarGrid, DraggableTask } from '@/components/calendar/CalendarGrid';
+import { CalendarHeader } from '@/components/calendar/CalendarHeader';
 import { ErrorBoundary } from '@/components/error-boundary';
 
 type ViewMode = 'day' | 'week' | 'month';
@@ -16,7 +16,6 @@ export default function CalendarPage() {
   const [view, setView] = useState<ViewMode>('week');
   const [baseDate, setBaseDate] = useState<Date>(new Date());
   const utils = api.useUtils();
-  const router = useRouter();
   const { data: session } = useSession();
 
   const [dayStart, setDayStart] = useState(8);
@@ -67,6 +66,10 @@ export default function CalendarPage() {
   }, [eventsData]);
 
   const changeDate = React.useCallback((delta: number) => {
+    if (delta === 0) {
+      setBaseDate(new Date());
+      return;
+    }
     setBaseDate((prev) => {
       const d = new Date(prev);
       if (view === 'day') {
@@ -188,38 +191,16 @@ export default function CalendarPage() {
     return () => window.removeEventListener('keydown', onKey, true);
   }, [toggleFocus]);
 
-  const ViewTabs = (
-    <div role="tablist" aria-label="Calendar view" className="flex gap-2">
-      {(['day', 'week', 'month'] as ViewMode[]).map((v) => (
-        <button
-          key={v}
-          role="tab"
-          aria-selected={view === v}
-          className={`px-3 py-1 text-sm border-b-2 ${view === v ? 'border-black dark:border-white' : 'border-transparent'}`}
-          onClick={() => setView(v)}
-        >
-          {v[0].toUpperCase() + v.slice(1)}
-        </button>
-      ))}
-    </div>
-  );
-
   if (focusedTaskId) {
     const task = tasksData.find((t) => t.id === focusedTaskId);
     return (
       <main className="space-y-4">
-        <header className="flex items-center justify-end gap-2">
-          <a
-            href="/"
-            className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-            title="Back to Home"
-            onClick={(e) => { e.preventDefault(); router.push('/'); }}
-          >
-            Home
-          </a>
-          {/* Account menu available in the global nav bar */}
-        </header>
-        {ViewTabs}
+        <CalendarHeader
+          changeDate={changeDate}
+          baseDate={baseDate}
+          view={view}
+          setView={setView}
+        />
         <section className="p-4 rounded border">
           <h2 className="text-xl font-semibold">Focusing: {task?.title}</h2>
           <p aria-label="timer">{Math.floor(elapsed / 1000)}s</p>
@@ -232,51 +213,12 @@ export default function CalendarPage() {
   return (
     <ErrorBoundary fallback={<main>Failed to load calendar</main>}>
     <main className="grid w-full grid-cols-1 gap-4 md:grid-cols-4">
-      <header className="flex items-center justify-between gap-2 md:col-span-4">
-        <div className="flex items-center gap-2">
-          <a
-            href="/"
-            className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-            title="Back to Home"
-            onClick={(e) => { e.preventDefault(); router.push('/'); }}
-          >
-            Home
-          </a>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              aria-label="Previous"
-              className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-              onClick={() => changeDate(-1)}
-            >
-              Prev
-            </button>
-            <button
-              type="button"
-              className={`rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${
-                baseDate.toDateString() === new Date().toDateString()
-                  ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
-                  : ''
-              }`}
-              onClick={() => setBaseDate(new Date())}
-              aria-current={baseDate.toDateString() === new Date().toDateString() ? 'date' : undefined}
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              aria-label="Next"
-              className="rounded border px-3 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-              onClick={() => changeDate(1)}
-            >
-              Next
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {ViewTabs}
-        </div>
-      </header>
+      <CalendarHeader
+        changeDate={changeDate}
+        baseDate={baseDate}
+        view={view}
+        setView={setView}
+      />
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
