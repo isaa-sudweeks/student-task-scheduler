@@ -60,8 +60,8 @@ export default function CoursesPage() {
   return (
     <main className="space-y-6">
       <h1 className="text-2xl font-semibold">Courses</h1>
-      <form onSubmit={handleSubmit}>
-        <div className="flex flex-col gap-2 max-w-md">
+      <div className="max-w-md mx-auto rounded-lg border p-4 shadow-sm bg-card">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           <label htmlFor="course-title" className="flex flex-col gap-1">
             Course title
             <input
@@ -104,8 +104,8 @@ export default function CoursesPage() {
             Add Course
           </Button>
           {createError && <p className="text-red-500">{createError.message}</p>}
-        </div>
-      </form>
+        </form>
+      </div>
       <div className="flex gap-2">
         <Button
           variant={sortBy === "title" ? "primary" : "secondary"}
