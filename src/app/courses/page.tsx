@@ -62,6 +62,10 @@ export default function CoursesPage() {
     event.preventDefault();
     const t = title.trim();
     if (!t) return;
+    if (courses.some((c) => c.title === t)) {
+      toast.error("Course already exists.");
+      return;
+    }
     createCourse({ title: t, term: term.trim() || undefined, color: color.trim() || undefined });
     setTitle("");
     setTerm("");
