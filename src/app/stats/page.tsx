@@ -14,7 +14,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  ResponsiveContainer,
 } from "recharts";
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
@@ -46,6 +45,50 @@ export default function StatsPage() {
       minutes: Math.round((focusMap[t.id] ?? 0) / 60000),
     }))
     .filter((f) => f.minutes > 0);
+  const totalFocusMinutes = focusByTask.reduce((sum, f) => sum + f.minutes, 0);
+  const averageFocusMinutes =
+    focusByTask.length === 0 ? 0 : Math.round(totalFocusMinutes / focusByTask.length);
+
+  const focusSubjectTotals = tasks.reduce(
+    (acc: Record<string, number>, task: Task) => {
+      const minutes = Math.round((focusMap[task.id] ?? 0) / 60000);
+      if (minutes > 0) {
+        const subject = task.subject ?? "Uncategorized";
+        acc[subject] = (acc[subject] ?? 0) + minutes;
+      }
+      return acc;
+    },
+    {}
+  );
+  const focusBySubject: { subject: string; minutes: number }[] = Object.entries(
+    focusSubjectTotals
+  ).map(([subject, minutes]) => ({ subject, minutes: Number(minutes) }));
+
+  const totalFocusMinutes = focusByTask.reduce(
+    (sum, f) => sum + f.minutes,
+    0
+  );
+  const averageFocusMinutes =
+    focusByTask.length === 0
+      ? 0
+      : Math.round(totalFocusMinutes / focusByTask.length);
+
+  const focusSubjectTotals = tasks.reduce(
+    (acc: Record<string, number>, task: Task) => {
+      const minutes = Math.round((focusMap[task.id] ?? 0) / 60000);
+      if (minutes > 0) {
+        const subject = task.subject ?? "Uncategorized";
+        acc[subject] = (acc[subject] ?? 0) + minutes;
+      }
+      return acc;
+    },
+    {}
+  );
+  const focusBySubject: { subject: string; minutes: number }[] =
+    Object.entries(focusSubjectTotals).map(([subject, minutes]) => ({
+      subject,
+      minutes: Number(minutes),
+    }));
   const { resolvedTheme } = useTheme();
 
   const isDark = resolvedTheme === "dark";
@@ -108,7 +151,8 @@ export default function StatsPage() {
         <header>
           <h1 className="text-2xl font-semibold">Task Statistics</h1>
         </header>
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+ 
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatCard
             icon={<List className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
             label="Total Tasks"
@@ -120,6 +164,11 @@ export default function StatsPage() {
             }
             label="Completion Rate"
             value={`${completionRate}%`}
+          />
+          <StatCard
+            icon={<List className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
+            label="Avg Focus (m)"
+            value={averageFocusMinutes}
           />
         </section>
         <div className="grid gap-6 md:grid-cols-2">
@@ -164,6 +213,44 @@ export default function StatsPage() {
                       />
                     ))}
                   </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+          <section>
+            <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
+              <h2 className="text-xl font-medium">Focus Time by Subject</h2>
+              <ul>
+                {focusBySubject.map((s) => (
+                  <li key={s.subject}>
+                    {s.subject}: {s.minutes}m
+                  </li>
+                ))}
+              </ul>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={focusBySubject}>
+                  <XAxis
+                    dataKey="subject"
+                    stroke={chartColors.axis}
+                    tick={{ fill: chartColors.text }}
+                  >
+                    <Label value="Subject" position="insideBottom" fill={chartColors.text} />
+                  </XAxis>
+                  <YAxis
+                    allowDecimals={false}
+                    stroke={chartColors.axis}
+                    tick={{ fill: chartColors.text }}
+                  >
+                    <Label
+                      value="Minutes"
+                      angle={-90}
+                      position="insideLeft"
+                      fill={chartColors.text}
+                    />
+                  </YAxis>
+                  <Tooltip />
+                  <Legend wrapperStyle={{ color: chartColors.text }} />
+                  <Bar dataKey="minutes" fill={chartColors.focusBar} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -238,6 +325,7 @@ export default function StatsPage() {
             </div>
           </section>
         </div>
+ 
       </main>
     </ErrorBoundary>
   );

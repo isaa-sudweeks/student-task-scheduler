@@ -88,11 +88,18 @@ describe('StatsPage', () => {
     expect(rateCard).toBeInTheDocument();
     expect(within(rateCard).getByText('67%')).toBeInTheDocument();
     expect(rateCard.querySelector('svg')).toBeTruthy();
+
+    const avgFocusLabel = screen.getByText('Avg Focus (m)');
+    const avgFocusCard = avgFocusLabel.parentElement?.parentElement as HTMLElement;
+    expect(avgFocusCard).toBeInTheDocument();
+    expect(within(avgFocusCard).getByText('2')).toBeInTheDocument();
+    expect(avgFocusCard.querySelector('svg')).toBeTruthy();
     expect(screen.getByText('TODO: 1')).toBeInTheDocument();
     expect(screen.getByText('DONE: 2')).toBeInTheDocument();
     expect(screen.getByText('Math: 2')).toBeInTheDocument();
     expect(screen.getByText('Science: 1')).toBeInTheDocument();
     expect(screen.getByText('Task 2: 2m')).toBeInTheDocument();
+    expect(screen.getByText('Science: 2m')).toBeInTheDocument();
   });
 
   it('renders focus stats for tasks with duplicate titles without key warnings', () => {
@@ -117,6 +124,8 @@ describe('StatsPage', () => {
     render(<StatsPage />);
     expect(screen.getByText('Task: 1m')).toBeInTheDocument();
     expect(screen.getByText('Task: 2m')).toBeInTheDocument();
+    expect(screen.getByText('Math: 1m')).toBeInTheDocument();
+    expect(screen.getByText('Science: 2m')).toBeInTheDocument();
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });
