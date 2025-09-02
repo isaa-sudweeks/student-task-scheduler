@@ -101,11 +101,43 @@ describe('focusRouter.aggregate', () => {
 
     const result = await focusRouter.createCaller({}).aggregate();
 
-    expect(hoisted.findMany).toHaveBeenCalled();
+    expect(hoisted.findMany).toHaveBeenCalledWith({
+      where: {
+        startedAt: { lte: new Date('2023-01-01T03:00:00Z') },
+        OR: [
+          { endedAt: { gte: new Date(0) } },
+          { endedAt: null },
+        ],
+      },
+    });
     expect(result).toEqual([
       { taskId: 't1', durationMs: 60 * 60 * 1000 },
       { taskId: 't2', durationMs: 60 * 60 * 1000 },
     ]);
+  });
+
+  it('clips durations to provided range', async () => {
+    hoisted.findMany.mockResolvedValueOnce([
+      {
+        taskId: 't1',
+        startedAt: new Date('2023-01-01T00:00:00Z'),
+        endedAt: new Date('2023-01-01T04:00:00Z'),
+      },
+    ]);
+
+    const start = new Date('2023-01-01T02:00:00Z');
+    const end = new Date('2023-01-01T03:00:00Z');
+    const result = await focusRouter
+      .createCaller({})
+      .aggregate({ start, end });
+
+    expect(hoisted.findMany).toHaveBeenCalledWith({
+      where: {
+        startedAt: { lte: end },
+        OR: [{ endedAt: { gte: start } }, { endedAt: null }],
+      },
+    });
+    expect(result).toEqual([{ taskId: 't1', durationMs: 60 * 60 * 1000 }]);
   });
 });
 
