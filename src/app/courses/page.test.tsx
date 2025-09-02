@@ -93,11 +93,11 @@ describe('CoursesPage', () => {
     listMock.mockReturnValue({ data: [], isLoading: false, error: undefined });
     createMock.mockReturnValue({ mutate: vi.fn(), isPending: false, error: undefined });
     render(<CoursesPage />);
-    const select = screen.getByLabelText('Course color') as HTMLSelectElement;
-    const swatch = screen.getByTestId('color-preview');
-    expect(swatch).toHaveStyle({ backgroundColor: '#000000' });
-    fireEvent.change(select, { target: { value: '#FF0000' } });
-    expect(swatch).toHaveStyle({ backgroundColor: '#FF0000' });
+    const preview = screen.getByTestId('color-preview');
+    expect(preview).toHaveStyle({ backgroundColor: '#000000' });
+    const swatch = screen.getByRole('button', { name: 'Select color #FF0000' });
+    fireEvent.click(swatch);
+    expect(preview).toHaveStyle({ backgroundColor: '#FF0000' });
   });
 
   it('sorts courses by title by default and toggles to term', () => {
