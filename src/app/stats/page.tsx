@@ -103,75 +103,83 @@ export default function StatsPage() {
           <p>Total Tasks: {total}</p>
           <p>Completion Rate: {completionRate}%</p>
         </section>
-        <section className="space-y-2">
-          <h2 className="text-xl font-medium">By Status</h2>
-          <ul>
-            {statusData.map((s) => (
-              <li key={s.status}>
-                {s.status}: {s.count}
-              </li>
-            ))}
-          </ul>
-          <BarChart width={400} height={200} data={statusData}>
-            <XAxis
-              dataKey="status"
-              stroke={chartColors.axis}
-              tick={{ fill: chartColors.text }}
-            />
-            <YAxis
-              allowDecimals={false}
-              stroke={chartColors.axis}
-              tick={{ fill: chartColors.text }}
-            />
-            <Tooltip />
-            <Bar dataKey="count" fill={chartColors.bar} />
-          </BarChart>
-        </section>
-        <section className="space-y-2">
-          <h2 className="text-xl font-medium">By Subject</h2>
-          <ul>
-            {subjectData.map((s) => (
-              <li key={s.subject}>
-                {s.subject}: {s.count}
-              </li>
-            ))}
-          </ul>
-          <PieChart width={400} height={200}>
-            <Pie data={subjectData} dataKey="count" nameKey="subject" outerRadius={80}>
-              {subjectData.map((_, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={chartColors.pie[index % chartColors.pie.length]}
+        <div className="grid gap-6 md:grid-cols-2">
+          <section>
+            <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
+              <h2 className="text-xl font-medium">By Status</h2>
+              <ul>
+                {statusData.map((s) => (
+                  <li key={s.status}>
+                    {s.status}: {s.count}
+                  </li>
+                ))}
+              </ul>
+              <BarChart width={400} height={200} data={statusData}>
+                <XAxis
+                  dataKey="status"
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.text }}
                 />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </section>
-        <section className="space-y-2">
-          <h2 className="text-xl font-medium">Focus Time by Task</h2>
-          <ul>
-            {focusByTask.map((f) => (
-              <li key={f.id}>
-                {f.title}: {f.minutes}m
-              </li>
-            ))}
-          </ul>
-          <BarChart width={400} height={200} data={focusByTask}>
-            <XAxis
-              dataKey="title"
-              stroke={chartColors.axis}
-              tick={{ fill: chartColors.text }}
-            />
-            <YAxis
-              allowDecimals={false}
-              stroke={chartColors.axis}
-              tick={{ fill: chartColors.text }}
-            />
-            <Tooltip />
-            <Bar dataKey="minutes" fill={chartColors.bar} />
-          </BarChart>
-        </section>
+                <YAxis
+                  allowDecimals={false}
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.text }}
+                />
+                <Tooltip />
+                <Bar dataKey="count" fill={chartColors.bar} />
+              </BarChart>
+            </div>
+          </section>
+          <section>
+            <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
+              <h2 className="text-xl font-medium">By Subject</h2>
+              <ul>
+                {subjectData.map((s) => (
+                  <li key={s.subject}>
+                    {s.subject}: {s.count}
+                  </li>
+                ))}
+              </ul>
+              <PieChart width={400} height={200}>
+                <Pie data={subjectData} dataKey="count" nameKey="subject" outerRadius={80}>
+                  {subjectData.map((_, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={chartColors.pie[index % chartColors.pie.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </div>
+          </section>
+          <section>
+            <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
+              <h2 className="text-xl font-medium">Focus Time by Task</h2>
+              <ul>
+                {focusByTask.map((f) => (
+                  <li key={f.id}>
+                    {f.title}: {f.minutes}m
+                  </li>
+                ))}
+              </ul>
+              <BarChart width={400} height={200} data={focusByTask}>
+                <XAxis
+                  dataKey="title"
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.text }}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.text }}
+                />
+                <Tooltip />
+                <Bar dataKey="minutes" fill={chartColors.bar} />
+              </BarChart>
+            </div>
+          </section>
+        </div>
       </main>
     </ErrorBoundary>
   );
