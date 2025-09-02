@@ -11,6 +11,7 @@ vi.mock('@/server/db', () => ({
   db: {
     project: {
       findMany: vi.fn().mockResolvedValue([]),
+      findFirst: hoisted.findFirst,
       create: hoisted.create,
       update: hoisted.update,
       findFirst: hoisted.findFirst,
@@ -56,6 +57,16 @@ describe('projectRouter.get', () => {
   });
   it('fetches project by id for user', async () => {
     await projectRouter.createCaller({ session: { user: { id: 'u1' } } as any }).get({ id: 'p1' });
+    expect(hoisted.findFirst).toHaveBeenCalledWith({ where: { id: 'p1', userId: 'u1' } });
+  });
+});
+
+describe('projectRouter.byId', () => {
+  beforeEach(() => {
+    hoisted.findFirst.mockClear();
+  });
+  it('fetches project for user', async () => {
+    await projectRouter.createCaller({ session: { user: { id: 'u1' } } as any }).byId({ id: 'p1' });
     expect(hoisted.findFirst).toHaveBeenCalledWith({ where: { id: 'p1', userId: 'u1' } });
   });
 });

@@ -14,6 +14,12 @@ export const projectRouter = router({
       const userId = ctx.session.user.id;
       return db.project.findFirst({ where: { id: input.id, userId } });
     }),
+  byId: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      return db.project.findFirst({ where: { id: input.id, userId } });
+    }),
   create: protectedProcedure
     .input(
       z.object({
