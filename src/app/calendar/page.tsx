@@ -246,7 +246,13 @@ export default function CalendarPage() {
         {ViewTabs}
         <section className="p-4 rounded border">
           <h2 className="text-xl font-semibold">Focusing: {task?.title}</h2>
-          <p aria-label="timer">{Math.floor(elapsed / 1000)}s</p>
+          <p
+            role="timer"
+            aria-live="polite"
+            aria-label="Elapsed focus time"
+          >
+            {Math.floor(elapsed / 1000)}s
+          </p>
           <button className="mt-2 px-3 py-1 border rounded" onClick={() => toggleFocus(focusedTaskId!)}>Unfocus</button>
         </section>
       </main>

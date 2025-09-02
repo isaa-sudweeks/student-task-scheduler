@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
@@ -127,6 +127,25 @@ describe('CalendarPage', () => {
     fireEvent.keyDown(backlogItem, { key: ' ' });
     expect(focusStart).toHaveBeenCalledWith({ taskId: 't1' });
     expect(screen.getByText(/Focusing:/i)).toBeInTheDocument();
+  });
+
+  it('announces elapsed focus time updates', () => {
+    vi.useFakeTimers();
+    render(<CalendarPage />);
+
+    const backlogItem = screen.getByRole('button', { name: /focus Unscheduled task/i });
+    backlogItem.focus();
+    fireEvent.keyDown(backlogItem, { key: ' ' });
+
+    const timer = screen.getByRole('timer', { name: /elapsed focus time/i });
+    expect(timer).toHaveAttribute('aria-live', 'polite');
+    expect(timer).toHaveTextContent('0s');
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(timer).toHaveTextContent('2s');
+    vi.useRealTimers();
   });
 
   it('schedules an unscheduled task with default 30 minutes when dropped onto calendar', () => {
