@@ -99,9 +99,9 @@ export default function CoursesPage() {
 
   return (
     <div className="container mx-auto px-4">
-      <main className="space-y-6">
-        <h1 className="text-2xl font-semibold">Courses</h1>
-        <div className="max-w-md mx-auto rounded-lg border p-4 shadow-sm bg-card">
+      <main className="space-y-6 md:grid md:grid-cols-2 md:gap-6 md:space-y-0">
+        <h1 className="text-2xl font-semibold md:col-span-2">Courses</h1>
+        <div className="max-w-md mx-auto md:mx-0 rounded-lg border p-4 shadow-sm bg-card">
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <label htmlFor="course-title" className="flex flex-col gap-1">
               Course title
@@ -147,65 +147,67 @@ export default function CoursesPage() {
             {createError && <p className="text-red-500">{createError.message}</p>}
           </form>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant={sortBy === "title" ? "primary" : "secondary"}
-            onClick={() => setSortBy("title")}
-          >
-            Sort by Title
-          </Button>
-          <Button
-            variant={sortBy === "term" ? "primary" : "secondary"}
-            onClick={() => setSortBy("term")}
-          >
-            Sort by Term
-          </Button>
-          <Button
-            variant="tertiary"
-            onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
-            aria-label="Toggle sort direction"
-          >
-            <ArrowUpDownIcon className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="max-w-md">
-          <div className="mb-4">
-            <label htmlFor="term-filter" className="mb-2 block">
-              Filter by term
-            </label>
-            <select
-              id="term-filter"
-              className="w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-              value={termFilter}
-              onChange={(e) => setTermFilter(e.target.value)}
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Button
+              variant={sortBy === "title" ? "primary" : "secondary"}
+              onClick={() => setSortBy("title")}
             >
-              <option value="">All terms</option>
-              {terms.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+              Sort by Title
+            </Button>
+            <Button
+              variant={sortBy === "term" ? "primary" : "secondary"}
+              onClick={() => setSortBy("term")}
+            >
+              Sort by Term
+            </Button>
+            <Button
+              variant="tertiary"
+              onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
+              aria-label="Toggle sort direction"
+            >
+              <ArrowUpDownIcon className="h-4 w-4" />
+            </Button>
           </div>
-          <input
-            className="mb-4 w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            placeholder="Search courses..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <ul className="space-y-4">
-            {sortedCourses
-              .filter(
-                (c) =>
-                  c.title
-                    .toLowerCase()
-                    .includes(debouncedSearch.toLowerCase()) &&
-                  (termFilter === "" || c.term === termFilter),
-              )
-              .map((c) => (
-                <CourseItem key={c.id} course={c} />
-              ))}
-          </ul>
+          <div className="max-w-md">
+            <div className="mb-4">
+              <label htmlFor="term-filter" className="mb-2 block">
+                Filter by term
+              </label>
+              <select
+                id="term-filter"
+                className="w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                value={termFilter}
+                onChange={(e) => setTermFilter(e.target.value)}
+              >
+                <option value="">All terms</option>
+                {terms.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <input
+              className="mb-4 w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              placeholder="Search courses..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <ul className="space-y-4">
+              {sortedCourses
+                .filter(
+                  (c) =>
+                    c.title
+                      .toLowerCase()
+                      .includes(debouncedSearch.toLowerCase()) &&
+                    (termFilter === "" || c.term === termFilter),
+                )
+                .map((c) => (
+                  <CourseItem key={c.id} course={c} />
+                ))}
+            </ul>
+          </div>
         </div>
       </main>
     </div>
