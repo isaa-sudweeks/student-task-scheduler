@@ -210,7 +210,13 @@ export default function CoursesPage() {
   );
 }
 
-function CourseItem({ course }: { course: { id: string; title: string; term: string | null; color: string | null } }) {
+function CourseItem({
+  course,
+  onPendingChange,
+}: {
+  course: { id: string; title: string; term: string | null; color: string | null };
+  onPendingChange: (id: string, pending: boolean) => void;
+}) {
   const utils = api.useUtils();
   const {
     mutate: updateCourse,
@@ -237,6 +243,7 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
   const [title, setTitle] = useState(course.title);
   const [term, setTerm] = useState(course.term ?? "");
   const [color, setColor] = useState(course.color ?? "");
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const titleId = `course-${course.id}-title`;
   const termId = `course-${course.id}-term`;
   const colorId = `course-${course.id}-color`;
@@ -247,7 +254,19 @@ function CourseItem({ course }: { course: { id: string; title: string; term: str
     trimmedTitle !== course.title ||
     trimmedTerm !== (course.term ?? "") ||
     trimmedColor !== (course.color ?? "");
-  const isSaveDisabled = isUpdating || !hasChanges;
+
+  useEffect(() => {
+    setHasPendingChanges(hasChanges);
+    onPendingChange(course.id, hasChanges);
+  }, [course.id, hasChanges, onPendingChange]);
+
+  useEffect(() => {
+    return () => {
+      onPendingChange(course.id, false);
+    };
+  }, [course.id, onPendingChange]);
+
+  const isSaveDisabled = isUpdating || !hasPendingChanges;
   return (
     <li>
       <div className="flex flex-col gap-2 rounded-lg border p-4 shadow-sm bg-card">
