@@ -21,6 +21,7 @@ import type { RouterOutputs } from "@/server/api/root";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { StatCard } from "@/components/ui/stat-card";
 import { Input } from "@/components/ui/input";
+import { TaskFilterTabs, type TaskFilter } from "@/components/task-filter-tabs";
 import { CheckCircle, List } from "lucide-react";
 
 type Task = RouterOutputs["task"]["list"][number];
@@ -40,12 +41,17 @@ export default function StatsPage() {
     [startDate, endDate]
   );
 
-  const { data, isLoading, error } = api.task.list.useQuery(range, {
+  const [filter, setFilter] = React.useState<TaskFilter>("all");
+  const [subject, setSubject] = React.useState<string | null>(null);
+  const queryInput = React.useMemo(
+    () => ({ filter, subject: subject ?? undefined, start: range.start, end: range.end }),
+    [filter, subject, range.start, range.end]
+  );
+  const { data, isLoading, error } = api.task.list.useQuery(queryInput, {
     enabled: !!session,
   });
   const tasks: RouterOutputs["task"]["list"] = data ?? [];
   const { data: focusData } = api.focus.aggregate.useQuery(range);
-
   const focusMap = React.useMemo(() => {
     const map: Record<string, number> = {};
     const totals = focusData ?? [];
@@ -141,8 +147,14 @@ export default function StatsPage() {
   return (
     <ErrorBoundary fallback={<main>Failed to load stats</main>}>
       <main className="space-y-6 text-neutral-900 dark:text-neutral-100">
-        <header>
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-semibold">Task Statistics</h1>
+          <TaskFilterTabs
+            value={filter}
+            onChange={setFilter}
+            subject={subject}
+            onSubjectChange={setSubject}
+          />
         </header>
 
         <section className="flex items-end gap-2">
@@ -345,4 +357,3 @@ export default function StatsPage() {
     </ErrorBoundary>
   );
 }
-

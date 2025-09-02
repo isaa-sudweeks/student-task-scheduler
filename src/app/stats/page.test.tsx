@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, cleanup, within } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach, beforeAll, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
@@ -14,6 +14,21 @@ vi.mock('@/server/api/react', () => ({
     focus: {
       aggregate: {
         useQuery: vi.fn(),
+      },
+    },
+    course: {
+      list: {
+        useQuery: vi.fn(() => ({ data: [] })),
+      },
+    },
+    project: {
+      list: {
+        useQuery: vi.fn(() => ({ data: [] })),
+      },
+    },
+    user: {
+      get: {
+        useQuery: vi.fn(() => ({ data: {} })),
       },
     },
   },
@@ -32,6 +47,12 @@ const taskUseQueryMock = api.task.list.useQuery as ReturnType<typeof vi.fn>;
 const focusUseQueryMock = api.focus.aggregate.useQuery as ReturnType<typeof vi.fn>;
 
 expect.extend(matchers);
+
+const sampleTasks = [
+  { id: '1', status: 'TODO', subject: 'Math', title: 'Task 1' },
+  { id: '2', status: 'DONE', subject: 'Science', title: 'Task 2' },
+  { id: '3', status: 'DONE', subject: 'Math', title: 'Task 3' },
+];
 
 beforeAll(() => {
   class ResizeObserver {
@@ -64,11 +85,7 @@ afterEach(() => {
 describe('StatsPage', () => {
   it('renders summary metrics', () => {
     taskUseQueryMock.mockReturnValue({
-      data: [
-        { id: '1', status: 'TODO', subject: 'Math', title: 'Task 1' },
-        { id: '2', status: 'DONE', subject: 'Science', title: 'Task 2' },
-        { id: '3', status: 'DONE', subject: 'Math', title: 'Task 3' },
-      ],
+      data: sampleTasks,
       isLoading: false,
     });
     focusUseQueryMock.mockReturnValue({
@@ -157,6 +174,43 @@ describe('StatsPage', () => {
     expect(range.end).toBeInstanceOf(Date);
     expect(focusUseQueryMock.mock.calls[0][0]).toBe(range);
     expect(screen.getByText('Failed to load stats')).toBeInTheDocument();
+  });
+
+  it('filters tasks by subject', () => {
+    taskUseQueryMock.mockImplementation((input) => ({
+      data:
+        input?.subject === 'Math'
+          ? sampleTasks.filter((t) => t.subject === 'Math')
+          : sampleTasks,
+      isLoading: false,
+    }));
+    focusUseQueryMock.mockReturnValue({ data: [], isLoading: false });
+
+    render(<StatsPage />);
+    fireEvent.change(screen.getByLabelText('Subject filter'), {
+      target: { value: 'Math' },
+    });
+    expect(screen.getByText('Total Tasks: 2')).toBeInTheDocument();
+    expect(screen.getByText('Math: 2')).toBeInTheDocument();
+    expect(screen.queryByText('Science: 1')).not.toBeInTheDocument();
+  });
+
+  it('filters tasks by status', () => {
+    taskUseQueryMock.mockImplementation((input) => ({
+      data:
+        input?.filter === 'archive'
+          ? sampleTasks.filter((t) => t.status === 'DONE')
+          : sampleTasks,
+      isLoading: false,
+    }));
+    focusUseQueryMock.mockReturnValue({ data: [], isLoading: false });
+
+    render(<StatsPage />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Archive' }));
+    expect(screen.getByText('Total Tasks: 2')).toBeInTheDocument();
+    expect(screen.getByText('Completion Rate: 100%')).toBeInTheDocument();
+    expect(screen.queryByText('TODO: 1')).not.toBeInTheDocument();
+    expect(screen.getByText('DONE: 2')).toBeInTheDocument();
   });
 
   describe('visual regression', () => {
