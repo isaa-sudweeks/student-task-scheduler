@@ -29,6 +29,7 @@ export const taskRouter = router({
           priority: z.nativeEnum(TaskPriority).optional(),
           courseId: z.string().optional(),
           projectId: z.string().optional(),
+          parentId: z.string().nullable().optional(),
           // Minutes to add to UTC to get client local time offset (Date.getTimezoneOffset style)
           tzOffsetMinutes: z.number().int().optional(),
           // Optional explicit client-local day bounds as absolute instants
@@ -46,6 +47,7 @@ export const taskRouter = router({
       const priority = input?.priority;
       const courseId = input?.courseId;
       const projectId = input?.projectId;
+      const parentId = input?.parentId ?? null;
       const tzOffsetMinutes = input?.tzOffsetMinutes ?? null;
       const nowUtc = new Date();
 
@@ -83,8 +85,8 @@ export const taskRouter = router({
       // Show only DONE in archive; otherwise include all by default
       const baseWhere: Prisma.TaskWhereInput =
         filter === 'archive'
-          ? { status: TaskStatus.DONE, userId }
-          : { userId };
+          ? { status: TaskStatus.DONE, userId, parentId }
+          : { userId, parentId };
 
       let where: Prisma.TaskWhereInput =
         filter === 'overdue'
@@ -104,6 +106,9 @@ export const taskRouter = router({
       }
       if (projectId) {
         where = { ...where, projectId };
+      }
+      if (input?.parentId !== undefined) {
+        where = { ...where, parentId };
       }
 
       const limit = input?.limit;
@@ -151,6 +156,7 @@ export const taskRouter = router({
         recurrenceUntil: z.date().optional(),
         projectId: z.string().min(1).optional(),
         courseId: z.string().min(1).optional(),
+        parentId: z.string().min(1).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -167,6 +173,10 @@ export const taskRouter = router({
         const course = await db.course.findFirst({ where: { id: input.courseId, userId } });
         if (!course) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid courseId' });
       }
+      if (input.parentId) {
+        const parent = await db.task.findFirst({ where: { id: input.parentId, userId } });
+        if (!parent) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid parentId' });
+      }
       const created = await db.task.create({
         data: {
           userId,
@@ -181,6 +191,7 @@ export const taskRouter = router({
           recurrenceUntil: input.recurrenceUntil ?? undefined,
           projectId: input.projectId ?? undefined,
           courseId: input.courseId ?? undefined,
+          parentId: input.parentId ?? undefined,
         },
       });
       await invalidateTaskListCache();
@@ -202,6 +213,7 @@ export const taskRouter = router({
         // Disallow empty strings; allow explicit null to clear
         projectId: z.string().min(1).nullable().optional(),
         courseId: z.string().min(1).nullable().optional(),
+        parentId: z.string().min(1).nullable().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -230,6 +242,13 @@ export const taskRouter = router({
         if (cid && typeof cid === 'string') {
           const course = await db.course.findFirst({ where: { id: cid, userId } });
           if (!course) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid courseId' });
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(data, 'parentId')) {
+        const pid = data.parentId as string | null | undefined;
+        if (pid && typeof pid === 'string') {
+          const parent = await db.task.findFirst({ where: { id: pid, userId } });
+          if (!parent) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid parentId' });
         }
       }
       let result: Task;

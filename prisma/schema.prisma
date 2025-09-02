@@ -118,6 +118,9 @@ model Task {
   projectId     String?
   course        Course?    @relation(fields: [courseId], references: [id])
   courseId      String?
+  parent        Task?      @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId      String?
+  subtasks      Task[]     @relation("Subtasks")
   title         String
   notes         String?
   subject       String?

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StatusDropdown } from "@/components/status-dropdown";
 import { api } from "@/server/api/react";
 import { formatLocalDateTime, parseLocalDateTime, defaultEndOfToday } from "@/lib/datetime";
@@ -40,6 +41,12 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
   const { data: courses = [] } = api.course.list.useQuery();
   const [projectId, setProjectId] = useState<string | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
+  const [subtaskTitle, setSubtaskTitle] = useState('');
+
+  const { data: subtasks = [] } = api.task.list.useQuery(
+    { filter: 'all', parentId: task?.id },
+    { enabled: isEdit && !!task }
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -87,6 +94,13 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
     },
   });
 
+  const createSubtask = api.task.create.useMutation({
+    onSuccess: async () => {
+      await utils.task.list.invalidate();
+      setSubtaskTitle('');
+    },
+  });
+
   const update = api.task.update.useMutation({
     onSuccess: async () => {
       await utils.task.list.invalidate();
@@ -111,6 +125,7 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
   if (update.error) throw update.error;
   if (setStatus.error) throw setStatus.error;
   if (del.error) throw del.error;
+  if (createSubtask.error) throw createSubtask.error;
 
   const footer = (
     <>
@@ -377,6 +392,30 @@ export function TaskModal({ open, mode, onClose, task, initialTitle, initialDueA
             onChange={(e) => setNotes(e.target.value)}
           />
         </div>
+        {isEdit && task && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Subtasks</h3>
+            <ul className="ml-6 list-disc">
+              {subtasks.map((st) => (
+                <li key={st.id}>{st.title}</li>
+              ))}
+            </ul>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="New subtask"
+                value={subtaskTitle}
+                onChange={(e) => setSubtaskTitle(e.target.value)}
+              />
+              <Button
+                type="button"
+                onClick={() => task && createSubtask.mutate({ title: subtaskTitle, parentId: task.id })}
+                disabled={!subtaskTitle.trim() || createSubtask.isPending}
+              >
+                Add subtask
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
   );
