@@ -47,7 +47,7 @@ export const taskRouter = router({
       const priority = input?.priority;
       const courseId = input?.courseId;
       const projectId = input?.projectId;
-      const parentId = input?.parentId ?? null;
+      const parentId = input?.parentId;
       const tzOffsetMinutes = input?.tzOffsetMinutes ?? null;
       const nowUtc = new Date();
 
@@ -85,8 +85,8 @@ export const taskRouter = router({
       // Show only DONE in archive; otherwise include all by default
       const baseWhere: Prisma.TaskWhereInput =
         filter === 'archive'
-          ? { status: TaskStatus.DONE, userId, parentId }
-          : { userId, parentId };
+          ? { status: TaskStatus.DONE, userId }
+          : { userId };
 
       let where: Prisma.TaskWhereInput =
         filter === 'overdue'
@@ -107,7 +107,7 @@ export const taskRouter = router({
       if (projectId) {
         where = { ...where, projectId };
       }
-      if (input?.parentId !== undefined) {
+      if (parentId !== undefined) {
         where = { ...where, parentId };
       }
 
