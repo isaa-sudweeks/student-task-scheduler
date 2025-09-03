@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TaskPriority, RecurrenceType, TaskStatus } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
 
 // Define hoisted fns for module mock
 const hoisted = vi.hoisted(() => {
@@ -154,7 +155,7 @@ describe('taskRouter.list caching', () => {
     await cache.clear();
   });
 
-  it('caches per user and invalidates on create', async () => {
+  it('caches per user and invalidates only for that user on create', async () => {
     const ctx1 = { session: { user: { id: 'u1' } } } as any;
     const ctx2 = { session: { user: { id: 'u2' } } } as any;
 
@@ -173,7 +174,7 @@ describe('taskRouter.list caching', () => {
     expect(hoisted.findMany).toHaveBeenCalledTimes(3);
 
     await taskRouter.createCaller(ctx2).list({ filter: 'all' });
-    expect(hoisted.findMany).toHaveBeenCalledTimes(4);
+    expect(hoisted.findMany).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -232,13 +233,11 @@ describe('taskRouter.create', () => {
   });
 
   it('passes recurrence data to the database', async () => {
-    const until = new Date('2024-01-01');
     await taskRouter.createCaller(ctx).create({
       title: 'a',
       recurrenceType: RecurrenceType.DAILY,
       recurrenceInterval: 2,
       recurrenceCount: 5,
-      recurrenceUntil: until,
     });
     expect(hoisted.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -246,9 +245,40 @@ describe('taskRouter.create', () => {
         recurrenceType: RecurrenceType.DAILY,
         recurrenceInterval: 2,
         recurrenceCount: 5,
-        recurrenceUntil: until,
       }),
     });
+  });
+
+  it('requires recurrenceType when recurrence fields provided', async () => {
+    await expect(
+      taskRouter.createCaller(ctx).create({ title: 'a', recurrenceInterval: 2 })
+    ).rejects.toThrow(TRPCError);
+    expect(hoisted.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects NONE recurrenceType with recurrence details', async () => {
+    await expect(
+      taskRouter.createCaller(ctx).create({
+        title: 'a',
+        recurrenceType: RecurrenceType.NONE,
+        recurrenceUntil: new Date('2024-01-01'),
+      })
+    ).rejects.toThrow(TRPCError);
+    expect(hoisted.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects when both recurrenceCount and recurrenceUntil are provided', async () => {
+    const until = new Date('2024-01-01');
+    await expect(
+      taskRouter.createCaller(ctx).create({
+        title: 'a',
+        recurrenceType: RecurrenceType.DAILY,
+        recurrenceInterval: 1,
+        recurrenceCount: 2,
+        recurrenceUntil: until,
+      })
+    ).rejects.toThrow(TRPCError);
+    expect(hoisted.create).not.toHaveBeenCalled();
   });
 
   it('passes project and course ids to the database', async () => {
@@ -287,13 +317,11 @@ describe('taskRouter.update recurrence', () => {
   });
 
   it('updates recurrence fields', async () => {
-    const until = new Date('2024-02-02');
     await taskRouter.createCaller(ctx).update({
       id: '1',
       recurrenceType: RecurrenceType.WEEKLY,
       recurrenceInterval: 3,
       recurrenceCount: 4,
-      recurrenceUntil: until,
     });
     expect(hoisted.update).toHaveBeenCalledWith({
       where: { id: '1' },
@@ -301,9 +329,29 @@ describe('taskRouter.update recurrence', () => {
         recurrenceType: RecurrenceType.WEEKLY,
         recurrenceInterval: 3,
         recurrenceCount: 4,
-        recurrenceUntil: until,
       },
     });
+  });
+
+  it('requires recurrenceType when updating recurrence fields', async () => {
+    await expect(
+      taskRouter.createCaller(ctx).update({ id: '1', recurrenceInterval: 2 })
+    ).rejects.toThrow(TRPCError);
+    expect(hoisted.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects when both recurrenceCount and recurrenceUntil are provided', async () => {
+    const until = new Date('2024-02-02');
+    await expect(
+      taskRouter.createCaller(ctx).update({
+        id: '1',
+        recurrenceType: RecurrenceType.WEEKLY,
+        recurrenceInterval: 1,
+        recurrenceCount: 2,
+        recurrenceUntil: until,
+      })
+    ).rejects.toThrow(TRPCError);
+    expect(hoisted.update).not.toHaveBeenCalled();
   });
 });
 
@@ -355,5 +403,31 @@ describe('taskRouter.bulkDelete', () => {
     expect(hoisted.deleteMany).toHaveBeenCalledWith({
       where: { id: { in: ['1', '2'] }, userId: 'user1' },
     });
+  });
+});
+
+describe('taskRouter.setDueDate', () => {
+  beforeEach(() => {
+    hoisted.findFirst.mockClear();
+    hoisted.update.mockClear();
+  });
+
+  it('updates due date when provided with a future date', async () => {
+    const future = new Date(Date.now() + 60 * 60 * 1000);
+    await taskRouter.createCaller(ctx).setDueDate({ id: '1', dueAt: future });
+    expect(hoisted.findFirst).toHaveBeenCalledWith({ where: { id: '1', userId: 'user1' } });
+    expect(hoisted.update).toHaveBeenCalledWith({
+      where: { id: '1' },
+      data: { dueAt: future },
+    });
+  });
+
+  it('throws when due date is in the past', async () => {
+    const past = new Date(Date.now() - 60 * 60 * 1000);
+    const call = taskRouter.createCaller(ctx).setDueDate({ id: '1', dueAt: past });
+    await expect(call).rejects.toThrow(TRPCError);
+    await expect(call).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(hoisted.findFirst).not.toHaveBeenCalled();
+    expect(hoisted.update).not.toHaveBeenCalled();
   });
 });

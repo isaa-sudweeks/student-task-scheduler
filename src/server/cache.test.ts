@@ -16,3 +16,21 @@ describe('cache.clear', () => {
     expect(await cache.get(otherKey)).toBe(2);
   });
 });
+
+describe('cache.deleteByPrefix', () => {
+  it('removes keys matching the given prefix', async () => {
+    const key1 = 'foo:1';
+    const key2 = 'foo:2';
+    const otherKey = 'bar:1';
+
+    await cache.set(key1, 1);
+    await cache.set(key2, 2);
+    await cache.set(otherKey, 3);
+
+    await cache.deleteByPrefix('foo:');
+
+    expect(await cache.get(key1)).toBeNull();
+    expect(await cache.get(key2)).toBeNull();
+    expect(await cache.get(otherKey)).toBe(3);
+  });
+});
