@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TaskPriority, RecurrenceType, TaskStatus } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
 
 // Define hoisted fns for module mock
 const hoisted = vi.hoisted(() => {
@@ -355,5 +356,31 @@ describe('taskRouter.bulkDelete', () => {
     expect(hoisted.deleteMany).toHaveBeenCalledWith({
       where: { id: { in: ['1', '2'] }, userId: 'user1' },
     });
+  });
+});
+
+describe('taskRouter.setDueDate', () => {
+  beforeEach(() => {
+    hoisted.findFirst.mockClear();
+    hoisted.update.mockClear();
+  });
+
+  it('updates due date when provided with a future date', async () => {
+    const future = new Date(Date.now() + 60 * 60 * 1000);
+    await taskRouter.createCaller(ctx).setDueDate({ id: '1', dueAt: future });
+    expect(hoisted.findFirst).toHaveBeenCalledWith({ where: { id: '1', userId: 'user1' } });
+    expect(hoisted.update).toHaveBeenCalledWith({
+      where: { id: '1' },
+      data: { dueAt: future },
+    });
+  });
+
+  it('throws when due date is in the past', async () => {
+    const past = new Date(Date.now() - 60 * 60 * 1000);
+    const call = taskRouter.createCaller(ctx).setDueDate({ id: '1', dueAt: past });
+    await expect(call).rejects.toThrow(TRPCError);
+    await expect(call).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(hoisted.findFirst).not.toHaveBeenCalled();
+    expect(hoisted.update).not.toHaveBeenCalled();
   });
 });
