@@ -5,17 +5,20 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+# Required so GitHub can mint an OIDC token for WIF
 permissions:
   contents: read
   id-token: write
 
 env:
-  REGION: ${{ vars.GCP_REGION }}                     # e.g. us-central1
-  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}             # e.g. student-scheduler-469918
-  REPOSITORY: ${{ vars.AR_REPOSITORY }}              # e.g. web-containers (Artifact Registry repo)
-  SERVICE_NAME: ${{ vars.CLOUD_RUN_SERVICE }}        # e.g. student-task-scheduler
+  REGION: ${{ vars.GCP_REGION }}                     # e.g., us-central1
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}             # e.g., student-scheduler-469918
+  REPOSITORY: ${{ vars.AR_REPOSITORY }}              # e.g., web-containers (Artifact Registry repo)
+  SERVICE_NAME: ${{ vars.CLOUD_RUN_SERVICE }}        # e.g., student-task-scheduler
   IMAGE_NAME: student-task-scheduler
-  INSTANCE_CONNECTION_NAME: ${{ vars.INSTANCE_CONNECTION_NAME }}  # e.g. project:region:instance
+  INSTANCE_CONNECTION_NAME: ${{ vars.INSTANCE_CONNECTION_NAME }}  # e.g., project:region:instance
+
+  # App secrets
   DB_USER: ${{ secrets.DB_USER }}
   DB_PASS: ${{ secrets.DB_PASS }}
   DB_NAME: ${{ secrets.DB_NAME }}
@@ -29,17 +32,16 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Auth to GCP via Workload Identity Federation (no JSON key file needed)
-      - name: Google Auth
-        uses: google-github-actions/auth@v2
+      # ---- GITHUB -> GOOGLE AUTH (WIF) ----
+      - name: Google Auth (Workload Identity Federation)
+        uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }} # projects/123456789/locations/global/workloadIdentityPools/gh-pool/providers/gh-provider
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}                  # deployer@PROJECT_ID.iam.gserviceaccount.com
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
           token_format: access_token
 
       - name: Setup gcloud
@@ -66,16 +68,12 @@ jobs:
           docker push "${AR_PATH}"
           echo "AR_PATH=${AR_PATH}" >> $GITHUB_ENV
 
-      # First deploy WITHOUT NEXTAUTH_URL set to obtain the service URL
+      # First deploy WITHOUT NEXTAUTH_URL to obtain service URL
       - name: First Deploy (bootstrap URL)
         run: |
-          # Compose Postgres Unix-socket URL for Cloud SQL connector on Cloud Run
           DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@localhost/${DB_NAME}?host=/cloudsql/${INSTANCE_CONNECTION_NAME}"
-
-          # Build env var list (omit NEXTAUTH_URL for first deploy)
           ENV_VARS="NEXTAUTH_SECRET=${NEXTAUTH_SECRET},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET},DATABASE_URL=${DATABASE_URL}"
 
-          # Optional Redis cache
           if [ -n "${REDIS_URL}" ] && [ -n "${REDIS_TOKEN}" ]; then
             ENV_VARS="${ENV_VARS},REDIS_URL=${REDIS_URL},REDIS_TOKEN=${REDIS_TOKEN}"
           fi
@@ -91,11 +89,14 @@ jobs:
         run: |
           URL=$(gcloud run services describe "${SERVICE_NAME}" --format='value(status.url)')
           echo "url=${URL}" >> $GITHUB_OUTPUT
+          echo "Cloud Run URL: ${URL}"
 
+      # Redeploy WITH NEXTAUTH_URL now that we know it
       - name: Second Deploy (set NEXTAUTH_URL)
         run: |
           DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@localhost/${DB_NAME}?host=/cloudsql/${INSTANCE_CONNECTION_NAME}"
           ENV_VARS="NEXTAUTH_SECRET=${NEXTAUTH_SECRET},NEXTAUTH_URL=${{ steps.url.outputs.url }},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET},DATABASE_URL=${DATABASE_URL}"
+
           if [ -n "${REDIS_URL}" ] && [ -n "${REDIS_TOKEN}" ]; then
             ENV_VARS="${ENV_VARS},REDIS_URL=${REDIS_URL},REDIS_TOKEN=${REDIS_TOKEN}"
           fi
@@ -106,24 +107,24 @@ jobs:
             --add-cloudsql-instances "${INSTANCE_CONNECTION_NAME}" \
             --set-env-vars "${ENV_VARS}"
 
-      # Prisma migrations via Cloud Run Job (idempotent: create if missing, else update)
+      # Create/Update a Cloud Run Job to run Prisma migrations
       - name: Ensure Prisma Migrate Job
         run: |
           JOB_NAME="prisma-migrate"
           set -e
+          DB_URL_FOR_JOB="postgresql://${DB_USER}:${DB_PASS}@localhost/${DB_NAME}?host=/cloudsql/${INSTANCE_CONNECTION_NAME}"
 
-          # Create/Update the job to run npx prisma migrate deploy
           if gcloud run jobs describe "${JOB_NAME}" >/dev/null 2>&1; then
             gcloud run jobs update "${JOB_NAME}" \
               --image "${AR_PATH}" \
               --add-cloudsql-instances "${INSTANCE_CONNECTION_NAME}" \
-              --set-env-vars "DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@localhost/${DB_NAME}?host=/cloudsql/${INSTANCE_CONNECTION_NAME}" \
+              --set-env-vars "DATABASE_URL=${DB_URL_FOR_JOB}" \
               --command "npx" --args "prisma","migrate","deploy"
           else
             gcloud run jobs create "${JOB_NAME}" \
               --image "${AR_PATH}" \
               --add-cloudsql-instances "${INSTANCE_CONNECTION_NAME}" \
-              --set-env-vars "DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@localhost/${DB_NAME}?host=/cloudsql/${INSTANCE_CONNECTION_NAME}" \
+              --set-env-vars "DATABASE_URL=${DB_URL_FOR_JOB}" \
               --command "npx" --args "prisma","migrate","deploy"
           fi
 
