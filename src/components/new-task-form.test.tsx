@@ -31,7 +31,7 @@ vi.mock('@/server/api/react', () => ({
       },
       delete: { useMutation: () => ({ mutate: vi.fn() }) },
       updateTitle: { useMutation: () => ({ mutate: vi.fn() }) },
-      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: { message: 'Failed to update status' } }) },
+      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
     },
     project: { list: { useQuery: () => ({ data: [] }) } },
     course: { list: { useQuery: () => ({ data: [] }) } },
@@ -44,10 +44,15 @@ afterEach(() => {
 });
 
 describe('NewTaskForm', () => {
+  it('renders task title input with a label', () => {
+    render(<NewTaskForm />);
+    expect(screen.getByLabelText('Task title')).toBeInTheDocument();
+  });
+
   it('submits on Enter with title only', () => {
     mutateSpy = vi.fn();
     render(<NewTaskForm />);
-    const input = screen.getByPlaceholderText('Add a task…');
+    const input = screen.getByLabelText('Task title');
     fireEvent.change(input, { target: { value: 'Do homework' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(mutateSpy).toHaveBeenCalledWith({ title: 'Do homework' });
@@ -56,7 +61,7 @@ describe('NewTaskForm', () => {
   it('does not submit when title is blank', () => {
     mutateSpy = vi.fn();
     render(<NewTaskForm />);
-    const input = screen.getByPlaceholderText('Add a task…');
+    const input = screen.getByLabelText('Task title');
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(mutateSpy).not.toHaveBeenCalled();
   });
@@ -72,9 +77,9 @@ describe('NewTaskForm', () => {
     const dueInput = screen.getByDisplayValue(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
     fireEvent.change(dueInput, { target: { value: '2099-12-31T23:59' } });
     // Hint should appear in the form outside the modal
-    expect(screen.getByText(/Due /)).toBeInTheDocument();
+    expect(screen.getByText(/^Due \d/)).toBeInTheDocument();
     // Disable due and ensure hint disappears
     fireEvent.click(dueToggle);
-    expect(screen.queryByText(/Due /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Due \d/)).not.toBeInTheDocument();
   });
 });
