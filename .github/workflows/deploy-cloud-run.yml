@@ -37,17 +37,12 @@ jobs:
         uses: actions/checkout@v4
 
       # ---- GITHUB -> GOOGLE AUTH ----
-      # Prefer JSON key if provided (simpler to unblock), else use WIF.
-      - name: Google Auth (JSON Key)
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+      # Use JSON key if provided; otherwise fall back to WIF.
+      - name: Google Auth
         uses: google-github-actions/auth@v3
         with:
+          # Fallback: if empty, action will use WIF inputs instead
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Google Auth (Workload Identity Federation)
-        if: ${{ secrets.GCP_SA_KEY == '' }}
-        uses: google-github-actions/auth@v3
-        with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
           token_format: access_token
