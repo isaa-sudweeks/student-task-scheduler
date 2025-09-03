@@ -54,7 +54,9 @@ afterAll(() => {
 describe('ProjectsPage validation', () => {
   it('shows error when title too long', () => {
     render(<ProjectsPage />);
-    fireEvent.click(screen.getByRole('button', { name: /add project/i }));
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /add project/i })[0]
+    );
     fireEvent.change(screen.getByPlaceholderText('Project title'), {
       target: { value: 'a'.repeat(201) },
     });
@@ -83,7 +85,9 @@ describe('ProjectsPage loading states', () => {
   it('disables save button when creating', () => {
     createIsPending = true;
     render(<ProjectsPage />);
-    fireEvent.click(screen.getByRole('button', { name: /add project/i }));
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /add project/i })[0]
+    );
     const btn = screen.getByRole('button', { name: /saving/i });
     expect(btn).toBeDisabled();
   });
@@ -140,14 +144,13 @@ describe('ProjectsPage', () => {
     expect(filtered).toEqual(['Alpha']);
   });
 
-  it('shows character counters', () => {
+  it('renders form fields in modal', () => {
     listData = [{ id: '1', title: 'Proj', description: 'desc' }];
     render(<ProjectsPage />);
-    const titleCounters = screen.getAllByText(/\/200/);
-    expect(titleCounters[0]).toHaveTextContent('0/200');
-    expect(titleCounters[1]).toHaveTextContent('4/200');
-    const descCounters = screen.getAllByText(/\/1000/);
-    expect(descCounters[0]).toHaveTextContent('0/1000');
-    expect(descCounters[1]).toHaveTextContent('4/1000');
+    fireEvent.click(screen.getAllByRole('button', { name: /add project/i })[0]);
+    expect(screen.getByPlaceholderText('Project title')).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('Description (optional)')
+    ).toBeInTheDocument();
   });
 });

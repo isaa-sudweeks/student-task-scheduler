@@ -24,6 +24,8 @@ vi.mock('recharts', () => {
     XAxis: Null,
     YAxis: Null,
     Tooltip: Null,
+    Legend: Null,
+    Label: Null,
     PieChart: Div,
     Pie,
     Cell,
@@ -130,10 +132,13 @@ describe('StatsPage', () => {
     });
 
     render(<StatsPage />);
-    const range = taskUseQueryMock.mock.calls[0][0];
-    expect(range.start).toBeInstanceOf(Date);
-    expect(range.end).toBeInstanceOf(Date);
-    expect(focusUseQueryMock.mock.calls[0][0]).toBe(range);
+    const queryInput = taskUseQueryMock.mock.calls[0][0];
+    expect(queryInput.start).toBeInstanceOf(Date);
+    expect(queryInput.end).toBeInstanceOf(Date);
+    expect(focusUseQueryMock.mock.calls[0][0]).toEqual({
+      start: queryInput.start,
+      end: queryInput.end,
+    });
 
     const totalCardLabel = screen.getByText('Total Tasks');
     const totalCard = totalCardLabel.parentElement?.parentElement as HTMLElement;
@@ -209,10 +214,13 @@ describe('StatsPage', () => {
     });
 
     render(<StatsPage />);
-    const range = taskUseQueryMock.mock.calls[0][0];
-    expect(range.start).toBeInstanceOf(Date);
-    expect(range.end).toBeInstanceOf(Date);
-    expect(focusUseQueryMock.mock.calls[0][0]).toBe(range);
+    const queryInput = taskUseQueryMock.mock.calls[0][0];
+    expect(queryInput.start).toBeInstanceOf(Date);
+    expect(queryInput.end).toBeInstanceOf(Date);
+    expect(focusUseQueryMock.mock.calls[0][0]).toEqual({
+      start: queryInput.start,
+      end: queryInput.end,
+    });
     expect(screen.getByText('Task: 1m')).toBeInTheDocument();
     expect(screen.getByText('Task: 2m')).toBeInTheDocument();
     expect(screen.getByText('Math: 1m')).toBeInTheDocument();
@@ -234,10 +242,13 @@ describe('StatsPage', () => {
         <StatsPage />
       </ErrorBoundary>
     );
-    const range = taskUseQueryMock.mock.calls[0][0];
-    expect(range.start).toBeInstanceOf(Date);
-    expect(range.end).toBeInstanceOf(Date);
-    expect(focusUseQueryMock.mock.calls[0][0]).toBe(range);
+    const queryInput = taskUseQueryMock.mock.calls[0][0];
+    expect(queryInput.start).toBeInstanceOf(Date);
+    expect(queryInput.end).toBeInstanceOf(Date);
+    expect(focusUseQueryMock.mock.calls[0][0]).toEqual({
+      start: queryInput.start,
+      end: queryInput.end,
+    });
     expect(screen.getByText('Failed to load stats')).toBeInTheDocument();
   });
 
@@ -255,7 +266,9 @@ describe('StatsPage', () => {
     fireEvent.change(screen.getByLabelText('Subject filter'), {
       target: { value: 'Math' },
     });
-    expect(screen.getByText('Total Tasks: 2')).toBeInTheDocument();
+    const totalCard = screen.getByText('Total Tasks').parentElement
+      ?.parentElement as HTMLElement;
+    expect(within(totalCard).getByText('2')).toBeInTheDocument();
     expect(screen.getByText('Math: 2')).toBeInTheDocument();
     expect(screen.queryByText('Science: 1')).not.toBeInTheDocument();
   });
@@ -272,8 +285,12 @@ describe('StatsPage', () => {
 
     render(<StatsPage />);
     fireEvent.click(screen.getByRole('tab', { name: 'Archive' }));
-    expect(screen.getByText('Total Tasks: 2')).toBeInTheDocument();
-    expect(screen.getByText('Completion Rate: 100%')).toBeInTheDocument();
+    const totalCard = screen.getByText('Total Tasks').parentElement
+      ?.parentElement as HTMLElement;
+    expect(within(totalCard).getByText('2')).toBeInTheDocument();
+    const rateCard = screen.getByText('Completion Rate').parentElement
+      ?.parentElement as HTMLElement;
+    expect(within(rateCard).getByText('100%')).toBeInTheDocument();
     expect(screen.queryByText('TODO: 1')).not.toBeInTheDocument();
     expect(screen.getByText('DONE: 2')).toBeInTheDocument();
   });
