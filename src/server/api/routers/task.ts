@@ -19,6 +19,26 @@ const requireUserId = (ctx: { session?: { user?: { id?: string } | null } | null
   if (!id) throw new TRPCError({ code: 'UNAUTHORIZED' });
   return id;
 };
+
+export const validateTaskRelationships = async (
+  userId: string,
+  ids: { projectId?: string | null; courseId?: string | null; parentId?: string | null },
+) => {
+  const { projectId, courseId, parentId } = ids;
+  if (typeof projectId === 'string') {
+    const project = await db.project.findFirst({ where: { id: projectId, userId } });
+    if (!project) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid projectId' });
+  }
+  if (typeof courseId === 'string') {
+    const course = await db.course.findFirst({ where: { id: courseId, userId } });
+    if (!course) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid courseId' });
+  }
+  if (typeof parentId === 'string') {
+    const parent = await db.task.findFirst({ where: { id: parentId, userId } });
+    if (!parent) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid parentId' });
+  }
+};
+
 export const taskRouter = router({
   // List tasks for the authenticated user
   list: protectedProcedure
@@ -202,19 +222,11 @@ export const taskRouter = router({
           });
         }
       }
-      // Validate foreign keys to avoid FK violations and cross-user links
-      if (input.projectId) {
-        const project = await db.project.findFirst({ where: { id: input.projectId, userId } });
-        if (!project) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid projectId' });
-      }
-      if (input.courseId) {
-        const course = await db.course.findFirst({ where: { id: input.courseId, userId } });
-        if (!course) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid courseId' });
-      }
-      if (input.parentId) {
-        const parent = await db.task.findFirst({ where: { id: input.parentId, userId } });
-        if (!parent) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid parentId' });
-      }
+      await validateTaskRelationships(userId, {
+        projectId: input.projectId,
+        courseId: input.courseId,
+        parentId: input.parentId,
+      });
       const created = await db.task.create({
         data: {
           userId,
@@ -285,28 +297,11 @@ export const taskRouter = router({
         if (typeof value !== 'undefined') data[key] = value;
       }
 
-      // Validate foreign keys belong to the user before updating, to avoid FK errors
-      if (Object.prototype.hasOwnProperty.call(data, 'projectId')) {
-        const pid = data.projectId as string | null | undefined;
-        if (pid && typeof pid === 'string') {
-          const project = await db.project.findFirst({ where: { id: pid, userId } });
-          if (!project) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid projectId' });
-        }
-      }
-      if (Object.prototype.hasOwnProperty.call(data, 'courseId')) {
-        const cid = data.courseId as string | null | undefined;
-        if (cid && typeof cid === 'string') {
-          const course = await db.course.findFirst({ where: { id: cid, userId } });
-          if (!course) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid courseId' });
-        }
-      }
-      if (Object.prototype.hasOwnProperty.call(data, 'parentId')) {
-        const pid = data.parentId as string | null | undefined;
-        if (pid && typeof pid === 'string') {
-          const parent = await db.task.findFirst({ where: { id: pid, userId } });
-          if (!parent) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid parentId' });
-        }
-      }
+      await validateTaskRelationships(userId, {
+        projectId: data.projectId as string | null | undefined,
+        courseId: data.courseId as string | null | undefined,
+        parentId: data.parentId as string | null | undefined,
+      });
       let result: Task;
       if (Object.keys(data).length === 0) {
         result = existing;

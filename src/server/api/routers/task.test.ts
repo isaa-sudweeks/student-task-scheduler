@@ -50,9 +50,10 @@ vi.mock('@/server/db', () => ({
   },
 }));
 
-import { taskRouter } from './task';
+import * as taskModule from './task';
 import { cache } from '@/server/cache';
 
+const { taskRouter } = taskModule;
 const ctx = { session: { user: { id: 'user1' } } } as any;
 
 describe('taskRouter.list ordering', () => {
@@ -309,6 +310,19 @@ describe('taskRouter.create', () => {
       }),
     });
   });
+
+  it('validates relationships via helper', async () => {
+    const spy = vi.spyOn(taskModule, 'validateTaskRelationships');
+    await taskRouter
+      .createCaller(ctx)
+      .create({ title: 'a', projectId: 'p1', courseId: 'c1', parentId: 't1' });
+    expect(spy).toHaveBeenCalledWith('user1', {
+      projectId: 'p1',
+      courseId: 'c1',
+      parentId: 't1',
+    });
+    spy.mockRestore();
+  });
 });
 
 describe('taskRouter.update recurrence', () => {
@@ -366,6 +380,19 @@ describe('taskRouter.update project/course', () => {
       where: { id: '1' },
       data: { projectId: 'p1', courseId: null },
     });
+  });
+
+  it('validates relationships via helper', async () => {
+    const spy = vi.spyOn(taskModule, 'validateTaskRelationships');
+    await taskRouter
+      .createCaller(ctx)
+      .update({ id: '1', projectId: 'p1', courseId: null, parentId: 't1' });
+    expect(spy).toHaveBeenCalledWith('user1', {
+      projectId: 'p1',
+      courseId: null,
+      parentId: 't1',
+    });
+    spy.mockRestore();
   });
 });
 
