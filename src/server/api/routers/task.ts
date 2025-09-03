@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { TaskStatus, TaskPriority, Prisma, RecurrenceType } from '@prisma/client';
 import { protectedProcedure, router } from '../trpc';
+import * as taskModule from './task';
 import { db } from '@/server/db';
 import { cache } from '@/server/cache';
 import type { Task } from '@prisma/client';
@@ -20,10 +21,10 @@ const requireUserId = (ctx: { session?: { user?: { id?: string } | null } | null
   return id;
 };
 
-export const validateTaskRelationships = async (
+export async function validateTaskRelationships(
   userId: string,
   ids: { projectId?: string | null; courseId?: string | null; parentId?: string | null },
-) => {
+) {
   const { projectId, courseId, parentId } = ids;
   if (typeof projectId === 'string') {
     const project = await db.project.findFirst({ where: { id: projectId, userId } });
@@ -37,7 +38,7 @@ export const validateTaskRelationships = async (
     const parent = await db.task.findFirst({ where: { id: parentId, userId } });
     if (!parent) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid parentId' });
   }
-};
+}
 
 export const taskRouter = router({
   // List tasks for the authenticated user
@@ -222,7 +223,7 @@ export const taskRouter = router({
           });
         }
       }
-      await validateTaskRelationships(userId, {
+      await taskModule.validateTaskRelationships(userId, {
         projectId: input.projectId,
         courseId: input.courseId,
         parentId: input.parentId,
@@ -297,7 +298,7 @@ export const taskRouter = router({
         if (typeof value !== 'undefined') data[key] = value;
       }
 
-      await validateTaskRelationships(userId, {
+      await taskModule.validateTaskRelationships(userId, {
         projectId: data.projectId as string | null | undefined,
         courseId: data.courseId as string | null | undefined,
         parentId: data.parentId as string | null | undefined,
