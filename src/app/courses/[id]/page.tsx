@@ -30,6 +30,11 @@ export default function CoursePage({ params }: { params: { id: string } }) {
     return <div>Loading...</div>;
   }
 
+  // Some list queries may not carry syllabusUrl in the inferred type.
+  // It exists in the Course model; narrow softly for rendering.
+  const syllabusUrl = (course as unknown as { syllabusUrl?: string | null })
+    .syllabusUrl ?? null;
+
   return (
     <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
       <div className="space-y-1">
@@ -50,9 +55,9 @@ export default function CoursePage({ params }: { params: { id: string } }) {
             aria-label="Upload syllabus"
             onChange={handleFileChange}
           />
-          {course.syllabusUrl && (
+          {syllabusUrl && (
             <a
-              href={course.syllabusUrl}
+              href={syllabusUrl}
               className="text-indigo-600 underline"
               target="_blank"
               rel="noopener noreferrer"

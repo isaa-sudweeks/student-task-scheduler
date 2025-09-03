@@ -66,16 +66,17 @@ export const courseRouter = router({
           message: 'Course already exists',
         });
       }
-      return db.course.create({
-        data: {
-          title: input.title,
-          userId,
-          term: input.term ?? null,
-          color: input.color ?? null,
-          description: input.description ?? null,
-          syllabusUrl: input.syllabusUrl ?? null,
-        },
-      });
+      const data: Record<string, unknown> = {
+        title: input.title,
+        userId,
+        term: input.term ?? null,
+        color: input.color ?? null,
+        description: input.description ?? null,
+      };
+      if (typeof input.syllabusUrl !== 'undefined') {
+        (data as any).syllabusUrl = input.syllabusUrl ?? null;
+      }
+      return db.course.create({ data: data as any });
     }),
   update: protectedProcedure
     .input(

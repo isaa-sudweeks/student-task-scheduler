@@ -141,7 +141,9 @@ export function StatusDropdown({ value, onChange, className, disabled, ariaLabel
           {STATUSES.map((s, i) => (
             <li key={s} id={`status-${s}`} role="option" aria-selected={s === value}>
               <button
-                ref={(el) => (optionRefs.current[i] = el)}
+                ref={(el) => {
+                  optionRefs.current[i] = el;
+                }}
                 type="button"
                 className={clsx(
                   "flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-black/5 focus:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 dark:hover:bg-white/10 dark:focus:bg-white/10 dark:focus-visible:ring-white/20",
