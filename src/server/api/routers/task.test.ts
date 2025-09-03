@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TaskPriority, RecurrenceType, TaskStatus } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
 
 // Define hoisted fns for module mock
 const hoisted = vi.hoisted(() => {
@@ -232,13 +233,11 @@ describe('taskRouter.create', () => {
   });
 
   it('passes recurrence data to the database', async () => {
-    const until = new Date('2024-01-01');
     await taskRouter.createCaller(ctx).create({
       title: 'a',
       recurrenceType: RecurrenceType.DAILY,
       recurrenceInterval: 2,
       recurrenceCount: 5,
-      recurrenceUntil: until,
     });
     expect(hoisted.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -246,9 +245,40 @@ describe('taskRouter.create', () => {
         recurrenceType: RecurrenceType.DAILY,
         recurrenceInterval: 2,
         recurrenceCount: 5,
-        recurrenceUntil: until,
       }),
     });
+  });
+
+  it('requires recurrenceType when recurrence fields provided', async () => {
+    await expect(
+      taskRouter.createCaller(ctx).create({ title: 'a', recurrenceInterval: 2 })
+    ).rejects.toThrow(TRPCError);
+    expect(hoisted.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects NONE recurrenceType with recurrence details', async () => {
+    await expect(
+      taskRouter.createCaller(ctx).create({
+        title: 'a',
+        recurrenceType: RecurrenceType.NONE,
+        recurrenceUntil: new Date('2024-01-01'),
+      })
+    ).rejects.toThrow(TRPCError);
+    expect(hoisted.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects when both recurrenceCount and recurrenceUntil are provided', async () => {
+    const until = new Date('2024-01-01');
+    await expect(
+      taskRouter.createCaller(ctx).create({
+        title: 'a',
+        recurrenceType: RecurrenceType.DAILY,
+        recurrenceInterval: 1,
+        recurrenceCount: 2,
+        recurrenceUntil: until,
+      })
+    ).rejects.toThrow(TRPCError);
+    expect(hoisted.create).not.toHaveBeenCalled();
   });
 
   it('passes project and course ids to the database', async () => {
@@ -287,13 +317,11 @@ describe('taskRouter.update recurrence', () => {
   });
 
   it('updates recurrence fields', async () => {
-    const until = new Date('2024-02-02');
     await taskRouter.createCaller(ctx).update({
       id: '1',
       recurrenceType: RecurrenceType.WEEKLY,
       recurrenceInterval: 3,
       recurrenceCount: 4,
-      recurrenceUntil: until,
     });
     expect(hoisted.update).toHaveBeenCalledWith({
       where: { id: '1' },
@@ -301,9 +329,29 @@ describe('taskRouter.update recurrence', () => {
         recurrenceType: RecurrenceType.WEEKLY,
         recurrenceInterval: 3,
         recurrenceCount: 4,
-        recurrenceUntil: until,
       },
     });
+  });
+
+  it('requires recurrenceType when updating recurrence fields', async () => {
+    await expect(
+      taskRouter.createCaller(ctx).update({ id: '1', recurrenceInterval: 2 })
+    ).rejects.toThrow(TRPCError);
+    expect(hoisted.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects when both recurrenceCount and recurrenceUntil are provided', async () => {
+    const until = new Date('2024-02-02');
+    await expect(
+      taskRouter.createCaller(ctx).update({
+        id: '1',
+        recurrenceType: RecurrenceType.WEEKLY,
+        recurrenceInterval: 1,
+        recurrenceCount: 2,
+        recurrenceUntil: until,
+      })
+    ).rejects.toThrow(TRPCError);
+    expect(hoisted.update).not.toHaveBeenCalled();
   });
 });
 

@@ -183,6 +183,24 @@ export const taskRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
       const userId = requireUserId(ctx);
+      if (input.recurrenceCount !== undefined && input.recurrenceUntil !== undefined) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Specify either recurrenceCount or recurrenceUntil, not both',
+        });
+      }
+      if (
+        input.recurrenceInterval !== undefined ||
+        input.recurrenceCount !== undefined ||
+        input.recurrenceUntil !== undefined
+      ) {
+        if (!input.recurrenceType || input.recurrenceType === RecurrenceType.NONE) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'recurrenceType must be provided and not NONE when specifying recurrence details',
+          });
+        }
+      }
       // Validate foreign keys to avoid FK violations and cross-user links
       if (input.projectId) {
         const project = await db.project.findFirst({ where: { id: input.projectId, userId } });
@@ -238,6 +256,24 @@ export const taskRouter = router({
     .mutation(async ({ input, ctx }) => {
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
+      }
+      if (input.recurrenceCount !== undefined && input.recurrenceUntil !== undefined) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Specify either recurrenceCount or recurrenceUntil, not both',
+        });
+      }
+      if (
+        input.recurrenceInterval !== undefined ||
+        input.recurrenceCount !== undefined ||
+        input.recurrenceUntil !== undefined
+      ) {
+        if (!input.recurrenceType || input.recurrenceType === RecurrenceType.NONE) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'recurrenceType must be provided and not NONE when specifying recurrence details',
+          });
+        }
       }
       const { id, ...rest } = input;
       const userId = requireUserId(ctx);
