@@ -64,6 +64,36 @@ export function StatusDropdown({ value, onChange, className, disabled, ariaLabel
     optionRefs.current[index]?.focus();
   }, [open, value]);
 
+  const handleListKey = (e: React.KeyboardEvent<HTMLUListElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const options = optionRefs.current;
+      const index = options.findIndex((el) => el === document.activeElement);
+      const next =
+        e.key === "ArrowDown"
+          ? (index + 1) % options.length
+          : (index - 1 + options.length) % options.length;
+      options[next]?.focus();
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const index = optionRefs.current.findIndex((el) => el === document.activeElement);
+      const status = STATUSES[index];
+      if (status) {
+        onChange(status);
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+  };
+
   return (
     <div ref={ref} className={clsx("relative inline-block", className)}>
       <button
@@ -106,33 +136,7 @@ export function StatusDropdown({ value, onChange, className, disabled, ariaLabel
           aria-activedescendant={`status-${value}`}
           className="absolute z-50 mt-1 min-w-[8rem] overflow-hidden rounded-md border border-black/10 bg-white p-1 text-xs shadow-lg dark:border-white/10 dark:bg-gray-900"
           onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-              e.preventDefault();
-              const options = optionRefs.current;
-              const index = options.findIndex((el) => el === document.activeElement);
-              const next =
-                e.key === "ArrowDown"
-                  ? (index + 1) % options.length
-                  : (index - 1 + options.length) % options.length;
-              options[next]?.focus();
-            } else if (e.key === "Enter") {
-              e.preventDefault();
-              const index = optionRefs.current.findIndex(
-                (el) => el === document.activeElement
-              );
-              const status = STATUSES[index];
-              if (status) {
-                onChange(status);
-                setOpen(false);
-                triggerRef.current?.focus();
-              }
-            } else if (e.key === "Escape") {
-              e.preventDefault();
-              setOpen(false);
-              triggerRef.current?.focus();
-            }
-          }}
+          onKeyDown={handleListKey}
         >
           {STATUSES.map((s, i) => (
             <li key={s} id={`status-${s}`} role="option" aria-selected={s === value}>
