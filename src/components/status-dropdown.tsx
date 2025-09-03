@@ -29,6 +29,8 @@ const DOT_STYLES: Record<TaskStatus, string> = {
   CANCELLED: "bg-neutral-400",
 };
 
+const STATUSES = Object.keys(STATUS_LABELS) as TaskStatus[];
+
 export interface StatusDropdownProps {
   value: TaskStatus;
   onChange: (next: TaskStatus) => void;
@@ -40,6 +42,8 @@ export interface StatusDropdownProps {
 export function StatusDropdown({ value, onChange, className, disabled, ariaLabel = "Change status" }: StatusDropdownProps) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement | null>(null);
+  const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+  const optionRefs = React.useRef<HTMLButtonElement[]>([]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -51,9 +55,32 @@ export function StatusDropdown({ value, onChange, className, disabled, ariaLabel
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
+  React.useEffect(() => {
+    if (open) {
+      const idx = STATUSES.indexOf(value);
+      optionRefs.current[idx]?.focus();
+    }
+  }, [open, value]);
+
+  const handleListKey = (e: React.KeyboardEvent<HTMLUListElement>) => {
+    if (e.key === "Escape") {
+      setOpen(false);
+      buttonRef.current?.focus();
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const current = optionRefs.current.findIndex((el) => el === document.activeElement);
+      const next =
+        (current + (e.key === "ArrowDown" ? 1 : -1) + optionRefs.current.length) %
+        optionRefs.current.length;
+      optionRefs.current[next]?.focus();
+    }
+  };
+
   return (
     <div ref={ref} className={clsx("relative inline-block", className)}>
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
         aria-haspopup="listbox"
@@ -92,10 +119,14 @@ export function StatusDropdown({ value, onChange, className, disabled, ariaLabel
           aria-activedescendant={`status-${value}`}
           className="absolute z-50 mt-1 min-w-[8rem] overflow-hidden rounded-md border border-black/10 bg-white p-1 text-xs shadow-lg dark:border-white/10 dark:bg-gray-900"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={handleListKey}
         >
-          {(Object.keys(STATUS_LABELS) as TaskStatus[]).map((s) => (
+          {STATUSES.map((s, i) => (
             <li key={s} id={`status-${s}`} role="option" aria-selected={s === value}>
               <button
+                ref={(el) => {
+                  optionRefs.current[i] = el!;
+                }}
                 type="button"
                 className={clsx(
                   "flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-black/5 focus:bg-black/5 dark:hover:bg-white/10 dark:focus:bg-white/10",
