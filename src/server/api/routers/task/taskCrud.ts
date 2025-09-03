@@ -1,25 +1,17 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { TaskStatus, TaskPriority, Prisma, RecurrenceType } from '@prisma/client';
-import { protectedProcedure, router } from '../trpc';
+import type { Task } from '@prisma/client';
+import { router, protectedProcedure } from '../../trpc';
 import { db } from '@/server/db';
 import { cache } from '@/server/cache';
-import type { Task } from '@prisma/client';
+import {
+  buildListCacheKey,
+  invalidateTaskListCache,
+  requireUserId,
+} from './utils';
 
-const TASK_LIST_CACHE_PREFIX = 'task:list:';
-
-const buildListCacheKey = (input: unknown, userId: string | null) =>
-  `${TASK_LIST_CACHE_PREFIX}${userId ?? 'null'}:${JSON.stringify(input ?? {})}`;
-
-const invalidateTaskListCache = () => cache.clear();
-
-const requireUserId = (ctx: { session?: { user?: { id?: string } | null } | null }) => {
-  const id = ctx.session?.user?.id;
-  if (!id) throw new TRPCError({ code: 'UNAUTHORIZED' });
-  return id;
-};
-export const taskRouter = router({
-  // List tasks for the authenticated user
+export const taskCrudRouter = router({
   list: protectedProcedure
     .input(
       z
@@ -41,7 +33,7 @@ export const taskRouter = router({
           cursor: z.string().optional(),
           limit: z.number().int().min(1).max(100).optional(),
         })
-        .optional()
+        .optional(),
     )
     .query(async ({ input, ctx }) => {
       const userId = requireUserId(ctx);
@@ -71,26 +63,25 @@ export const taskRouter = router({
         startUtc = new Date(startTz.toLocaleString('en-US', { timeZone: 'UTC' }));
         endUtc = new Date(endTz.toLocaleString('en-US', { timeZone: 'UTC' }));
       } else {
-        const nowClient = tzOffsetMinutes != null
-          ? new Date(nowUtc.getTime() - tzOffsetMinutes * 60 * 1000)
-          : nowUtc;
+        const nowClient =
+          tzOffsetMinutes != null ? new Date(nowUtc.getTime() - tzOffsetMinutes * 60 * 1000) : nowUtc;
         const startClient = new Date(nowClient);
         startClient.setHours(0, 0, 0, 0);
         const endClient = new Date(nowClient);
         endClient.setHours(23, 59, 59, 999);
-        startUtc = tzOffsetMinutes != null
-          ? new Date(startClient.getTime() + tzOffsetMinutes * 60 * 1000)
-          : startClient;
-        endUtc = tzOffsetMinutes != null
-          ? new Date(endClient.getTime() + tzOffsetMinutes * 60 * 1000)
-          : endClient;
+        startUtc =
+          tzOffsetMinutes != null
+            ? new Date(startClient.getTime() + tzOffsetMinutes * 60 * 1000)
+            : startClient;
+        endUtc =
+          tzOffsetMinutes != null
+            ? new Date(endClient.getTime() + tzOffsetMinutes * 60 * 1000)
+            : endClient;
       }
 
       // Show only DONE in archive; otherwise include all by default
       const baseWhere: Prisma.TaskWhereInput =
-        filter === 'archive'
-          ? { status: TaskStatus.DONE, userId }
-          : { userId };
+        filter === 'archive' ? { status: TaskStatus.DONE, userId } : { userId };
 
       let where: Prisma.TaskWhereInput =
         filter === 'overdue'
@@ -176,7 +167,7 @@ export const taskRouter = router({
         projectId: z.string().min(1).optional(),
         courseId: z.string().min(1).optional(),
         parentId: z.string().min(1).optional(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       if (input.dueAt && input.dueAt < new Date()) {
@@ -233,7 +224,7 @@ export const taskRouter = router({
         projectId: z.string().min(1).nullable().optional(),
         courseId: z.string().min(1).nullable().optional(),
         parentId: z.string().min(1).nullable().optional(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       if (input.dueAt && input.dueAt < new Date()) {
@@ -280,9 +271,7 @@ export const taskRouter = router({
       return result;
     }),
   setDueDate: protectedProcedure
-    .input(
-      z.object({ id: z.string().min(1), dueAt: z.date().nullable() })
-    )
+    .input(z.object({ id: z.string().min(1), dueAt: z.date().nullable() }))
     .mutation(async ({ input, ctx }) => {
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
@@ -295,9 +284,7 @@ export const taskRouter = router({
       return updated;
     }),
   updateTitle: protectedProcedure
-    .input(
-      z.object({ id: z.string().min(1), title: z.string().min(1).max(200) })
-    )
+    .input(z.object({ id: z.string().min(1), title: z.string().min(1).max(200) }))
     .mutation(async ({ input, ctx }) => {
       const userId = requireUserId(ctx);
       const existing = await db.task.findFirst({ where: { id: input.id, userId } });
@@ -310,8 +297,8 @@ export const taskRouter = router({
     .input(
       z.object({
         id: z.string().min(1),
-        status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]),
-      })
+        status: z.enum(['TODO', 'IN_PROGRESS', 'DONE', 'CANCELLED']),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const userId = requireUserId(ctx);
@@ -320,22 +307,6 @@ export const taskRouter = router({
       const updated = await db.task.update({ where: { id: input.id }, data: { status: input.status } });
       await invalidateTaskListCache();
       return updated;
-    }),
-  bulkUpdate: protectedProcedure
-    .input(
-      z.object({
-        ids: z.array(z.string().min(1)),
-        status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const userId = requireUserId(ctx);
-      await db.task.updateMany({
-        where: { id: { in: input.ids }, userId },
-        data: { status: input.status },
-      });
-      await invalidateTaskListCache();
-      return { success: true };
     }),
   delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
@@ -351,31 +322,5 @@ export const taskRouter = router({
       ]);
       await invalidateTaskListCache();
       return deleted;
-    }),
-  bulkDelete: protectedProcedure
-    .input(z.object({ ids: z.array(z.string().min(1)) }))
-    .mutation(async ({ input, ctx }) => {
-      const userId = requireUserId(ctx);
-      await db.$transaction([
-        db.reminder.deleteMany({ where: { taskId: { in: input.ids }, task: { userId } } }),
-        db.event.deleteMany({ where: { taskId: { in: input.ids }, task: { userId } } }),
-        db.task.deleteMany({ where: { id: { in: input.ids }, userId } }),
-      ]);
-      await invalidateTaskListCache();
-      return { success: true };
-    }),
-  reorder: protectedProcedure
-    .input(z.object({ ids: z.array(z.string().min(1)) }))
-    .mutation(async ({ input, ctx }) => {
-      const userId = requireUserId(ctx);
-      const tasks = await db.task.findMany({ where: { id: { in: input.ids }, userId }, select: { id: true } });
-      if (tasks.length !== input.ids.length) throw new TRPCError({ code: 'NOT_FOUND' });
-      await db.$transaction(
-        input.ids.map((id, index) =>
-          db.task.update({ where: { id }, data: { position: index + 1 } })
-        )
-      );
-      await invalidateTaskListCache();
-      return { success: true };
     }),
 });

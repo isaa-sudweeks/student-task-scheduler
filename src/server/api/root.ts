@@ -1,10 +1,10 @@
 import { inferRouterOutputs } from '@trpc/server';
 import { router } from './trpc';
-import { taskRouter } from './routers/task';
+import { courseRouter } from './routers/course';
 import { eventRouter } from './routers/event';
 import { focusRouter } from './routers/focus';
 import { projectRouter } from './routers/project';
-import { courseRouter } from './routers/course';
+import { taskRouter } from './routers/task';
 import { userRouter } from './routers/user';
 
 export const appRouter = router({
