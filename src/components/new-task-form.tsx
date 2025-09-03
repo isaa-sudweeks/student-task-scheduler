@@ -27,6 +27,7 @@ export function NewTaskForm() {
       <input
         className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
         placeholder="Add a task…"
+        aria-label="Task title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => {
