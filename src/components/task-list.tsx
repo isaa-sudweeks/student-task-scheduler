@@ -18,9 +18,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Calendar, Tag, Clock, GripVertical, MoreVertical } from "lucide-react";
+import type { inferRouterInputs } from "@trpc/server";
 
 import { api } from "@/server/api/react";
-import type { RouterOutputs } from "@/server/api/root";
+import type { RouterOutputs, AppRouter } from "@/server/api/root";
 
 import { TaskListSkeleton } from "./task-list-skeleton";
 import { TaskModal } from "@/components/task-modal";
@@ -28,6 +29,8 @@ import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
+type RouterInputs = inferRouterInputs<AppRouter>;
+type TaskListQueryInput = Partial<RouterInputs["task"]["list"]>;
 type Task = RouterOutputs["task"]["list"][number];
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 
@@ -57,7 +60,7 @@ export function TaskList({
   const { data: session } = useSession();
 
   const queryInput = React.useMemo(() => {
-    const base: any = {
+    const base: TaskListQueryInput = {
       filter,
       subject: subject ?? undefined,
       status: status ?? undefined,
