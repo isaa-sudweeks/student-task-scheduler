@@ -36,6 +36,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Diagnose SA key presence
+        run: |
+          set -e
+          if [ -z "${GCP_SA_KEY}" ]; then
+            echo "GCP_SA_KEY is empty" && exit 1
+          fi
+          printf "%s" "$GCP_SA_KEY" > sa.json
+          echo "Wrote key file: $(wc -c < sa.json) bytes"
+          jq -e type sa.json
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
       # ---- GITHUB -> GOOGLE AUTH (JSON key) ----
       - name: Google Auth
         uses: google-github-actions/auth@v3
