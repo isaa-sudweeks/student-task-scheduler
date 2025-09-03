@@ -37,16 +37,13 @@ jobs:
         uses: actions/checkout@v4
 
       # ---- GITHUB -> GOOGLE AUTH (JSON key) ----
-      - name: Google Auth
-        uses: google-github-actions/auth@v3
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-          token_format: access_token
-
-      - name: Setup gcloud
+      - name: Setup gcloud + Auth
         uses: google-github-actions/setup-gcloud@v2
         with:
           version: ">= 474.0.0"
+          project_id: ${{ env.PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
 
       - name: Enable Required APIs
         run: |
