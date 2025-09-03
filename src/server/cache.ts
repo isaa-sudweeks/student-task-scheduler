@@ -5,6 +5,7 @@ export const CACHE_PREFIX = 'task:';
 interface CacheStore {
   get<T>(key: string): Promise<T | null>;
   set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
+  deleteByPrefix(prefix: string): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -22,11 +23,14 @@ if (url && token) {
     async set<T>(key: string, value: T, ttlSeconds?: number) {
       await redis.set(key, value, ttlSeconds ? { ex: ttlSeconds } : undefined);
     },
-    async clear() {
-      const keys: string[] = await redis.keys(`${CACHE_PREFIX}*`);
+    async deleteByPrefix(prefix: string) {
+      const keys: string[] = await redis.keys(`${prefix}*`);
       if (keys.length) {
         await redis.del(...keys);
       }
+    },
+    async clear() {
+      await this.deleteByPrefix(CACHE_PREFIX);
     },
   };
 } else {
@@ -44,12 +48,15 @@ if (url && token) {
     async set<T>(key: string, value: T, ttlSeconds?: number) {
       map.set(key, { value, expires: ttlSeconds ? Date.now() + ttlSeconds * 1000 : null });
     },
-    async clear() {
+    async deleteByPrefix(prefix: string) {
       for (const key of Array.from(map.keys())) {
-        if (key.startsWith(CACHE_PREFIX)) {
+        if (key.startsWith(prefix)) {
           map.delete(key);
         }
       }
+    },
+    async clear() {
+      await this.deleteByPrefix(CACHE_PREFIX);
     },
   };
 }

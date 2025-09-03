@@ -11,7 +11,8 @@ const TASK_LIST_CACHE_PREFIX = 'task:list:';
 const buildListCacheKey = (input: unknown, userId: string | null) =>
   `${TASK_LIST_CACHE_PREFIX}${userId ?? 'null'}:${JSON.stringify(input ?? {})}`;
 
-const invalidateTaskListCache = () => cache.clear();
+const invalidateTaskListCache = (userId: string) =>
+  cache.deleteByPrefix(`${TASK_LIST_CACHE_PREFIX}${userId}:`);
 
 const requireUserId = (ctx: { session?: { user?: { id?: string } | null } | null }) => {
   const id = ctx.session?.user?.id;
@@ -213,7 +214,7 @@ export const taskRouter = router({
           parentId: input.parentId ?? undefined,
         },
       });
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return created;
     }),
   update: protectedProcedure
@@ -276,7 +277,7 @@ export const taskRouter = router({
       } else {
         result = await db.task.update({ where: { id }, data: data as Prisma.TaskUpdateInput });
       }
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return result;
     }),
   setDueDate: protectedProcedure
@@ -291,7 +292,7 @@ export const taskRouter = router({
       const existing = await db.task.findFirst({ where: { id: input.id, userId } });
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const updated = await db.task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return updated;
     }),
   updateTitle: protectedProcedure
@@ -303,7 +304,7 @@ export const taskRouter = router({
       const existing = await db.task.findFirst({ where: { id: input.id, userId } });
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const updated = await db.task.update({ where: { id: input.id }, data: { title: input.title } });
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return updated;
     }),
   setStatus: protectedProcedure
@@ -318,7 +319,7 @@ export const taskRouter = router({
       const existing = await db.task.findFirst({ where: { id: input.id, userId } });
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const updated = await db.task.update({ where: { id: input.id }, data: { status: input.status } });
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return updated;
     }),
   bulkUpdate: protectedProcedure
@@ -334,7 +335,7 @@ export const taskRouter = router({
         where: { id: { in: input.ids }, userId },
         data: { status: input.status },
       });
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return { success: true };
     }),
   delete: protectedProcedure
@@ -349,7 +350,7 @@ export const taskRouter = router({
         db.event.deleteMany({ where: { taskId: input.id, task: { userId } } }),
         db.task.delete({ where: { id: input.id } }),
       ]);
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return deleted;
     }),
   bulkDelete: protectedProcedure
@@ -361,7 +362,7 @@ export const taskRouter = router({
         db.event.deleteMany({ where: { taskId: { in: input.ids }, task: { userId } } }),
         db.task.deleteMany({ where: { id: { in: input.ids }, userId } }),
       ]);
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return { success: true };
     }),
   reorder: protectedProcedure
@@ -375,7 +376,7 @@ export const taskRouter = router({
           db.task.update({ where: { id }, data: { position: index + 1 } })
         )
       );
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return { success: true };
     }),
 });
