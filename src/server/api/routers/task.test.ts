@@ -154,7 +154,7 @@ describe('taskRouter.list caching', () => {
     await cache.clear();
   });
 
-  it('caches per user and invalidates on create', async () => {
+  it('caches per user and invalidates only for that user on create', async () => {
     const ctx1 = { session: { user: { id: 'u1' } } } as any;
     const ctx2 = { session: { user: { id: 'u2' } } } as any;
 
@@ -173,7 +173,7 @@ describe('taskRouter.list caching', () => {
     expect(hoisted.findMany).toHaveBeenCalledTimes(3);
 
     await taskRouter.createCaller(ctx2).list({ filter: 'all' });
-    expect(hoisted.findMany).toHaveBeenCalledTimes(4);
+    expect(hoisted.findMany).toHaveBeenCalledTimes(3);
   });
 });
 
