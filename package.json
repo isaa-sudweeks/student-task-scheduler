@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:watch": "nodemon --watch prisma/schema.prisma --watch next.config.mjs --watch tsconfig.json --watch tailwind.config.ts --watch postcss.config.js --watch .env --signal SIGTERM --exec \"sh -c 'npm run prisma:sync && next dev'\"",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "next start -p ${PORT:-3000}",
     "lint": "next lint",
     "clean": "rm -rf .next node_modules/.cache",
     "prisma:sync": "prisma generate && prisma db push",
