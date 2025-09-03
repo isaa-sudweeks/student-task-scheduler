@@ -39,20 +39,20 @@ jobs:
       - name: Diagnose SA key presence
         run: |
           set -e
-          if [ -z "${GCP_SA_KEY}" ]; then
-            echo "GCP_SA_KEY is empty" && exit 1
+          if [ -z "${GOOGLE_CLOUD_KEYFILE_JSON}" ]; then
+            echo "GOOGLE_CLOUD_KEYFILE_JSON is empty" && exit 1
           fi
-          printf "%s" "$GCP_SA_KEY" > sa.json
+          printf "%s" "$GOOGLE_CLOUD_KEYFILE_JSON" > sa.json
           echo "Wrote key file: $(wc -c < sa.json) bytes"
           jq -e type sa.json
         env:
-          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          GOOGLE_CLOUD_KEYFILE_JSON: ${{ secrets.GOOGLE_CLOUD_KEYFILE_JSON }}
 
       # ---- GITHUB -> GOOGLE AUTH (JSON key) ----
       - name: Google Auth
         uses: google-github-actions/auth@v3
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GOOGLE_CLOUD_KEYFILE_JSON }}
           token_format: access_token
 
       - name: Setup gcloud
