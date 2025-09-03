@@ -44,6 +44,19 @@ Notes:
 - No postinstall hook (avoids prisma generate before schema copy in Docker).
 - TypeScript 5.7.x + tRPC 11.4.4 + ESLint 8.57 aligned with Next 14.2.x.
 
+## Environment Variables
+
+Configure these variables in `.env`:
+
+- `DATABASE_URL` – PostgreSQL connection string. Defaults to `postgresql://postgres:postgres@localhost:5432/scheduler` for development.
+- `NEXTAUTH_SECRET` – Secret used to encrypt NextAuth JWTs. Defaults to `replace_me` in development; use a strong value in production.
+- `NEXTAUTH_URL` – Base URL used for NextAuth callbacks. Defaults to `http://localhost:3000`.
+- `GITHUB_ID` – GitHub OAuth app client ID for enabling GitHub sign-in.
+- `GITHUB_SECRET` – GitHub OAuth app client secret.
+- `REDIS_URL` – Redis connection string for caching. Defaults to `redis://localhost:6379`.
+- `GOOGLE_CLIENT_ID` – Google OAuth client ID for Calendar sync.
+- `GOOGLE_CLIENT_SECRET` – Google OAuth client secret.
+
 ## Google Authentication & Calendar Sync
 
 1. Create a Google Cloud project and enable the Calendar API.
