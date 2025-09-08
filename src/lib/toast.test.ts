@@ -44,4 +44,11 @@ describe("toast utility", () => {
     expect(mocks.dismiss).toHaveBeenCalled();
     expect(mocks.base).toHaveBeenCalledWith("FYI.", { duration: 3500 });
   });
+
+  it("allows multiple toasts when dismissal skipped", () => {
+    toast.success("One", false);
+    toast.success("Two", false);
+    expect(mocks.dismiss).not.toHaveBeenCalled();
+    expect(mocks.success).toHaveBeenCalledTimes(2);
+  });
 });
