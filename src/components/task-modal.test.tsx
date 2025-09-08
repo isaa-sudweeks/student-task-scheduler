@@ -83,6 +83,25 @@ describe('TaskModal due date editing', () => {
 
 });
 
+describe('TaskModal status changes', () => {
+  beforeEach(() => {
+    setStatusMutation.mutate.mockReset();
+    setStatusMutation.error = undefined;
+  });
+
+  it('calls setStatus when status is updated', () => {
+    const task = { id: 't1', title: 'Write essay', status: 'TODO', subject: null, notes: null, dueAt: null } as Task;
+    const onClose = vi.fn();
+    render(<TaskModal open mode="edit" onClose={onClose} task={task} />);
+
+    fireEvent.click(screen.getByLabelText('Change status'));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+    expect(setStatusMutation.mutate).toHaveBeenCalledWith({ id: 't1', status: 'DONE' });
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
 describe('TaskModal validation', () => {
   beforeEach(() => {
     mutateCreate.mockReset();

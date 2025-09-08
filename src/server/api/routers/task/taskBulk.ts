@@ -17,7 +17,7 @@ export const taskBulkRouter = router({
         where: { id: { in: input.ids }, userId },
         data: { status: input.status },
       });
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return { success: true };
     }),
   bulkDelete: protectedProcedure
@@ -29,7 +29,7 @@ export const taskBulkRouter = router({
         db.event.deleteMany({ where: { taskId: { in: input.ids }, task: { userId } } }),
         db.task.deleteMany({ where: { id: { in: input.ids }, userId } }),
       ]);
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return { success: true };
     }),
 });

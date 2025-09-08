@@ -37,7 +37,6 @@ export function TaskModal({
 }: TaskModalProps) {
   const utils = api.useUtils();
   const isEdit = mode === "edit";
-  const apiAny = api as any;
 
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState<string | null>(null);
@@ -122,11 +121,11 @@ export function TaskModal({
     },
   });
 
-  const setStatus = apiAny.task?.setStatus?.useMutation?.({
+  const setStatus = api.task.setStatus.useMutation({
     onSuccess: async () => {
       await utils.task.list.invalidate();
     },
-  }) ?? { mutate: () => {}, isPending: false, error: undefined };
+  });
 
   const del = api.task.delete.useMutation({
     onSuccess: async () => {
