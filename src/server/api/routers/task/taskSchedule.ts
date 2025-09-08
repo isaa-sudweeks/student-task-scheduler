@@ -19,7 +19,7 @@ export const taskScheduleRouter = router({
           db.task.update({ where: { id }, data: { position: index + 1 } }),
         ),
       );
-      await invalidateTaskListCache();
+      await invalidateTaskListCache(userId);
       return { success: true };
     }),
 });
