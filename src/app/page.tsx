@@ -11,6 +11,13 @@ import type { TaskStatus } from "@/components/status-dropdown";
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 
+const FILTER_OPTIONS: Array<"all" | "overdue" | "today" | "archive"> = [
+  "all",
+  "today",
+  "overdue",
+  "archive",
+];
+
 export default function HomePage() {
   return (
     <Suspense fallback={null}>
@@ -68,13 +75,12 @@ function HomePageContent() {
       }
       if ((e.key === "ArrowRight" || e.key === "ArrowLeft") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        const options: Array<"all" | "overdue" | "today" | "archive"> = ["all", "today", "overdue", "archive"];
-        const idx = options.indexOf(filter);
+        const idx = FILTER_OPTIONS.indexOf(filter);
         const nextIndex =
           e.key === "ArrowRight"
-            ? (idx + 1) % options.length
-            : (idx - 1 + options.length) % options.length;
-        setFilter(options[nextIndex]);
+            ? (idx + 1) % FILTER_OPTIONS.length
+            : (idx - 1 + FILTER_OPTIONS.length) % FILTER_OPTIONS.length;
+        setFilter(FILTER_OPTIONS[nextIndex]);
       }
     };
     window.addEventListener("keydown", onKeyDown);
