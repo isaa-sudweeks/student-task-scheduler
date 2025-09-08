@@ -24,10 +24,17 @@ if (url && token) {
       await redis.set(key, value, ttlSeconds ? { ex: ttlSeconds } : undefined);
     },
     async deleteByPrefix(prefix: string) {
-      const keys: string[] = await redis.keys(`${prefix}*`);
-      if (keys.length) {
-        await redis.del(...keys);
-      }
+      let cursor = 0;
+      do {
+        const [nextCursor, keys] = await redis.scan(cursor, {
+          match: `${prefix}*`,
+          count: 100,
+        });
+        if (keys.length) {
+          await redis.del(...keys);
+        }
+        cursor = Number(nextCursor);
+      } while (cursor !== 0);
     },
     async clear() {
       await this.deleteByPrefix(CACHE_PREFIX);

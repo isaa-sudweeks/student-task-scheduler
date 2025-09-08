@@ -33,4 +33,22 @@ describe('cache.deleteByPrefix', () => {
     expect(await cache.get(key2)).toBeNull();
     expect(await cache.get(otherKey)).toBe(3);
   });
+
+  it('removes all keys matching the prefix even when many exist', async () => {
+    const prefix = 'many:';
+    const keys = Array.from({ length: 150 }, (_, i) => `${prefix}${i}`);
+    const otherKey = 'other:1';
+
+    for (const [i, key] of keys.entries()) {
+      await cache.set(key, i);
+    }
+    await cache.set(otherKey, 1);
+
+    await cache.deleteByPrefix(prefix);
+
+    for (const key of keys) {
+      expect(await cache.get(key)).toBeNull();
+    }
+    expect(await cache.get(otherKey)).toBe(1);
+  });
 });
