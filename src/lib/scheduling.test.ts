@@ -77,6 +77,43 @@ describe('findNonOverlappingSlot', () => {
     expect(result).toBeNull();
   });
 
+  it('ignores events outside day window and sorts existing intervals', () => {
+    const events = [
+      { startAt: d('2099-01-01T10:00:00Z'), endAt: d('2099-01-01T11:00:00Z') },
+      { startAt: d('2099-01-01T04:00:00Z'), endAt: d('2099-01-01T05:00:00Z') },
+      { startAt: d('2099-01-01T18:30:00Z'), endAt: d('2099-01-01T19:00:00Z') },
+      { startAt: d('2099-01-01T09:00:00Z'), endAt: d('2099-01-01T10:00:00Z') },
+    ];
+    const result = findNonOverlappingSlot({
+      desiredStart: d('2099-01-01T08:00:00Z'),
+      durationMinutes: 30,
+      dayWindowStartHour: 8,
+      dayWindowEndHour: 18,
+      existing: events,
+      stepMinutes: 15,
+    });
+    expect(result?.startAt.toISOString()).toBe('2099-01-01T08:00:00.000Z');
+    expect(result?.endAt.toISOString()).toBe('2099-01-01T08:30:00.000Z');
+  });
+
+  it('finds next slot after sequential unsorted intervals', () => {
+    const events = [
+      { startAt: d('2099-01-01T09:00:00Z'), endAt: d('2099-01-01T09:45:00Z') },
+      { startAt: d('2099-01-01T09:45:00Z'), endAt: d('2099-01-01T10:00:00Z') },
+      { startAt: d('2099-01-01T10:00:00Z'), endAt: d('2099-01-01T10:30:00Z') },
+    ];
+    const result = findNonOverlappingSlot({
+      desiredStart: d('2099-01-01T09:00:00Z'),
+      durationMinutes: 15,
+      dayWindowStartHour: 8,
+      dayWindowEndHour: 18,
+      existing: events,
+      stepMinutes: 15,
+    });
+    expect(result?.startAt.toISOString()).toBe('2099-01-01T10:30:00.000Z');
+    expect(result?.endAt.toISOString()).toBe('2099-01-01T10:45:00.000Z');
+  });
+
   it('respects timezone offsets when applying day window', () => {
     timezoneMock.register('US/Eastern');
     try {
