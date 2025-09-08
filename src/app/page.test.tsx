@@ -104,10 +104,17 @@ describe('HomePage', () => {
         <HomePage />
       </>
     );
-    // Tabs are buttons styled as tabs; verify cycling changes selected label
-    expect(screen.getByRole('button', { name: /all/i })).toBeInTheDocument();
+    const allTab = screen.getByRole('button', { name: 'All' });
+    const todayTab = screen.getByRole('button', { name: 'Today' });
+    const overdueTab = screen.getByRole('button', { name: 'Overdue' });
+
+    expect(allTab).toHaveClass('bg-neutral-100');
     fireEvent.keyDown(window, { key: 'ArrowRight', ctrlKey: true });
-    expect(screen.getByRole('button', { name: /overdue/i })).toBeInTheDocument();
+    expect(todayTab).toHaveClass('bg-neutral-100');
+    fireEvent.keyDown(window, { key: 'ArrowRight', ctrlKey: true });
+    expect(overdueTab).toHaveClass('bg-neutral-100');
+    fireEvent.keyDown(window, { key: 'ArrowLeft', ctrlKey: true });
+    expect(todayTab).toHaveClass('bg-neutral-100');
   });
 
   it('shows shortcuts popover when clicking question mark', () => {
