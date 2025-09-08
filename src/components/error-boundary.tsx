@@ -4,6 +4,7 @@ import React from "react";
 type ErrorBoundaryProps = {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  onReset?: () => void;
 };
 
 type ErrorBoundaryState = {
@@ -16,6 +17,11 @@ export class ErrorBoundary extends React.Component<
 > {
   state: ErrorBoundaryState = { hasError: false };
 
+  reset = () => {
+    this.setState({ hasError: false });
+    this.props.onReset?.();
+  };
+
   static getDerivedStateFromError(): ErrorBoundaryState {
     return { hasError: true };
   }
@@ -27,7 +33,10 @@ export class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return this.props.fallback ?? (
-        <div role="alert">Something went wrong</div>
+        <div role="alert">
+          <p>Something went wrong</p>
+          <button onClick={this.reset}>Try again</button>
+        </div>
       );
     }
     return this.props.children;
