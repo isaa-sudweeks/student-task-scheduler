@@ -6,18 +6,27 @@ export function formatLocalDateTime(date: Date): string {
   return format(date, DATETIME_LOCAL_FORMAT);
 }
 
-export function parseLocalDateTime(value: string): Date {
+export function parseLocalDateTime(value: string): Date | null {
   // Expecting 'yyyy-MM-ddTHH:mm' (no timezone); interpret as local time explicitly
-  const [datePart, timePart] = value.split('T');
-  if (!datePart || !timePart) return new Date(NaN);
-  const [yStr, mStr, dStr] = datePart.split('-');
-  const [hhStr, mmStr] = timePart.split(':');
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  const [, yStr, mStr, dStr, hhStr, mmStr] = match;
   const y = Number(yStr);
-  const m = Number(mStr);
+  const m = Number(mStr) - 1; // JS months are 0-indexed
   const d = Number(dStr);
   const hh = Number(hhStr);
   const mm = Number(mmStr);
-  return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
+  const date = new Date(y, m, d, hh, mm, 0, 0);
+  if (
+    date.getFullYear() !== y ||
+    date.getMonth() !== m ||
+    date.getDate() !== d ||
+    date.getHours() !== hh ||
+    date.getMinutes() !== mm
+  ) {
+    return null;
+  }
+  return date;
 }
 
 export function calculateDurationMinutes(startAt: Date | string, endAt: Date | string): number {
