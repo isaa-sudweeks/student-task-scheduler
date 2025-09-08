@@ -15,7 +15,8 @@ describe('datetime utility', () => {
     }
 
     const parsed = parseLocalDateTime(formatted);
-    expect(parsed.getTime()).toBe(date.getTime());
+    expect(parsed).not.toBeNull();
+    expect(parsed?.getTime()).toBe(date.getTime());
 
     process.env.TZ = originalTZ;
   });
@@ -28,5 +29,20 @@ describe('datetime utility', () => {
     expect(
       calculateDurationMinutes(start.toISOString(), end.toISOString())
     ).toBe(90);
+  });
+
+  it('returns null for malformed input', () => {
+    const cases = [
+      '',
+      'not-a-date',
+      '2024-13-01T00:00',
+      '2024-01-32T00:00',
+      '2024-01-01T24:00',
+      '2024-01-01T00:60',
+      '2024/01/01T00:00',
+    ];
+    for (const c of cases) {
+      expect(parseLocalDateTime(c)).toBeNull();
+    }
   });
 });

@@ -158,7 +158,8 @@ export function TaskModal({
       <Button
         disabled={create.isPending || update.isPending}
         onClick={() => {
-          const dueAt = dueEnabled && due ? parseLocalDateTime(due) : null;
+          const parsedDue = parseLocalDateTime(due);
+          const dueAt = dueEnabled && parsedDue ? parsedDue : null;
           const recurrenceUntilDate =
             recurrenceUntil ? new Date(`${recurrenceUntil}T23:59:59`) : undefined;
           const recurrenceCountVal =
@@ -267,7 +268,8 @@ export function TaskModal({
                 if (enabled && !due) {
                   const v = defaultEndOfToday();
                   setDue(v);
-                  onDraftDueChange?.(parseLocalDateTime(v));
+                  const parsed = parseLocalDateTime(v);
+                  onDraftDueChange?.(parsed);
                 }
                 if (!enabled) onDraftDueChange?.(null);
               }}
@@ -279,7 +281,8 @@ export function TaskModal({
               value={due}
               onChange={(e) => {
                 setDue(e.target.value);
-                onDraftDueChange?.(e.target.value ? parseLocalDateTime(e.target.value) : null);
+                const parsed = e.target.value ? parseLocalDateTime(e.target.value) : null;
+                onDraftDueChange?.(parsed);
               }}
               disabled={!dueEnabled}
             />
