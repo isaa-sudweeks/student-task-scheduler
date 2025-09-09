@@ -13,9 +13,6 @@ export default function ThemeToggle() {
   const toggle = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("theme", nextTheme);
-    }
   };
   return (
     <button
