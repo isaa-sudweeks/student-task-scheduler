@@ -1,7 +1,16 @@
 services:
   web:
+    # Mirror dev behavior without compose watch support
+    command: ["sh", "-c", "chmod +x docker-entrypoint.sh && ./docker-entrypoint.sh dev"]
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/scheduler
+      CHOKIDAR_USEPOLLING: "1"
+      WATCHPACK_POLLING: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
     volumes:
       - .:/app
       - /app/node_modules
       - /app/.next
-
