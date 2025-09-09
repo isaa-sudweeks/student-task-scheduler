@@ -7,6 +7,7 @@ expect.extend(matchers);
 import { TaskList } from './task-list';
 
 const useInfiniteQueryMock = vi.fn();
+vi.mock('next-auth/react', () => ({ useSession: () => ({ data: {} }) }));
 
 vi.mock('@/server/api/react', () => ({
   api: {
