@@ -1,5 +1,40 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { cache, CACHE_PREFIX } from '@/server/cache';
+
+vi.mock('@upstash/redis', () => {
+  class MockRedis {
+    private data = new Map<string, { value: unknown; expires: number | null }>();
+
+    async get<T>(key: string) {
+      const entry = this.data.get(key);
+      if (!entry) return null;
+      if (entry.expires && entry.expires < Date.now()) {
+        this.data.delete(key);
+        return null;
+      }
+      return entry.value as T;
+    }
+
+    async set<T>(key: string, value: T, opts?: { ex?: number }) {
+      this.data.set(key, {
+        value,
+        expires: opts?.ex ? Date.now() + opts.ex * 1000 : null,
+      });
+    }
+
+    async scan() {
+      return ['0', []] as [string, string[]];
+    }
+
+    async del(...keys: string[]) {
+      for (const key of keys) {
+        this.data.delete(key);
+      }
+    }
+  }
+
+  return { Redis: MockRedis };
+});
 
 // Since env vars are not set, cache uses in-memory Map implementation.
 describe('cache.clear', () => {
@@ -50,5 +85,32 @@ describe('cache.deleteByPrefix', () => {
       expect(await cache.get(key)).toBeNull();
     }
     expect(await cache.get(otherKey)).toBe(1);
+  });
+});
+
+describe('cache.ttl', () => {
+  it('expires keys after ttl using Map implementation', async () => {
+    vi.useFakeTimers();
+    const key = 'ttl:map';
+    await cache.set(key, 1, 1);
+    vi.advanceTimersByTime(1100);
+    expect(await cache.get(key)).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('expires keys after ttl using Redis implementation', async () => {
+    vi.resetModules();
+    process.env.UPSTASH_REDIS_REST_URL = 'http://localhost';
+    process.env.UPSTASH_REDIS_REST_TOKEN = 'token';
+    const { cache: redisCache } = await import('@/server/cache');
+    vi.useFakeTimers();
+    const key = 'ttl:redis';
+    await redisCache.set(key, 1, 1);
+    vi.advanceTimersByTime(1100);
+    expect(await redisCache.get(key)).toBeNull();
+    vi.useRealTimers();
+    vi.resetModules();
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
   });
 });
