@@ -144,6 +144,7 @@ model Task {
   timeLogs  TaskTimeLog[]
 
   @@index([dueAt, status])
+  @@unique([userId, title, dueAt, recurrenceType, recurrenceInterval])
 }
 
 model Event {
