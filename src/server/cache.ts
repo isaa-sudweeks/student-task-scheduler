@@ -13,6 +13,7 @@ const url = process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL;
 const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.REDIS_TOKEN;
 
 let store: CacheStore;
+let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
 if (url && token) {
   const redis = new Redis({ url, token });
@@ -41,7 +42,18 @@ if (url && token) {
     },
   };
 } else {
+  // In-memory map store; expired entries are pruned every minute.
   const map = new Map<string, { value: unknown; expires: number | null }>();
+
+  cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [key, { expires }] of map.entries()) {
+      if (expires && expires < now) {
+        map.delete(key);
+      }
+    }
+  }, 60_000);
+
   store = {
     async get<T>(key: string) {
       const entry = map.get(key);
@@ -69,4 +81,11 @@ if (url && token) {
 }
 
 export const cache: CacheStore = store;
+
+export function dispose() {
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+    cleanupInterval = null;
+  }
+}
 

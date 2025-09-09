@@ -1,9 +1,20 @@
-import { describe, it, expect } from 'vitest';
-import { cache, CACHE_PREFIX } from '@/server/cache';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+
+async function getCacheModule() {
+  return await import('@/server/cache');
+}
 
 // Since env vars are not set, cache uses in-memory Map implementation.
+afterEach(async () => {
+  const mod = await import('@/server/cache');
+  mod.dispose();
+  vi.resetModules();
+  vi.useRealTimers();
+});
+
 describe('cache.clear', () => {
   it('removes only keys with the app prefix', async () => {
+    const { cache, CACHE_PREFIX } = await getCacheModule();
     const prefixedKey = `${CACHE_PREFIX}foo`;
     const otherKey = 'other:bar';
 
@@ -19,6 +30,7 @@ describe('cache.clear', () => {
 
 describe('cache.deleteByPrefix', () => {
   it('removes keys matching the given prefix', async () => {
+    const { cache } = await getCacheModule();
     const key1 = 'foo:1';
     const key2 = 'foo:2';
     const otherKey = 'bar:1';
@@ -35,6 +47,7 @@ describe('cache.deleteByPrefix', () => {
   });
 
   it('removes all keys matching the prefix even when many exist', async () => {
+    const { cache } = await getCacheModule();
     const prefix = 'many:';
     const keys = Array.from({ length: 150 }, (_, i) => `${prefix}${i}`);
     const otherKey = 'other:1';
@@ -50,5 +63,16 @@ describe('cache.deleteByPrefix', () => {
       expect(await cache.get(key)).toBeNull();
     }
     expect(await cache.get(otherKey)).toBe(1);
+  });
+});
+
+describe('cache cleanup interval', () => {
+  it('removes expired entries periodically', async () => {
+    vi.useFakeTimers();
+    const { cache } = await getCacheModule();
+
+    await cache.set('foo', 'bar', 1);
+    vi.advanceTimersByTime(60_000);
+    expect(await cache.get('foo')).toBeNull();
   });
 });
