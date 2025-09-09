@@ -1,6 +1,6 @@
 import { addDays, addWeeks, addMonths } from 'date-fns';
 import { db } from '@/server/db';
-import { RecurrenceType } from '@prisma/client';
+import { RecurrenceType, Prisma } from '@prisma/client';
 
 export async function generateRecurringTasks(now = new Date()) {
   const templates = await db.task.findMany({
@@ -31,18 +31,7 @@ export async function generateRecurringTasks(now = new Date()) {
           : addMonths(nextDue, task.recurrenceInterval);
     }
     if (task.recurrenceUntil && nextDue > task.recurrenceUntil) continue;
-    const existing = await db.task.findFirst({
-      where: {
-        title: task.title,
-        userId: task.userId ?? undefined,
-        dueAt: nextDue,
-        recurrenceType: task.recurrenceType,
-        recurrenceInterval: task.recurrenceInterval,
-        recurrenceCount: task.recurrenceCount ?? undefined,
-        recurrenceUntil: task.recurrenceUntil ?? undefined,
-      },
-    });
-    if (!existing) {
+    try {
       await db.task.create({
         data: {
           title: task.title,
@@ -59,6 +48,13 @@ export async function generateRecurringTasks(now = new Date()) {
           recurrenceUntil: task.recurrenceUntil ?? undefined,
         },
       });
+    } catch (err) {
+      if (
+        !(err instanceof Prisma.PrismaClientKnownRequestError) ||
+        err.code !== 'P2002'
+      ) {
+        throw err;
+      }
     }
   }
 }

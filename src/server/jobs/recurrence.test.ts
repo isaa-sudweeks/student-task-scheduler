@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { Prisma } from '@prisma/client';
 
 const hoisted = vi.hoisted(() => {
   const findMany = vi.fn();
-  const findFirst = vi.fn();
   const create = vi.fn();
   const count = vi.fn();
-  return { findMany, findFirst, create, count };
+  return { findMany, create, count };
 });
 
 vi.mock('@prisma/client', async () => {
@@ -19,7 +19,6 @@ vi.mock('@/server/db', () => ({
   db: {
     task: {
       findMany: hoisted.findMany,
-      findFirst: hoisted.findFirst,
       create: hoisted.create,
       count: hoisted.count,
     },
@@ -42,7 +41,6 @@ const baseTemplate = {
 describe('generateRecurringTasks', () => {
   beforeEach(() => {
     hoisted.findMany.mockReset();
-    hoisted.findFirst.mockReset();
     hoisted.create.mockReset();
     hoisted.count.mockReset();
   });
@@ -56,7 +54,6 @@ describe('generateRecurringTasks', () => {
         recurrenceType: 'DAILY' as any,
       },
     ]);
-    hoisted.findFirst.mockResolvedValue(null);
     hoisted.create.mockResolvedValue({});
     hoisted.count.mockResolvedValue(1);
 
@@ -76,7 +73,6 @@ describe('generateRecurringTasks', () => {
         recurrenceType: 'WEEKLY' as any,
       },
     ]);
-    hoisted.findFirst.mockResolvedValue(null);
     hoisted.create.mockResolvedValue({});
     hoisted.count.mockResolvedValue(1);
 
@@ -96,7 +92,6 @@ describe('generateRecurringTasks', () => {
         recurrenceType: 'MONTHLY' as any,
       },
     ]);
-    hoisted.findFirst.mockResolvedValue(null);
     hoisted.create.mockResolvedValue({});
     hoisted.count.mockResolvedValue(1);
 
@@ -107,7 +102,7 @@ describe('generateRecurringTasks', () => {
     expect(call.data.dueAt).toEqual(new Date('2023-04-01T00:00:00Z'));
   });
 
-  it('does not create task when next already exists', async () => {
+  it('handles unique constraint when next already exists', async () => {
     const now = new Date('2023-01-02T00:00:00Z');
     hoisted.findMany.mockResolvedValue([
       {
@@ -116,12 +111,16 @@ describe('generateRecurringTasks', () => {
         recurrenceType: 'DAILY' as any,
       },
     ]);
-    hoisted.findFirst.mockResolvedValue({ id: 'existing' });
+    const err = new Prisma.PrismaClientKnownRequestError('dup', {
+      code: 'P2002',
+      clientVersion: '4.0.0',
+    });
+    hoisted.create.mockRejectedValue(err);
     hoisted.count.mockResolvedValue(1);
 
-    await generateRecurringTasks(now);
-    
-    expect(hoisted.create).not.toHaveBeenCalled();
+    await expect(generateRecurringTasks(now)).resolves.toBeUndefined();
+
+    expect(hoisted.create).toHaveBeenCalledTimes(1);
   });
 
   it('respects recurrenceCount limit', async () => {
@@ -135,7 +134,6 @@ describe('generateRecurringTasks', () => {
       },
     ]);
     hoisted.count.mockResolvedValue(1);
-    hoisted.findFirst.mockResolvedValue(null);
 
     await generateRecurringTasks(now);
 
@@ -153,7 +151,6 @@ describe('generateRecurringTasks', () => {
       },
     ]);
     hoisted.count.mockResolvedValue(1);
-    hoisted.findFirst.mockResolvedValue(null);
 
     await generateRecurringTasks(now);
 
@@ -177,19 +174,46 @@ describe('generateRecurringTasks', () => {
       },
     ]);
     hoisted.count.mockResolvedValue(1);
-    hoisted.findFirst.mockImplementation(({ where }) =>
-      where.userId === 'u1' &&
-      where.recurrenceType === 'DAILY' &&
-      where.recurrenceInterval === 1
-        ? { id: 'existing' }
-        : null
+    const err = new Prisma.PrismaClientKnownRequestError('dup', {
+      code: 'P2002',
+      clientVersion: '4.0.0',
+    });
+    hoisted.create.mockImplementation(({ data }) =>
+      data.userId === 'u1' ? Promise.reject(err) : Promise.resolve({})
     );
-    hoisted.create.mockResolvedValue({});
 
-    await generateRecurringTasks(now);
+    await expect(generateRecurringTasks(now)).resolves.toBeUndefined();
 
-    expect(hoisted.create).toHaveBeenCalledTimes(1);
-    const call = hoisted.create.mock.calls[0][0];
-    expect(call.data.userId).toBe('u2');
+    expect(hoisted.create).toHaveBeenCalledTimes(2);
+    const successful = hoisted.create.mock.calls.find(
+      ([{ data }]) => data.userId === 'u2'
+    );
+    expect(successful).toBeTruthy();
+  });
+
+  it('handles concurrent executions', async () => {
+    const now = new Date('2023-01-02T00:00:00Z');
+    hoisted.findMany.mockResolvedValue([
+      {
+        ...baseTemplate,
+        dueAt: new Date('2023-01-01T00:00:00Z'),
+        recurrenceType: 'DAILY' as any,
+      },
+    ]);
+    hoisted.count.mockResolvedValue(1);
+    let first = true;
+    const err = new Prisma.PrismaClientKnownRequestError('dup', {
+      code: 'P2002',
+      clientVersion: '4.0.0',
+    });
+    hoisted.create.mockImplementation(() =>
+      first ? ((first = false), Promise.resolve({})) : Promise.reject(err)
+    );
+
+    await expect(
+      Promise.all([generateRecurringTasks(now), generateRecurringTasks(now)])
+    ).resolves.toEqual([undefined, undefined]);
+
+    expect(hoisted.create).toHaveBeenCalledTimes(2);
   });
 });
