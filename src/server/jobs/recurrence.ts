@@ -66,10 +66,24 @@ export function scheduleRecurringTasks() {
     generateRecurringTasks().catch((err) =>
       console.error('recurrence job failed', err)
     );
-  run();
-  setInterval(run, DAY_MS);
+  let interval: NodeJS.Timeout | null = null;
+  return {
+    start() {
+      run();
+      interval = setInterval(run, DAY_MS);
+      return interval;
+    },
+    stop() {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    },
+  };
 }
 
 if (require.main === module) {
-  scheduleRecurringTasks();
+  const job = scheduleRecurringTasks();
+  job.start();
+  process.on('SIGTERM', job.stop);
 }
