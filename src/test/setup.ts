@@ -101,6 +101,7 @@ vi.mock('next-auth/react', () => {
     SessionProvider: ({ children }: any) => children,
   } as any;
 });
+(HTMLElement.prototype as any).scrollIntoView = () => {};
 
 // Mock fuse.js used in TaskList to avoid requiring the library in unit tests
 vi.mock('fuse.js', () => {
