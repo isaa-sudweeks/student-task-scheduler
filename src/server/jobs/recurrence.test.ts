@@ -26,7 +26,10 @@ vi.mock('@/server/db', () => ({
   },
 }));
 
-import { generateRecurringTasks } from './recurrence';
+import {
+  generateRecurringTasks,
+  scheduleRecurringTasks,
+} from './recurrence';
 
 const baseTemplate = {
   title: 't',
@@ -191,5 +194,21 @@ describe('generateRecurringTasks', () => {
     expect(hoisted.create).toHaveBeenCalledTimes(1);
     const call = hoisted.create.mock.calls[0][0];
     expect(call.data.userId).toBe('u2');
+  });
+});
+
+describe('scheduleRecurringTasks', () => {
+  it('runs immediately and can be stopped', () => {
+    hoisted.findMany.mockReset();
+    hoisted.findMany.mockResolvedValue([]);
+    vi.useFakeTimers();
+    const job = scheduleRecurringTasks();
+    job.start();
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+    job.stop();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(24 * 60 * 60 * 1000);
+    expect(hoisted.findMany).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 });
