@@ -4,8 +4,27 @@ import { db } from '@/server/db';
 
 export const TASK_LIST_CACHE_PREFIX = 'task:list:';
 
+const isPlainObject = (val: unknown): val is Record<string, unknown> =>
+  Object.prototype.toString.call(val) === '[object Object]';
+
+export const serializeSorted = (val: unknown): string => {
+  const sort = (input: unknown): unknown => {
+    if (Array.isArray(input)) return input.map(sort);
+    if (isPlainObject(input)) {
+      const result: Record<string, unknown> = {};
+      for (const key of Object.keys(input).sort()) {
+        const value = (input as Record<string, unknown>)[key];
+        if (value !== undefined) result[key] = sort(value);
+      }
+      return result;
+    }
+    return input;
+  };
+  return JSON.stringify(sort(val));
+};
+
 export const buildListCacheKey = (input: unknown, userId: string | null) =>
-  `${TASK_LIST_CACHE_PREFIX}${userId ?? 'null'}:${JSON.stringify(input ?? {})}`;
+  `${TASK_LIST_CACHE_PREFIX}${userId ?? 'null'}:${serializeSorted(input ?? {})}`;
 
 export const invalidateTaskListCache = (userId: string) =>
   cache.deleteByPrefix(`${TASK_LIST_CACHE_PREFIX}${userId}:`);
