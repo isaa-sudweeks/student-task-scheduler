@@ -12,60 +12,82 @@ interface CacheStore {
 const url = process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL;
 const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.REDIS_TOKEN;
 
+const map = new Map<string, { value: unknown; expires: number | null }>();
+const mapStore: CacheStore = {
+  async get<T>(key: string) {
+    const entry = map.get(key);
+    if (!entry) return null;
+    if (entry.expires && entry.expires < Date.now()) {
+      map.delete(key);
+      return null;
+    }
+    return entry.value as T;
+  },
+  async set<T>(key: string, value: T, ttlSeconds?: number) {
+    map.set(key, { value, expires: ttlSeconds ? Date.now() + ttlSeconds * 1000 : null });
+  },
+  async deleteByPrefix(prefix: string) {
+    for (const key of Array.from(map.keys())) {
+      if (key.startsWith(prefix)) {
+        map.delete(key);
+      }
+    }
+  },
+  async clear() {
+    await this.deleteByPrefix(CACHE_PREFIX);
+  },
+};
+
 let store: CacheStore;
 
 if (url && token) {
   const redis = new Redis({ url, token });
   store = {
     async get<T>(key: string) {
-      return (await redis.get<T>(key)) ?? null;
+      try {
+        return (await redis.get<T>(key)) ?? null;
+      } catch (err) {
+        console.error('Redis get error', err);
+        return mapStore.get<T>(key);
+      }
     },
     async set<T>(key: string, value: T, ttlSeconds?: number) {
-      await redis.set(key, value, ttlSeconds ? { ex: ttlSeconds } : undefined);
+      try {
+        await redis.set(key, value, ttlSeconds ? { ex: ttlSeconds } : undefined);
+      } catch (err) {
+        console.error('Redis set error', err);
+        await mapStore.set(key, value, ttlSeconds);
+      }
     },
     async deleteByPrefix(prefix: string) {
-      let cursor = 0;
-      do {
-        const [nextCursor, keys] = await redis.scan(cursor, {
-          match: `${prefix}*`,
-          count: 100,
-        });
-        if (keys.length) {
-          await redis.del(...keys);
-        }
-        cursor = Number(nextCursor);
-      } while (cursor !== 0);
+      try {
+        let cursor = 0;
+        do {
+          const [nextCursor, keys] = await redis.scan(cursor, {
+            match: `${prefix}*`,
+            count: 100,
+          });
+          if (keys.length) {
+            await redis.del(...keys);
+          }
+          cursor = Number(nextCursor);
+        } while (cursor !== 0);
+      } catch (err) {
+        console.error('Redis deleteByPrefix error', err);
+        await mapStore.deleteByPrefix(prefix);
+      }
     },
     async clear() {
-      await this.deleteByPrefix(CACHE_PREFIX);
+      try {
+        await this.deleteByPrefix(CACHE_PREFIX);
+      } catch (err) {
+        console.error('Redis clear error', err);
+        await mapStore.clear();
+      }
     },
   };
 } else {
-  const map = new Map<string, { value: unknown; expires: number | null }>();
-  store = {
-    async get<T>(key: string) {
-      const entry = map.get(key);
-      if (!entry) return null;
-      if (entry.expires && entry.expires < Date.now()) {
-        map.delete(key);
-        return null;
-      }
-      return entry.value as T;
-    },
-    async set<T>(key: string, value: T, ttlSeconds?: number) {
-      map.set(key, { value, expires: ttlSeconds ? Date.now() + ttlSeconds * 1000 : null });
-    },
-    async deleteByPrefix(prefix: string) {
-      for (const key of Array.from(map.keys())) {
-        if (key.startsWith(prefix)) {
-          map.delete(key);
-        }
-      }
-    },
-    async clear() {
-      await this.deleteByPrefix(CACHE_PREFIX);
-    },
-  };
+  store = mapStore;
 }
 
 export const cache: CacheStore = store;
