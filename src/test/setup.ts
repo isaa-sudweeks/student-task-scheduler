@@ -2,6 +2,10 @@ import { vi, afterEach, beforeAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 // Force a deterministic timezone for date logic tests
 process.env.TZ = 'UTC';
+process.env.DATABASE_URL ??= 'postgres://localhost:5432/test';
+process.env.NEXTAUTH_SECRET ??= 'test-secret';
+process.env.GOOGLE_CLIENT_ID ??= 'test-google-id';
+process.env.GOOGLE_CLIENT_SECRET ??= 'test-google-secret';
 // Freeze time to a deterministic date so calendar/event tests render predictable weeks
 beforeAll(() => {
   vi.useFakeTimers();

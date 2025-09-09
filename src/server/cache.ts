@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import { env } from '@/env';
 
 export const CACHE_PREFIX = 'task:';
 
@@ -9,8 +10,8 @@ interface CacheStore {
   clear(): Promise<void>;
 }
 
-const url = process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL;
-const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.REDIS_TOKEN;
+const url = env.UPSTASH_REDIS_REST_URL ?? env.REDIS_URL;
+const token = env.UPSTASH_REDIS_REST_TOKEN ?? env.REDIS_TOKEN;
 
 let store: CacheStore;
 
