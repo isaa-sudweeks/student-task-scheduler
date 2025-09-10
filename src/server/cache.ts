@@ -40,6 +40,7 @@ const mapStore: CacheStore = {
 };
 
 let store: CacheStore;
+let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
 if (url && token) {
   const redis = new Redis({ url, token });
@@ -88,8 +89,23 @@ if (url && token) {
     },
   };
 } else {
+  // Use in-memory map store and prune expired entries periodically.
   store = mapStore;
+  cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [key, { expires }] of map.entries()) {
+      if (expires && expires < now) {
+        map.delete(key);
+      }
+    }
+  }, 60_000);
 }
 
 export const cache: CacheStore = store;
 
+export function dispose() {
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+    cleanupInterval = null;
+  }
+}

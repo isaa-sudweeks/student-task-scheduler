@@ -1,5 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import { cache, CACHE_PREFIX } from '@/server/cache';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+
+async function getCacheModule() {
+  return await import('@/server/cache');
+}
 
 vi.mock('@upstash/redis', () => {
   class MockRedis {
@@ -37,8 +40,16 @@ vi.mock('@upstash/redis', () => {
 });
 
 // Since env vars are not set, cache uses in-memory Map implementation.
+afterEach(async () => {
+  const mod = await import('@/server/cache');
+  mod.dispose();
+  vi.resetModules();
+  vi.useRealTimers();
+});
+
 describe('cache.clear', () => {
   it('removes only keys with the app prefix', async () => {
+    const { cache, CACHE_PREFIX } = await getCacheModule();
     const prefixedKey = `${CACHE_PREFIX}foo`;
     const otherKey = 'other:bar';
 
@@ -54,6 +65,7 @@ describe('cache.clear', () => {
 
 describe('cache.deleteByPrefix', () => {
   it('removes keys matching the given prefix', async () => {
+    const { cache } = await getCacheModule();
     const key1 = 'foo:1';
     const key2 = 'foo:2';
     const otherKey = 'bar:1';
@@ -70,6 +82,7 @@ describe('cache.deleteByPrefix', () => {
   });
 
   it('removes all keys matching the prefix even when many exist', async () => {
+    const { cache } = await getCacheModule();
     const prefix = 'many:';
     const keys = Array.from({ length: 150 }, (_, i) => `${prefix}${i}`);
     const otherKey = 'other:1';
@@ -91,6 +104,7 @@ describe('cache.deleteByPrefix', () => {
 describe('cache.ttl', () => {
   it('expires keys after ttl using Map implementation', async () => {
     vi.useFakeTimers();
+    const { cache } = await getCacheModule();
     const key = 'ttl:map';
     await cache.set(key, 1, 1);
     vi.advanceTimersByTime(1100);
@@ -112,5 +126,16 @@ describe('cache.ttl', () => {
     vi.resetModules();
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  });
+});
+
+describe('cache cleanup interval', () => {
+  it('removes expired entries periodically', async () => {
+    vi.useFakeTimers();
+    const { cache } = await getCacheModule();
+
+    await cache.set('foo', 'bar', 1);
+    vi.advanceTimersByTime(60_000);
+    expect(await cache.get('foo')).toBeNull();
   });
 });
