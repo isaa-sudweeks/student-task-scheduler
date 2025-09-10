@@ -1,27 +1,21 @@
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc';
+import { router, protectedProcedure } from '../trpc';
 import { db } from '@/server/db';
 import { TRPCError } from '@trpc/server';
 
 export const userRouter = router({
-  get: publicProcedure.query(({ ctx }) => {
-    return ctx.session?.user ?? null;
+  get: protectedProcedure.query(({ ctx }) => {
+    return ctx.session.user;
   }),
-  setTimezone: publicProcedure
+  setTimezone: protectedProcedure
     .input(z.object({ timezone: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
-      }
+      const userId = ctx.session.user.id;
       await db.user.update({ where: { id: userId }, data: { timezone: input.timezone } });
       return { success: true };
     }),
-  getSettings: publicProcedure.query(async ({ ctx }) => {
-    const userId = ctx.session?.user?.id;
-    if (!userId) {
-      throw new TRPCError({ code: 'UNAUTHORIZED' });
-    }
+  getSettings: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
     const user = await db.user.findUnique({
       where: { id: userId },
       select: {
@@ -35,7 +29,7 @@ export const userRouter = router({
     if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
     return user;
   }),
-  setSettings: publicProcedure
+  setSettings: protectedProcedure
     .input(z.object({
       timezone: z.string(),
       dayWindowStartHour: z.number().int().min(0).max(23),
@@ -44,10 +38,7 @@ export const userRouter = router({
       googleSyncEnabled: z.boolean(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
-      }
+      const userId = ctx.session.user.id;
       await db.user.update({
         where: { id: userId },
         data: {
