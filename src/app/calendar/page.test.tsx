@@ -11,6 +11,7 @@ const focusStart = vi.fn();
 const focusStop = vi.fn();
 const scheduleMutate = vi.fn();
 const moveMutate = vi.fn();
+const taskCreate = vi.fn();
 
 const tasks = [
   { id: 't1', title: 'Unscheduled task', status: 'TODO', dueAt: null },
@@ -52,6 +53,15 @@ vi.mock('@/server/api/react', () => ({
           isLoading: tasksLoading,
         }),
         },
+        create: {
+          useMutation: (opts?: any) => ({
+            mutate: (args: any, o2?: any) => {
+              taskCreate(args);
+              const onSuccess = o2?.onSuccess ?? opts?.onSuccess;
+              onSuccess?.({ id: 'nt1', title: args.title });
+            },
+          }),
+        },
       },
       event: {
         listRange: {
@@ -77,6 +87,7 @@ describe('CalendarPage', () => {
     focusStop.mockReset();
     scheduleMutate.mockReset();
     moveMutate.mockReset();
+    taskCreate.mockReset();
     tasksLoading = false;
     eventsLoading = false;
     tasksQueryMock.error = null;
@@ -198,6 +209,19 @@ describe('CalendarPage', () => {
     fireEvent.click(simulateDrop);
     const arg = scheduleMutate.mock.calls[0][0] as any;
     expect(arg.durationMinutes).toBe(45);
+  });
+
+  it('creates and schedules a new task when clicking a calendar slot', () => {
+    render(<CalendarPage />);
+    const slot = screen.getByTestId('time-slot-2098-12-29T00:00:00.000Z');
+    fireEvent.click(slot);
+    fireEvent.change(screen.getByLabelText(/task title/i), { target: { value: 'New Task' } });
+    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+    expect(taskCreate).toHaveBeenCalledWith({ title: 'New Task' });
+    const arg = scheduleMutate.mock.calls[0][0] as any;
+    expect(arg.taskId).toBe('nt1');
+    expect(arg.startAt.toISOString()).toBe('2098-12-29T00:00:00.000Z');
+    expect(arg.durationMinutes).toBe(30);
   });
 
   it('updates settings and applies them immediately', () => {

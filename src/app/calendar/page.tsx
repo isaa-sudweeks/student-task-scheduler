@@ -27,6 +27,9 @@ export default function CalendarPage() {
   const [dayEnd, setDayEnd] = useState(18);
   const [defaultDuration, setDefaultDuration] = useState(30);
   const [showSettings, setShowSettings] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskStart, setNewTaskStart] = useState<Date | null>(null);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const s = window.localStorage.getItem('dayWindowStartHour');
@@ -141,6 +144,8 @@ export default function CalendarPage() {
     },
     [moveMutateFn, dayStart, dayEnd]
   );
+
+  const createTask = api.task.create.useMutation();
 
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [focusedSince, setFocusedSince] = useState<number | null>(null);
@@ -488,6 +493,10 @@ export default function CalendarPage() {
               setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt, endAt } : x));
               moveWithPrefs({ eventId, startAt, endAt });
             }}
+            onClickSlot={(startAt) => {
+              setNewTaskStart(startAt);
+              setShowCreate(true);
+            }}
             events={eventsLocal.map((e) => {
               const t = tasksData.find((x) => x.id === e.taskId);
               return { ...e, title: t?.title };
@@ -511,6 +520,64 @@ export default function CalendarPage() {
         >Simulate Resize</button>
       )}
       </DndContext>
+      <Modal
+        open={showCreate}
+        onClose={() => {
+          setShowCreate(false);
+          setNewTaskTitle('');
+        }}
+        title="New Task"
+        footer={
+          <>
+            <Button
+              variant="tertiary"
+              onClick={() => {
+                setShowCreate(false);
+                setNewTaskTitle('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const title = newTaskTitle.trim();
+                if (!title) return;
+                createTask.mutate(
+                  { title },
+                  {
+                    onSuccess: async (task) => {
+                      if (newTaskStart) {
+                        scheduleWithPrefs({
+                          taskId: task.id,
+                          startAt: newTaskStart,
+                          durationMinutes: defaultDuration,
+                        });
+                      }
+                      try {
+                        await utils.task.list.invalidate();
+                      } catch {}
+                      setShowCreate(false);
+                      setNewTaskTitle('');
+                      setNewTaskStart(null);
+                    },
+                  }
+                );
+              }}
+            >
+              Create
+            </Button>
+          </>
+        }
+      >
+        <label className="block text-sm">
+          <span>Title</span>
+          <Input
+            aria-label="Task title"
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+          />
+        </label>
+      </Modal>
       <Modal
         open={showSettings}
         onClose={() => setShowSettings(false)}
