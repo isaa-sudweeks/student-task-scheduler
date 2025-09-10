@@ -14,6 +14,7 @@ export function CalendarGrid(props: {
   events: { id: string; taskId: string; startAt: Date | string; endAt: Date | string; title?: string }[];
   workStartHour?: number;
   workEndHour?: number;
+  onClickSlot?: (startAt: Date) => void;
 }) {
   if (props.view === 'month') {
     return <MonthView startOfWeek={props.startOfWeek} events={props.events} />;

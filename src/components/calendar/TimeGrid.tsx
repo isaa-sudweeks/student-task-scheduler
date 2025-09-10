@@ -15,6 +15,7 @@ export function TimeGrid(props: {
   events: { id: string; taskId: string; startAt: Date | string; endAt: Date | string; title?: string }[];
   workStartHour?: number;
   workEndHour?: number;
+  onClickSlot?: (startAt: Date) => void;
 }) {
   const { view } = props;
   const days = getDays(view, props.startOfWeek);
@@ -63,7 +64,12 @@ export function TimeGrid(props: {
               <React.Fragment key={hour}>
                 <div className="p-2 text-xs border-t h-12">{formatHour(hour)}</div>
                 {days.map((d) => (
-                  <GridCell key={d.toDateString() + hour} day={d} hour={hour} />
+                  <GridCell
+                    key={d.toDateString() + hour}
+                    day={d}
+                    hour={hour}
+                    onClickSlot={props.onClickSlot}
+                  />
                 ))}
               </React.Fragment>
             );
@@ -135,13 +141,26 @@ export function TimeGrid(props: {
   );
 }
 
-function GridCell({ day, hour }: { day: Date; hour: number }) {
+function GridCell({
+  day,
+  hour,
+  onClickSlot,
+}: {
+  day: Date;
+  hour: number;
+  onClickSlot?: (startAt: Date) => void;
+}) {
   const slot = new Date(day);
   slot.setHours(hour, 0, 0, 0);
   const id = 'cell-' + slot.toISOString();
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div ref={setNodeRef} className={`h-12 border-t border-l ${isOver ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''}`}></div>
+    <div
+      ref={setNodeRef}
+      className={`h-12 border-t border-l ${isOver ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''}`}
+      onClick={() => onClickSlot?.(slot)}
+      data-testid={`time-slot-${slot.toISOString()}`}
+    ></div>
   );
 }
 
