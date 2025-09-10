@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { publicProcedure, protectedProcedure, router } from '../trpc';
+import { protectedProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 
 export const projectRouter = router({
@@ -40,7 +40,7 @@ export const projectRouter = router({
         },
       });
     }),
-  update: publicProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.string().min(1),
@@ -49,20 +49,36 @@ export const projectRouter = router({
         instructionsUrl: z.string().url().nullable().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      const project = await db.project.findFirst({ where: { id: input.id } });
+      if (!project) {
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
+      if (project.userId !== userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      }
       const { id, ...rest } = input;
       const data: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(rest)) {
         if (typeof value !== 'undefined') data[key] = value;
       }
       if (Object.keys(data).length === 0) {
-        return db.project.findUniqueOrThrow({ where: { id } });
+        return project;
       }
       return db.project.update({ where: { id }, data });
     }),
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      const project = await db.project.findFirst({ where: { id: input.id } });
+      if (!project) {
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
+      if (project.userId !== userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      }
       return db.project.delete({ where: { id: input.id } });
     }),
 });
