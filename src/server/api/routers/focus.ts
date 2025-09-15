@@ -1,40 +1,53 @@
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc';
+import { router, protectedProcedure } from '../trpc';
 import { db } from '@/server/db';
 import type { TaskTimeLog } from '@prisma/client';
 
 export const focusRouter = router({
-  start: publicProcedure
+  start: protectedProcedure
     .input(z.object({ taskId: z.string().min(1) }))
-    .mutation(async ({ input }) => {
-      // End any existing open log for any task
-      await db.taskTimeLog.updateMany({ where: { endedAt: null }, data: { endedAt: new Date() } });
-      return db.taskTimeLog.create({ data: { taskId: input.taskId, startedAt: new Date(), endedAt: null } });
+    .mutation(async ({ input, ctx }) => {
+      // End any existing open log for this user's tasks
+      await db.taskTimeLog.updateMany({
+        where: { endedAt: null, task: { userId: ctx.session.user.id } },
+        data: { endedAt: new Date() },
+      });
+      return db.taskTimeLog.create({
+        data: { taskId: input.taskId, startedAt: new Date(), endedAt: null },
+      });
     }),
-  stop: publicProcedure
+  stop: protectedProcedure
     .input(z.object({ taskId: z.string().min(1) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const open: TaskTimeLog | null = await db.taskTimeLog.findFirst({
-        where: { taskId: input.taskId, endedAt: null },
+        where: {
+          taskId: input.taskId,
+          endedAt: null,
+          task: { userId: ctx.session.user.id },
+        },
         orderBy: { startedAt: 'desc' },
       });
       if (!open) return { ok: true };
-      await db.taskTimeLog.update({ where: { id: open.id }, data: { endedAt: new Date() } });
+      await db.taskTimeLog.update({
+        where: { id: open.id },
+        data: { endedAt: new Date() },
+      });
       return { ok: true };
     }),
-  aggregate: publicProcedure
+  aggregate: protectedProcedure
     .input(
       z
         .object({ start: z.date().optional(), end: z.date().optional() })
         .optional()
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const rangeStart = input?.start ?? new Date(0);
       const rangeEnd = input?.end ?? new Date();
       const logs = await db.taskTimeLog.findMany({
         where: {
           startedAt: { lte: rangeEnd },
           OR: [{ endedAt: { gte: rangeStart } }, { endedAt: null }],
+          task: { userId: ctx.session.user.id },
         },
       });
       const now = new Date();
