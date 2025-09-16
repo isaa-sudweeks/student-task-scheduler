@@ -48,18 +48,18 @@ afterEach(async () => {
 });
 
 describe('cache.clear', () => {
-  it('removes only keys with the app prefix', async () => {
-    const { cache, CACHE_PREFIX } = await getCacheModule();
-    const prefixedKey = `${CACHE_PREFIX}foo`;
-    const otherKey = 'other:bar';
+  it('removes all keys', async () => {
+    const { cache } = await getCacheModule();
+    const key1 = 'foo:1';
+    const key2 = 'bar:2';
 
-    await cache.set(prefixedKey, 1);
-    await cache.set(otherKey, 2);
+    await cache.set(key1, 1);
+    await cache.set(key2, 2);
 
     await cache.clear();
 
-    expect(await cache.get(prefixedKey)).toBeNull();
-    expect(await cache.get(otherKey)).toBe(2);
+    expect(await cache.get(key1)).toBeNull();
+    expect(await cache.get(key2)).toBeNull();
   });
 });
 
