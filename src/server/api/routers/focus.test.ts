@@ -39,12 +39,11 @@ describe('focusRouter.start', () => {
     };
     hoisted.create.mockResolvedValueOnce(fakeLog);
 
-    const result = await focusRouter
-      .createCaller({ session: { user: { id: 'u1' } } as any })
-      .start({ taskId: 't1' });
+    const ctx = { session: { user: { id: 'u1' } } };
+    const result = await focusRouter.createCaller(ctx).start({ taskId: 't1' });
 
     expect(hoisted.updateMany).toHaveBeenCalledWith({
-      where: { endedAt: null, userId: 'u1' },
+      where: { endedAt: null, task: { userId: 'u1' } },
       data: { endedAt: expect.any(Date) },
     });
     expect(hoisted.create).toHaveBeenCalledWith({
@@ -64,8 +63,17 @@ describe('focusRouter.stop', () => {
     hoisted.findFirst.mockResolvedValueOnce({ id: 'log1' });
     hoisted.update.mockResolvedValueOnce({});
 
-    const result = await focusRouter.createCaller({}).stop({ taskId: 't1' });
+    const ctx = { session: { user: { id: 'u1' } } };
+    const result = await focusRouter.createCaller(ctx).stop({ taskId: 't1' });
 
+    expect(hoisted.findFirst).toHaveBeenCalledWith({
+      where: {
+        taskId: 't1',
+        endedAt: null,
+        task: { userId: 'u1' },
+      },
+      orderBy: { startedAt: 'desc' },
+    });
     expect(hoisted.update).toHaveBeenCalledWith({
       where: { id: 'log1' },
       data: { endedAt: expect.any(Date) },
@@ -76,8 +84,17 @@ describe('focusRouter.stop', () => {
   it('returns ok when no open log exists', async () => {
     hoisted.findFirst.mockResolvedValueOnce(null);
 
-    const result = await focusRouter.createCaller({}).stop({ taskId: 't1' });
+    const ctx = { session: { user: { id: 'u1' } } };
+    const result = await focusRouter.createCaller(ctx).stop({ taskId: 't1' });
 
+    expect(hoisted.findFirst).toHaveBeenCalledWith({
+      where: {
+        taskId: 't1',
+        endedAt: null,
+        task: { userId: 'u1' },
+      },
+      orderBy: { startedAt: 'desc' },
+    });
     expect(hoisted.update).not.toHaveBeenCalled();
     expect(result).toEqual({ ok: true });
   });
@@ -107,7 +124,8 @@ describe('focusRouter.aggregate', () => {
       },
     ]);
 
-    const result = await focusRouter.createCaller({}).aggregate();
+    const ctx = { session: { user: { id: 'u1' } } };
+    const result = await focusRouter.createCaller(ctx).aggregate();
 
     expect(hoisted.findMany).toHaveBeenCalledWith({
       where: {
@@ -116,6 +134,7 @@ describe('focusRouter.aggregate', () => {
           { endedAt: { gte: new Date(0) } },
           { endedAt: null },
         ],
+        task: { userId: 'u1' },
       },
     });
     expect(result).toEqual([
@@ -135,17 +154,18 @@ describe('focusRouter.aggregate', () => {
 
     const start = new Date('2023-01-01T02:00:00Z');
     const end = new Date('2023-01-01T03:00:00Z');
+    const ctx = { session: { user: { id: 'u1' } } };
     const result = await focusRouter
-      .createCaller({})
+      .createCaller(ctx)
       .aggregate({ start, end });
 
     expect(hoisted.findMany).toHaveBeenCalledWith({
       where: {
         startedAt: { lte: end },
         OR: [{ endedAt: { gte: start } }, { endedAt: null }],
+        task: { userId: 'u1' },
       },
     });
     expect(result).toEqual([{ taskId: 't1', durationMs: 60 * 60 * 1000 }]);
   });
 });
-

@@ -6,7 +6,6 @@ import { router, protectedProcedure } from '../../trpc';
 import * as taskModule from './index';
 import { db } from '@/server/db';
 import { cache } from '@/server/cache';
-<<<<<<< HEAD
 import {
   buildListCacheKey,
   invalidateTaskListCache,
@@ -14,14 +13,6 @@ import {
   validateRecurrence,
 } from './utils';
 import { computeTodayBounds } from './timezone';
-=======
-import {
-  buildListCacheKey,
-  invalidateTaskListCache,
-  requireUserId,
-  validateRecurrence,
-} from './utils';
->>>>>>> origin/codex/move-recurrence-validation-to-shared-function
 
 export const taskCrudRouter = router({
   list: protectedProcedure
