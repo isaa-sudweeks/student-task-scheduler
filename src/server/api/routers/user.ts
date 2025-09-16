@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { db } from '@/server/db';
 import { TRPCError } from '@trpc/server';
+import { LlmProvider } from '@prisma/client';
 
 export const userRouter = router({
   get: protectedProcedure.query(({ ctx }) => {
@@ -24,6 +25,9 @@ export const userRouter = router({
         dayWindowEndHour: true,
         defaultDurationMinutes: true,
         googleSyncEnabled: true,
+        llmProvider: true,
+        openaiApiKey: true,
+        lmStudioUrl: true,
       },
     });
     if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
@@ -36,9 +40,19 @@ export const userRouter = router({
       dayWindowEndHour: z.number().int().min(0).max(23),
       defaultDurationMinutes: z.number().int().min(1).max(24 * 60),
       googleSyncEnabled: z.boolean(),
+      llmProvider: z.nativeEnum(LlmProvider),
+      openaiApiKey: z.string().max(512).optional().nullable(),
+      lmStudioUrl: z.string().url(),
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+      const trimmedApiKey = input.openaiApiKey?.trim() ?? null;
+      if (input.llmProvider === LlmProvider.OPENAI && !trimmedApiKey) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'OpenAI API key is required when using the OpenAI provider.',
+        });
+      }
       await db.user.update({
         where: { id: userId },
         data: {
@@ -47,6 +61,9 @@ export const userRouter = router({
           dayWindowEndHour: input.dayWindowEndHour,
           defaultDurationMinutes: input.defaultDurationMinutes,
           googleSyncEnabled: input.googleSyncEnabled,
+          llmProvider: input.llmProvider,
+          openaiApiKey: trimmedApiKey,
+          lmStudioUrl: input.lmStudioUrl,
         },
       });
       return { success: true };

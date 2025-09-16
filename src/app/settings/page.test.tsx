@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, beforeEach } from "vitest";
 import * as matchers from "@testing-library/jest-dom/matchers";
 expect.extend(matchers);
@@ -34,5 +34,22 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
     const checkbox = screen.getByLabelText(/enable google calendar sync/i) as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
+  });
+
+  it("defaults the AI provider to none", () => {
+    render(<SettingsPage />);
+    const provider = screen.getByLabelText(/ai provider/i) as HTMLSelectElement;
+    expect(provider.value).toBe("NONE");
+    const urlInput = screen.getByLabelText(/lm studio url/i) as HTMLInputElement;
+    expect(urlInput.value).toBe("http://localhost:1234");
+    expect(urlInput).toBeDisabled();
+  });
+
+  it("enables LM Studio configuration when selected", () => {
+    render(<SettingsPage />);
+    const provider = screen.getByLabelText(/ai provider/i) as HTMLSelectElement;
+    fireEvent.change(provider, { target: { value: "LM_STUDIO" } });
+    const urlInput = screen.getByLabelText(/lm studio url/i) as HTMLInputElement;
+    expect(urlInput).not.toBeDisabled();
   });
 });
