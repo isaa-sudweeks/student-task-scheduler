@@ -4,6 +4,9 @@ import { cleanup } from '@testing-library/react';
 process.env.TZ = 'UTC';
 process.env.DATABASE_URL ??= 'postgres://localhost:5432/test';
 process.env.NEXTAUTH_SECRET ??= 'test-secret';
+process.env.NEXTAUTH_URL ??= 'http://localhost:3000';
+process.env.GITHUB_ID ??= 'test-github-id';
+process.env.GITHUB_SECRET ??= 'test-github-secret';
 process.env.GOOGLE_CLIENT_ID ??= 'test-google-id';
 process.env.GOOGLE_CLIENT_SECRET ??= 'test-google-secret';
 // Freeze time to a deterministic date so calendar/event tests render predictable weeks
