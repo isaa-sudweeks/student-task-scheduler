@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { env } from '@/env';
+import { logger } from '@/server/logger';
 
 export const CACHE_PREFIX = 'task:';
 
@@ -49,7 +50,7 @@ if (url && token) {
       try {
         return (await redis.get<T>(key)) ?? null;
       } catch (err) {
-        console.error('Redis get error', err);
+        logger.error('Redis get error', err);
         return mapStore.get<T>(key);
       }
     },
@@ -57,7 +58,7 @@ if (url && token) {
       try {
         await redis.set(key, value, ttlSeconds ? { ex: ttlSeconds } : undefined);
       } catch (err) {
-        console.error('Redis set error', err);
+        logger.error('Redis set error', err);
         await mapStore.set(key, value, ttlSeconds);
       }
     },
@@ -75,7 +76,7 @@ if (url && token) {
           cursor = Number(nextCursor);
         } while (cursor !== 0);
       } catch (err) {
-        console.error('Redis deleteByPrefix error', err);
+        logger.error('Redis deleteByPrefix error', err);
         await mapStore.deleteByPrefix(prefix);
       }
     },
@@ -83,7 +84,7 @@ if (url && token) {
       try {
         await this.deleteByPrefix(CACHE_PREFIX);
       } catch (err) {
-        console.error('Redis clear error', err);
+        logger.error('Redis clear error', err);
         await mapStore.clear();
       }
     },
