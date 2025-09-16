@@ -51,6 +51,7 @@ export function TaskModal({
   const [recurrenceInterval, setRecurrenceInterval] = useState<number>(1);
   const [recurrenceCount, setRecurrenceCount] = useState<number | ''>('');
   const [recurrenceUntil, setRecurrenceUntil] = useState<string>('');
+  const recurrenceConflict = recurrenceCount !== '' && recurrenceUntil !== '';
   const { data: projects = [] } = api.project.list.useQuery();
   const { data: courses = [] } = api.course.list.useQuery({ page: 1, limit: 100 });
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -157,8 +158,9 @@ export function TaskModal({
         Cancel
       </Button>
       <Button
-        disabled={create.isPending || update.isPending}
+        disabled={create.isPending || update.isPending || recurrenceConflict}
         onClick={() => {
+          if (recurrenceConflict) return;
           const parsedDue = parseLocalDateTime(due);
           const dueAt = dueEnabled && parsedDue ? parsedDue : null;
           const recurrenceUntilDate =

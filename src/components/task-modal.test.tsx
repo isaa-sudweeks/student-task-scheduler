@@ -116,6 +116,48 @@ describe('TaskModal validation', () => {
   });
 });
 
+describe('TaskModal recurrence options', () => {
+  beforeEach(() => {
+    mutateCreate.mockReset();
+    mutateUpdate.mockReset();
+    createMutation.error = undefined;
+    updateMutation.error = undefined;
+  });
+
+  it('disables end date when end count is set', () => {
+    render(<TaskModal open mode="create" onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText('Recurrence'), { target: { value: 'DAILY' } });
+    fireEvent.change(screen.getByLabelText('End after'), { target: { value: '5' } });
+    expect(screen.getByLabelText('End on')).toBeDisabled();
+  });
+
+  it('disables end count when end date is set', () => {
+    render(<TaskModal open mode="create" onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText('Recurrence'), { target: { value: 'DAILY' } });
+    fireEvent.change(screen.getByLabelText('End on'), { target: { value: '2099-12-31' } });
+    expect(screen.getByLabelText('End after')).toBeDisabled();
+  });
+
+  it('shows a warning when both end fields are set', () => {
+    const task = {
+      id: 't1',
+      title: 'Task',
+      subject: null,
+      notes: null,
+      dueAt: null,
+      recurrenceType: 'DAILY',
+      recurrenceInterval: 1,
+      recurrenceCount: 5,
+      recurrenceUntil: new Date('2099-12-31').toISOString(),
+    } as any;
+    render(<TaskModal open mode="edit" onClose={() => {}} task={task} />);
+    expect(
+      screen.getByText('Choose either "End after" or "End on", not both.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Save')).toBeDisabled();
+  });
+});
+
   describe('TaskModal project and course selection', () => {
   beforeEach(() => {
     mutateCreate.mockReset();

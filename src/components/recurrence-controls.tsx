@@ -22,6 +22,9 @@ export function RecurrenceControls({
   recurrenceUntil,
   onRecurrenceUntilChange,
 }: RecurrenceControlsProps) {
+  const disableCount = recurrenceUntil !== '';
+  const disableUntil = recurrenceCount !== '';
+  const showConflict = disableCount && disableUntil;
   return (
     <>
       <div className="flex items-center gap-4">
@@ -65,11 +68,12 @@ export function RecurrenceControls({
               id="recurrenceCount"
               type="number"
               min={1}
-              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:border-white/10"
               value={recurrenceCount}
               onChange={(e) =>
                 onRecurrenceCountChange(e.target.value ? parseInt(e.target.value, 10) : '')
               }
+              disabled={disableCount}
             />
           </div>
           <div className="flex items-center gap-4">
@@ -79,11 +83,17 @@ export function RecurrenceControls({
             <input
               id="recurrenceUntil"
               type="date"
-              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:border-white/10"
               value={recurrenceUntil}
               onChange={(e) => onRecurrenceUntilChange(e.target.value)}
+              disabled={disableUntil}
             />
           </div>
+          {showConflict && (
+            <p className="pl-28 text-sm text-red-600">
+              Choose either "End after" or "End on", not both.
+            </p>
+          )}
         </>
       )}
     </>
