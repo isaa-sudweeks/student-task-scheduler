@@ -45,4 +45,18 @@ describe('datetime utility', () => {
       expect(parseLocalDateTime(c)).toBeNull();
     }
   });
+
+  it('handles leap years and invalid dates', () => {
+    const leap = parseLocalDateTime('2024-02-29T12:00');
+    expect(leap).not.toBeNull();
+    expect(leap?.getFullYear()).toBe(2024);
+    expect(leap?.getMonth()).toBe(1);
+    expect(leap?.getDate()).toBe(29);
+
+    const nonLeap = parseLocalDateTime('2023-02-29T12:00');
+    expect(nonLeap).toBeNull();
+
+    const invalidDate = parseLocalDateTime('2024-02-30T12:00');
+    expect(invalidDate).toBeNull();
+  });
 });
