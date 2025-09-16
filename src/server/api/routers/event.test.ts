@@ -18,18 +18,7 @@ const hoisted = vi.hoisted(() => {
 const googleMock = vi.hoisted(() => {
   return {
     OAuth2: vi.fn().mockReturnValue({ setCredentials: vi.fn() }),
-    list: vi.fn().mockResolvedValue({
-      data: {
-        items: [
-          {
-            id: 'g1',
-            summary: 'GEvent',
-            start: { dateTime: '2023-01-01T00:00:00.000Z' },
-            end: { dateTime: '2023-01-01T01:00:00.000Z' },
-          },
-        ],
-      },
-    }),
+    list: vi.fn(),
     insert: vi.fn().mockResolvedValue({}),
   };
 });
@@ -236,9 +225,12 @@ describe('eventRouter.syncGoogle', () => {
     hoisted.userFindUnique.mockResolvedValue({ googleSyncEnabled: true });
     hoisted.accountFindFirst.mockResolvedValue({ access_token: 'a', refresh_token: 'r' });
     hoisted.eventFindFirst.mockResolvedValueOnce({ id: 'e1', taskId: 't1', task: { id: 't1', title: 'Old' } });
+    hoisted.eventFindFirst.mockResolvedValueOnce(null);
+    hoisted.taskCreate.mockResolvedValueOnce({ id: 't2' });
+    hoisted.create.mockResolvedValueOnce({});
     hoisted.findMany.mockResolvedValueOnce([
       {
-        id: 'e2',
+        id: 'e3',
         startAt: new Date('2023-01-02T00:00:00.000Z'),
         endAt: new Date('2023-01-02T01:00:00.000Z'),
         googleEventId: null,
@@ -247,15 +239,41 @@ describe('eventRouter.syncGoogle', () => {
     ]);
     hoisted.update.mockResolvedValue({});
     hoisted.taskUpdate.mockResolvedValue({});
+    googleMock.list
+      .mockResolvedValueOnce({
+        data: {
+          items: [
+            {
+              id: 'g1',
+              summary: 'GEvent',
+              start: { dateTime: '2023-01-01T00:00:00.000Z' },
+              end: { dateTime: '2023-01-01T01:00:00.000Z' },
+            },
+          ],
+          nextPageToken: 'tok',
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          items: [
+            {
+              id: 'g2',
+              summary: 'GEvent2',
+              start: { dateTime: '2023-01-03T00:00:00.000Z' },
+              end: { dateTime: '2023-01-03T01:00:00.000Z' },
+            },
+          ],
+        },
+      });
     googleMock.insert.mockResolvedValue({ data: { id: 'gid2' } });
 
     const items = await eventRouter.createCaller(ctx).syncGoogle();
-    expect(googleMock.list).toHaveBeenCalled();
-    expect(hoisted.taskCreate).not.toHaveBeenCalled();
-    expect(hoisted.create).not.toHaveBeenCalled();
+    expect(googleMock.list).toHaveBeenCalledTimes(2);
+    expect(hoisted.taskCreate).toHaveBeenCalledTimes(1);
+    expect(hoisted.create).toHaveBeenCalledTimes(1);
     expect(googleMock.insert).toHaveBeenCalledTimes(1);
     expect(hoisted.update).toHaveBeenCalled();
-    expect(items).toHaveLength(1);
+    expect(items).toHaveLength(2);
   });
 });
 

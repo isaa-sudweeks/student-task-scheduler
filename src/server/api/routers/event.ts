@@ -5,6 +5,7 @@ import { db } from '@/server/db';
 import { findNonOverlappingSlot, Interval } from '@/lib/scheduling';
 import type { Event as EventModel, Prisma } from '@prisma/client';
 import { google } from 'googleapis';
+import type { calendar_v3 } from 'googleapis';
 
 export const eventRouter = router({
   listRange: protectedProcedure
@@ -221,8 +222,14 @@ export const eventRouter = router({
     });
     const calendar = google.calendar({ version: 'v3', auth });
 
-    const res = await calendar.events.list({ calendarId: 'primary', maxResults: 10 });
-    const items = res.data.items ?? [];
+    const items: calendar_v3.Schema$Event[] = [];
+    let pageToken: string | undefined;
+    do {
+      const res = await calendar.events.list({ calendarId: 'primary', maxResults: 2500, pageToken });
+      items.push(...(res.data.items ?? []));
+      pageToken = res.data.nextPageToken || undefined;
+    } while (pageToken);
+
     for (const item of items) {
       const summary = item.summary;
       const start = item.start?.dateTime;
