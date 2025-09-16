@@ -7,6 +7,7 @@ import * as taskModule from './index';
 import { db } from '@/server/db';
 import { cache } from '@/server/cache';
 import { buildListCacheKey, invalidateTaskListCache, requireUserId } from './utils';
+import { computeTodayBounds } from './timezone';
 
 export const taskCrudRouter = router({
   list: protectedProcedure
@@ -44,37 +45,13 @@ export const taskCrudRouter = router({
       const tzOffsetMinutes = input?.tzOffsetMinutes ?? null;
       const nowUtc = new Date();
 
-      // Prefer explicit bounds from client when provided; otherwise compute from user tz or offset
-      let startUtc: Date;
-      let endUtc: Date;
-      if (input?.todayStart && input?.todayEnd) {
-        startUtc = input.todayStart;
-        endUtc = input.todayEnd;
-      } else if (ctx.session?.user?.timezone) {
-        const tz = ctx.session.user.timezone;
-        const nowTz = new Date(nowUtc.toLocaleString('en-US', { timeZone: tz }));
-        const startTz = new Date(nowTz);
-        startTz.setHours(0, 0, 0, 0);
-        const endTz = new Date(nowTz);
-        endTz.setHours(23, 59, 59, 999);
-        startUtc = new Date(startTz.toLocaleString('en-US', { timeZone: 'UTC' }));
-        endUtc = new Date(endTz.toLocaleString('en-US', { timeZone: 'UTC' }));
-      } else {
-        const nowClient =
-          tzOffsetMinutes != null ? new Date(nowUtc.getTime() - tzOffsetMinutes * 60 * 1000) : nowUtc;
-        const startClient = new Date(nowClient);
-        startClient.setHours(0, 0, 0, 0);
-        const endClient = new Date(nowClient);
-        endClient.setHours(23, 59, 59, 999);
-        startUtc =
-          tzOffsetMinutes != null
-            ? new Date(startClient.getTime() + tzOffsetMinutes * 60 * 1000)
-            : startClient;
-        endUtc =
-          tzOffsetMinutes != null
-            ? new Date(endClient.getTime() + tzOffsetMinutes * 60 * 1000)
-            : endClient;
-      }
+      const { startUtc, endUtc } = computeTodayBounds({
+        nowUtc,
+        timezone: ctx.session?.user?.timezone ?? null,
+        tzOffsetMinutes,
+        todayStart: input?.todayStart,
+        todayEnd: input?.todayEnd,
+      });
 
       // Show only DONE in archive; otherwise include all by default
       const baseWhere: Prisma.TaskWhereInput =
