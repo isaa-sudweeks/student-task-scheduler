@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { logger } from '@/server/logger';
 
 // These tests simulate Redis errors to ensure the cache falls back to the
 // in-memory Map implementation.
@@ -26,7 +27,7 @@ describe('cache with failing Redis', () => {
   });
 
   it('falls back to map for get/set operations', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
     const { cache } = await import('@/server/cache');
 
     await cache.set('foo', 'bar');
@@ -36,7 +37,7 @@ describe('cache with failing Redis', () => {
   });
 
   it('falls back to map for deleteByPrefix', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
     const { cache } = await import('@/server/cache');
 
     await cache.set('foo:1', 1);
