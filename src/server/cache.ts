@@ -14,6 +14,7 @@ const url = env.UPSTASH_REDIS_REST_URL ?? env.REDIS_URL;
 const token = env.UPSTASH_REDIS_REST_TOKEN ?? env.REDIS_TOKEN;
 
 const map = new Map<string, { value: unknown; expires: number | null }>();
+export const MAX_CACHE_ENTRIES = 1_000;
 const mapStore: CacheStore = {
   async get<T>(key: string) {
     const entry = map.get(key);
@@ -22,9 +23,22 @@ const mapStore: CacheStore = {
       map.delete(key);
       return null;
     }
+    // update recency
+    map.delete(key);
+    map.set(key, entry);
     return entry.value as T;
   },
   async set<T>(key: string, value: T, ttlSeconds?: number) {
+    // ensure key moves to most-recently-used position
+    if (map.has(key)) {
+      map.delete(key);
+    }
+    // prune least-recently-used entries if exceeding limit
+    while (map.size >= MAX_CACHE_ENTRIES) {
+      const oldestKey = map.keys().next().value as string | undefined;
+      if (oldestKey === undefined) break;
+      map.delete(oldestKey);
+    }
     map.set(key, { value, expires: ttlSeconds ? Date.now() + ttlSeconds * 1000 : null });
   },
   async deleteByPrefix(prefix: string) {
