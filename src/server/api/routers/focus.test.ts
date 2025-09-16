@@ -30,17 +30,25 @@ describe('focusRouter.start', () => {
 
   it('closes open logs and creates a new one', async () => {
     hoisted.updateMany.mockResolvedValueOnce({ count: 1 });
-    const fakeLog = { id: '1', taskId: 't1', startedAt: new Date(), endedAt: null };
+    const fakeLog = {
+      id: '1',
+      taskId: 't1',
+      userId: 'u1',
+      startedAt: new Date(),
+      endedAt: null,
+    };
     hoisted.create.mockResolvedValueOnce(fakeLog);
 
-    const result = await focusRouter.createCaller({}).start({ taskId: 't1' });
+    const result = await focusRouter
+      .createCaller({ session: { user: { id: 'u1' } } as any })
+      .start({ taskId: 't1' });
 
     expect(hoisted.updateMany).toHaveBeenCalledWith({
-      where: { endedAt: null },
+      where: { endedAt: null, userId: 'u1' },
       data: { endedAt: expect.any(Date) },
     });
     expect(hoisted.create).toHaveBeenCalledWith({
-      data: { taskId: 't1', startedAt: expect.any(Date), endedAt: null },
+      data: { taskId: 't1', userId: 'u1', startedAt: expect.any(Date), endedAt: null },
     });
     expect(result).toEqual(fakeLog);
   });

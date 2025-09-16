@@ -1,15 +1,21 @@
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc';
+import { router, publicProcedure, protectedProcedure } from '../trpc';
 import { db } from '@/server/db';
 import type { TaskTimeLog } from '@prisma/client';
 
 export const focusRouter = router({
-  start: publicProcedure
+  start: protectedProcedure
     .input(z.object({ taskId: z.string().min(1) }))
-    .mutation(async ({ input }) => {
-      // End any existing open log for any task
-      await db.taskTimeLog.updateMany({ where: { endedAt: null }, data: { endedAt: new Date() } });
-      return db.taskTimeLog.create({ data: { taskId: input.taskId, startedAt: new Date(), endedAt: null } });
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      // End any existing open log for this user
+      await db.taskTimeLog.updateMany({
+        where: { endedAt: null, userId },
+        data: { endedAt: new Date() },
+      });
+      return db.taskTimeLog.create({
+        data: { taskId: input.taskId, userId, startedAt: new Date(), endedAt: null },
+      });
     }),
   stop: publicProcedure
     .input(z.object({ taskId: z.string().min(1) }))
