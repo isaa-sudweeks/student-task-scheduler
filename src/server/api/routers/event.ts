@@ -50,11 +50,8 @@ export const eventRouter = router({
       const existing: EventModel[] = await db.event.findMany({
         where: {
           task: { userId },
-          // Consider same day events for overlap avoidance
-          OR: [
-            { startAt: { gte: sameDayStart, lte: sameDayEnd } },
-            { endAt: { gte: sameDayStart, lte: sameDayEnd } },
-          ],
+          // Consider events overlapping the day for overlap avoidance
+          AND: { startAt: { lt: sameDayEnd }, endAt: { gt: sameDayStart } },
         },
       });
 
@@ -139,10 +136,7 @@ export const eventRouter = router({
         where: {
           task: { userId },
           id: { not: input.eventId },
-          OR: [
-            { startAt: { gte: sameDayStart, lte: sameDayEnd } },
-            { endAt: { gte: sameDayStart, lte: sameDayEnd } },
-          ],
+          AND: { startAt: { lt: sameDayEnd }, endAt: { gt: sameDayStart } },
         },
       });
 
