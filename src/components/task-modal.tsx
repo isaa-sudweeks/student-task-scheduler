@@ -49,6 +49,7 @@ export function TaskModal({
   const [recurrenceInterval, setRecurrenceInterval] = useState<number>(1);
   const [recurrenceCount, setRecurrenceCount] = useState<number | ''>('');
   const [recurrenceUntil, setRecurrenceUntil] = useState<string>('');
+  const recurrenceConflict = recurrenceCount !== '' && recurrenceUntil !== '';
   const { data: projects = [] } = api.project.list.useQuery();
   const { data: courses = [] } = api.course.list.useQuery({ page: 1, limit: 100 });
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -155,8 +156,9 @@ export function TaskModal({
         Cancel
       </Button>
       <Button
-        disabled={create.isPending || update.isPending}
+        disabled={create.isPending || update.isPending || recurrenceConflict}
         onClick={() => {
+          if (recurrenceConflict) return;
           const parsedDue = parseLocalDateTime(due);
           const dueAt = dueEnabled && parsedDue ? parsedDue : null;
           const recurrenceUntilDate =
@@ -387,6 +389,7 @@ export function TaskModal({
                 onChange={(e) =>
                   setRecurrenceCount(e.target.value ? parseInt(e.target.value, 10) : '')
                 }
+                disabled={recurrenceUntil !== ''}
               />
             </div>
             <div className="flex items-center gap-4">
@@ -399,8 +402,14 @@ export function TaskModal({
                 className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
                 value={recurrenceUntil}
                 onChange={(e) => setRecurrenceUntil(e.target.value)}
+                disabled={recurrenceCount !== ''}
               />
             </div>
+            {recurrenceConflict && (
+              <p className="pl-28 text-sm text-red-600">
+                Choose either &quot;End after&quot; or &quot;End on&quot;, not both.
+              </p>
+            )}
           </>
         )}
 
