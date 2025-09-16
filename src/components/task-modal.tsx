@@ -2,10 +2,12 @@
 import React, { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { StatusDropdown } from "@/components/status-dropdown";
 import { api } from "@/server/api/react";
-import { formatLocalDateTime, parseLocalDateTime, defaultEndOfToday } from "@/lib/datetime";
+import { formatLocalDateTime, parseLocalDateTime } from "@/lib/datetime";
+import TaskDetailsForm from "./task-details-form";
+import RecurrenceControls from "./recurrence-controls";
+import SubtaskList from "./subtask-list";
 
 import type { RouterOutputs } from "@/server/api/root";
 
@@ -219,227 +221,54 @@ export function TaskModal({
             />
           </div>
         )}
-        <div className="flex items-center gap-4">
-          <label htmlFor="title" className="w-28 text-sm font-medium">
-            Title
-          </label>
-          <div className="flex-1">
-            <input
-              id="title"
-              className="w-full rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-              placeholder="Task title"
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                if (titleError) setTitleError(null);
-              }}
+        <TaskDetailsForm
+          title={title}
+          onTitleChange={(v) => {
+            setTitle(v);
+            if (titleError) setTitleError(null);
+          }}
+          titleError={titleError}
+          subject={subject}
+          onSubjectChange={setSubject}
+          due={due}
+          dueEnabled={dueEnabled}
+          onDueEnabledChange={setDueEnabled}
+          onDueChange={setDue}
+          projectId={projectId}
+          onProjectChange={setProjectId}
+          projects={projects}
+          courseId={courseId}
+          onCourseChange={setCourseId}
+          courses={courses}
+          priority={priority}
+          onPriorityChange={setPriority}
+          notes={notes}
+          onNotesChange={setNotes}
+          onDraftDueChange={onDraftDueChange}
+          recurrenceControls={
+            <RecurrenceControls
+              recurrenceType={recurrenceType}
+              onRecurrenceTypeChange={setRecurrenceType}
+              recurrenceInterval={recurrenceInterval}
+              onRecurrenceIntervalChange={setRecurrenceInterval}
+              recurrenceCount={recurrenceCount}
+              onRecurrenceCountChange={setRecurrenceCount}
+              recurrenceUntil={recurrenceUntil}
+              onRecurrenceUntilChange={setRecurrenceUntil}
             />
-            {titleError && (
-              <p className="mt-1 text-sm text-red-600">{titleError}</p>
-            )}
-          </div>
-        </div>
-  
-        <div className="flex items-center gap-4">
-          <label htmlFor="subject" className="w-28 text-sm font-medium">
-            Subject
-          </label>
-          <input
-            id="subject"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            placeholder="e.g., Math, CS, English"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="w-28 text-sm font-medium">Due date</span>
-          <div className="flex flex-1 items-center gap-2">
-            <input
-              id="due-enabled"
-              type="checkbox"
-              className="accent-black dark:accent-white"
-              checked={dueEnabled}
-              aria-label="Set due date"
-              onChange={(e) => {
-                const enabled = e.target.checked;
-                setDueEnabled(enabled);
-                if (enabled && !due) {
-                  const v = defaultEndOfToday();
-                  setDue(v);
-                  const parsed = parseLocalDateTime(v);
-                  onDraftDueChange?.(parsed);
-                }
-                if (!enabled) onDraftDueChange?.(null);
-              }}
-            />
-            <input
-              id="due"
-              type="datetime-local"
-              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:border-white/10"
-              value={due}
-              onChange={(e) => {
-                setDue(e.target.value);
-                const parsed = e.target.value ? parseLocalDateTime(e.target.value) : null;
-                onDraftDueChange?.(parsed);
-              }}
-              disabled={!dueEnabled}
-            />
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <label htmlFor="project" className="w-28 text-sm font-medium">
-            Project
-          </label>
-          <select
-            id="project"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            value={projectId ?? ""}
-            onChange={(e) => setProjectId(e.target.value || null)}
-          >
-            <option value="">None</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-4">
-          <label htmlFor="course" className="w-28 text-sm font-medium">
-            Course
-          </label>
-          <select
-            id="course"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            value={courseId ?? ""}
-            onChange={(e) => setCourseId(e.target.value || null)}
-          >
-            <option value="">None</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-4">
-          <label htmlFor="priority" className="w-28 text-sm font-medium">
-            Priority
-          </label>
-          <select
-            id="priority"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            value={priority}
-            onChange={(e) => setPriority(e.target.value as Task["priority"])}
-          >
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <label htmlFor="recurrenceType" className="w-28 text-sm font-medium">
-            Recurrence
-          </label>
-          <select
-            id="recurrenceType"
-            className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            value={recurrenceType}
-            onChange={(e) => setRecurrenceType(e.target.value as typeof recurrenceType)}
-          >
-            <option value="NONE">None</option>
-            <option value="DAILY">Daily</option>
-            <option value="WEEKLY">Weekly</option>
-            <option value="MONTHLY">Monthly</option>
-          </select>
-        </div>
-        {recurrenceType !== 'NONE' && (
-          <div className="flex items-center gap-4">
-            <label htmlFor="recurrenceInterval" className="w-28 text-sm font-medium">
-              Interval
-            </label>
-            <input
-              id="recurrenceInterval"
-              type="number"
-              min={1}
-              className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-              value={recurrenceInterval}
-              onChange={(e) => setRecurrenceInterval(parseInt(e.target.value, 10) || 1)}
-            />
-          </div>
-        )}
-
-        {recurrenceType !== 'NONE' && (
-          <>
-            <div className="flex items-center gap-4">
-              <label htmlFor="recurrenceCount" className="w-28 text-sm font-medium">
-                End after
-              </label>
-              <input
-                id="recurrenceCount"
-                type="number"
-                min={1}
-                className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-                value={recurrenceCount}
-                onChange={(e) =>
-                  setRecurrenceCount(e.target.value ? parseInt(e.target.value, 10) : '')
-                }
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <label htmlFor="recurrenceUntil" className="w-28 text-sm font-medium">
-                End on
-              </label>
-              <input
-                id="recurrenceUntil"
-                type="date"
-                className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-                value={recurrenceUntil}
-                onChange={(e) => setRecurrenceUntil(e.target.value)}
-              />
-            </div>
-          </>
-        )}
-
-        <div className="flex items-start gap-4">
-          <label htmlFor="notes" className="w-28 text-sm font-medium">
-            Notes
-          </label>
-          <textarea
-            id="notes"
-            rows={4}
-            className="flex-1 resize-none rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
-            placeholder="Optional details…"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
+          }
+        />
         {isEdit && task && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">Subtasks</h3>
-            <ul className="ml-6 list-disc">
-              {subtasks.map((st) => (
-                <li key={st.id}>{st.title}</li>
-              ))}
-            </ul>
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="New subtask"
-                value={subtaskTitle}
-                onChange={(e) => setSubtaskTitle(e.target.value)}
-              />
-              <Button
-                type="button"
-                onClick={() => task && createSubtask.mutate({ title: subtaskTitle, parentId: task.id })}
-                disabled={!subtaskTitle.trim() || createSubtask.isPending}
-              >
-                Add subtask
-              </Button>
-            </div>
-          </div>
+          <SubtaskList
+            subtasks={subtasks}
+            subtaskTitle={subtaskTitle}
+            onSubtaskTitleChange={setSubtaskTitle}
+            onAdd={() =>
+              task &&
+              createSubtask.mutate({ title: subtaskTitle, parentId: task.id })
+            }
+            disabled={createSubtask.isPending}
+          />
         )}
       </div>
     </Modal>
