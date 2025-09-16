@@ -35,7 +35,7 @@ const mapStore: CacheStore = {
     }
   },
   async clear() {
-    await this.deleteByPrefix(CACHE_PREFIX);
+    map.clear();
   },
 };
 

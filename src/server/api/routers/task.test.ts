@@ -51,7 +51,7 @@ vi.mock('@/server/db', () => ({
 }));
 
 import * as taskModule from './task';
-import { cache } from '@/server/cache';
+import { cache, CACHE_PREFIX } from '@/server/cache';
 
 const { taskRouter } = taskModule;
 const ctx = { session: { user: { id: 'user1' } } } as any;
@@ -59,7 +59,7 @@ const ctx = { session: { user: { id: 'user1' } } } as any;
 describe('taskRouter.list ordering', () => {
   beforeEach(async () => {
     hoisted.findMany.mockClear();
-    await cache.clear();
+    await cache.deleteByPrefix(CACHE_PREFIX);
   });
 
   it('orders by position, then priority, dueAt, then createdAt', async () => {
@@ -153,7 +153,7 @@ describe('taskRouter.list ordering', () => {
 describe('taskRouter.list caching', () => {
   beforeEach(async () => {
     hoisted.findMany.mockClear();
-    await cache.clear();
+    await cache.deleteByPrefix(CACHE_PREFIX);
   });
 
   it('caches per user and invalidates only for that user on create', async () => {
