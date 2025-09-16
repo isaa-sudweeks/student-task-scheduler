@@ -101,6 +101,25 @@ describe('cache.deleteByPrefix', () => {
   });
 });
 
+describe('cache.lru', () => {
+  it('evicts least recently used entries when limit is exceeded', async () => {
+    const { cache, MAX_CACHE_ENTRIES } = await getCacheModule();
+
+    for (let i = 0; i < MAX_CACHE_ENTRIES; i++) {
+      await cache.set(`key${i}`, i);
+    }
+
+    // Access key0 to make key1 the least recently used
+    expect(await cache.get('key0')).toBe(0);
+
+    await cache.set('new', MAX_CACHE_ENTRIES);
+
+    expect(await cache.get('key1')).toBeNull();
+    expect(await cache.get('key0')).toBe(0);
+    expect(await cache.get('new')).toBe(MAX_CACHE_ENTRIES);
+  });
+});
+
 describe('cache.ttl', () => {
   it('expires keys after ttl using Map implementation', async () => {
     vi.useFakeTimers();
