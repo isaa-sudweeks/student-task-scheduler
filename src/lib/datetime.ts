@@ -17,7 +17,7 @@ export function parseLocalDateTime(value: string): Date | null {
 export function calculateDurationMinutes(startAt: Date | string, endAt: Date | string): number {
   const start = new Date(startAt);
   const end = new Date(endAt);
-  return Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000));
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
 }
 
 export function defaultEndOfToday(): string {

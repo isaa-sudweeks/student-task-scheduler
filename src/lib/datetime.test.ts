@@ -21,11 +21,11 @@ describe('datetime utility', () => {
     process.env.TZ = originalTZ;
   });
 
-  it('calculates duration minutes with minimum of one minute', () => {
+  it('calculates duration minutes', () => {
     const start = new Date(2024, 0, 1, 9, 0);
     const end = new Date(2024, 0, 1, 10, 30);
     expect(calculateDurationMinutes(start, end)).toBe(90);
-    expect(calculateDurationMinutes(start, start)).toBe(1);
+    expect(calculateDurationMinutes(start, start)).toBe(0);
     expect(
       calculateDurationMinutes(start.toISOString(), end.toISOString())
     ).toBe(90);
