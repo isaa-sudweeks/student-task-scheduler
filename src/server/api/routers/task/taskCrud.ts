@@ -6,7 +6,12 @@ import { router, protectedProcedure } from '../../trpc';
 import * as taskModule from './index';
 import { db } from '@/server/db';
 import { cache } from '@/server/cache';
-import { buildListCacheKey, invalidateTaskListCache, requireUserId } from './utils';
+import {
+  buildListCacheKey,
+  invalidateTaskListCache,
+  requireUserId,
+  validateRecurrence,
+} from './utils';
 
 export const taskCrudRouter = router({
   list: protectedProcedure
@@ -171,24 +176,12 @@ export const taskCrudRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
       const userId = requireUserId(ctx);
-      if (input.recurrenceCount !== undefined && input.recurrenceUntil !== undefined) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Specify either recurrenceCount or recurrenceUntil, not both',
-        });
-      }
-      if (
-        input.recurrenceInterval !== undefined ||
-        input.recurrenceCount !== undefined ||
-        input.recurrenceUntil !== undefined
-      ) {
-        if (!input.recurrenceType || input.recurrenceType === RecurrenceType.NONE) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'recurrenceType must be provided and not NONE when specifying recurrence details',
-          });
-        }
-      }
+      validateRecurrence({
+        recurrenceType: input.recurrenceType,
+        recurrenceInterval: input.recurrenceInterval,
+        recurrenceCount: input.recurrenceCount,
+        recurrenceUntil: input.recurrenceUntil,
+      });
       await taskModule.validateTaskRelationships(userId, {
         projectId: input.projectId,
         courseId: input.courseId,
@@ -237,24 +230,12 @@ export const taskCrudRouter = router({
       if (input.dueAt && input.dueAt < new Date()) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
-      if (input.recurrenceCount !== undefined && input.recurrenceUntil !== undefined) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Specify either recurrenceCount or recurrenceUntil, not both',
-        });
-      }
-      if (
-        input.recurrenceInterval !== undefined ||
-        input.recurrenceCount !== undefined ||
-        input.recurrenceUntil !== undefined
-      ) {
-        if (!input.recurrenceType || input.recurrenceType === RecurrenceType.NONE) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'recurrenceType must be provided and not NONE when specifying recurrence details',
-          });
-        }
-      }
+      validateRecurrence({
+        recurrenceType: input.recurrenceType,
+        recurrenceInterval: input.recurrenceInterval,
+        recurrenceCount: input.recurrenceCount,
+        recurrenceUntil: input.recurrenceUntil,
+      });
       const { id, ...rest } = input;
       const userId = requireUserId(ctx);
       const existing = await db.task.findFirst({ where: { id, userId } });

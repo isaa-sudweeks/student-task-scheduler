@@ -1,4 +1,5 @@
 import { TRPCError } from '@trpc/server';
+import { RecurrenceType } from '@prisma/client';
 import { cache } from '@/server/cache';
 import { db } from '@/server/db';
 
@@ -33,6 +34,32 @@ export const requireUserId = (ctx: { session?: { user?: { id?: string } | null }
   const id = ctx.session?.user?.id;
   if (!id) throw new TRPCError({ code: 'UNAUTHORIZED' });
   return id;
+};
+
+export const validateRecurrence = (input: {
+  recurrenceType?: RecurrenceType | null;
+  recurrenceInterval?: number;
+  recurrenceCount?: number | null;
+  recurrenceUntil?: Date | null;
+}) => {
+  if (input.recurrenceCount !== undefined && input.recurrenceUntil !== undefined) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Specify either recurrenceCount or recurrenceUntil, not both',
+    });
+  }
+  if (
+    input.recurrenceInterval !== undefined ||
+    input.recurrenceCount !== undefined ||
+    input.recurrenceUntil !== undefined
+  ) {
+    if (!input.recurrenceType || input.recurrenceType === RecurrenceType.NONE) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'recurrenceType must be provided and not NONE when specifying recurrence details',
+      });
+    }
+  }
 };
 
 export async function validateTaskRelationships(
