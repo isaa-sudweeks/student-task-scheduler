@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { statsToCSV } from './export';
+import { describe, it, expect, vi } from 'vitest';
+import { statsToCSV, exportStatsToCSV } from './export';
 
 describe('statsToCSV', () => {
   it('generates csv for stats', () => {
@@ -61,6 +61,54 @@ describe('statsToCSV', () => {
         'id,title,minutes',
       ].join('\n')
     );
+  });
+});
+
+describe('exportStatsToCSV', () => {
+  const sampleData = {
+    tasks: [
+      { id: '1', title: 'Task 1', status: 'TODO', subject: 'Math' },
+    ],
+    statusData: [{ status: 'TODO', count: 1 }],
+    subjectData: [{ subject: 'Math', count: 1 }],
+    focusByTask: [{ id: '1', title: 'Task 1', minutes: 30 }],
+  };
+
+  it('triggers download when DOM is available', () => {
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+    const createSpy = vi.fn(() => 'blob:test');
+    const revokeSpy = vi.fn();
+    const originalCreate = (URL as any).createObjectURL;
+    const originalRevoke = (URL as any).revokeObjectURL;
+    (URL as any).createObjectURL = createSpy;
+    (URL as any).revokeObjectURL = revokeSpy;
+
+    const csv = exportStatsToCSV(sampleData, 'stats.csv');
+    expect(csv).toBe(statsToCSV(sampleData));
+    expect(clickSpy).toHaveBeenCalled();
+    expect(createSpy).toHaveBeenCalled();
+    expect(revokeSpy).toHaveBeenCalled();
+
+    clickSpy.mockRestore();
+    (URL as any).createObjectURL = originalCreate;
+    (URL as any).revokeObjectURL = originalRevoke;
+  });
+
+  it('returns csv string when DOM is unavailable', () => {
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+    // @ts-ignore force undefined for testing
+    globalThis.window = undefined;
+    // @ts-ignore force undefined for testing
+    globalThis.document = undefined;
+
+    const csv = exportStatsToCSV(sampleData, 'stats.csv');
+    expect(csv).toBe(statsToCSV(sampleData));
+
+    globalThis.window = originalWindow;
+    globalThis.document = originalDocument;
   });
 });
 

@@ -44,6 +44,9 @@ export function exportStatsToCSV(
   filename = 'stats.csv'
 ): string {
   const csv = statsToCSV(data);
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return csv;
+  }
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
