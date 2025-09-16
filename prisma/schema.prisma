@@ -25,6 +25,9 @@ model User {
   dayWindowEndHour     Int     @default(18)
   defaultDurationMinutes Int   @default(30)
   googleSyncEnabled    Boolean @default(true)
+  llmProvider          LlmProvider @default(NONE)
+  openaiApiKey         String?  @db.Text
+  lmStudioUrl          String   @default("http://localhost:1234")
 
   tasks    Task[]
   projects Project[]
@@ -181,4 +184,10 @@ model TaskTimeLog {
 
   @@index([taskId])
   @@index([userId])
+}
+
+enum LlmProvider {
+  NONE
+  OPENAI
+  LM_STUDIO
 }

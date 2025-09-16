@@ -4,7 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 // Theme and account controls are provided in the global nav bar
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
-// Define expected shape of user settings returned by API
+
+type LlmProviderOption = "NONE" | "OPENAI" | "LM_STUDIO";
 
 function SettingsContent() {
   const router = useRouter();
@@ -55,10 +56,20 @@ function SettingsContent() {
     dayWindowEndHour: number;
     defaultDurationMinutes: number;
     googleSyncEnabled: boolean;
+    llmProvider: LlmProviderOption;
+    openaiApiKey: string | null;
+    lmStudioUrl: string;
   };
   const settings = api.user.getSettings.useQuery().data as UserSettings | undefined;
   const [tz, setTz] = React.useState(
     settings?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  );
+  const [llmProvider, setLlmProvider] = React.useState<LlmProviderOption>(
+    settings?.llmProvider ?? "NONE"
+  );
+  const [openaiApiKey, setOpenaiApiKey] = React.useState(settings?.openaiApiKey ?? "");
+  const [lmStudioUrl, setLmStudioUrl] = React.useState(
+    settings?.lmStudioUrl ?? "http://localhost:1234"
   );
   React.useEffect(() => {
     if (!settings) return;
@@ -67,6 +78,9 @@ function SettingsContent() {
     setEndHour(settings.dayWindowEndHour);
     setDefaultDuration(settings.defaultDurationMinutes);
     setSyncEnabled(settings.googleSyncEnabled);
+    setLlmProvider(settings.llmProvider ?? "NONE");
+    setOpenaiApiKey(settings.openaiApiKey ?? "");
+    setLmStudioUrl(settings.lmStudioUrl || "http://localhost:1234");
     // Keep localStorage in sync for other pages
     if (typeof window !== "undefined") {
       window.localStorage.setItem("dayWindowStartHour", String(settings.dayWindowStartHour));
@@ -159,10 +173,82 @@ function SettingsContent() {
       </section>
 
       <section className="space-y-3">
+        <h2 className="text-lg font-medium">AI Assistant</h2>
+        <div className="max-w-md space-y-1">
+          <label className="block text-sm" htmlFor="llm-provider">
+            AI provider
+          </label>
+          <select
+            id="llm-provider"
+            value={llmProvider}
+            onChange={(e) => setLlmProvider(e.target.value as LlmProviderOption)}
+            className="mt-1 block w-full border p-1 rounded"
+          >
+            <option value="NONE">None</option>
+            <option value="OPENAI">OpenAI</option>
+            <option value="LM_STUDIO">LM Studio (local)</option>
+          </select>
+        </div>
+        {llmProvider === "OPENAI" && (
+          <div className="max-w-md space-y-1">
+            <label className="block text-sm" htmlFor="openai-api-key">
+              OpenAI API key
+            </label>
+            <input
+              id="openai-api-key"
+              type="password"
+              autoComplete="off"
+              value={openaiApiKey}
+              onChange={(e) => setOpenaiApiKey(e.target.value)}
+              placeholder="sk-..."
+              className="mt-1 w-full rounded border px-2 py-1"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Required to call OpenAI models for scheduling assistance.
+            </p>
+          </div>
+        )}
+        <div className="max-w-md space-y-1">
+          <label className="block text-sm" htmlFor="lmstudio-url">
+            LM Studio URL
+          </label>
+          <input
+            id="lmstudio-url"
+            type="url"
+            value={lmStudioUrl}
+            onChange={(e) => setLmStudioUrl(e.target.value)}
+            placeholder="http://localhost:1234"
+            className="mt-1 w-full rounded border px-2 py-1 disabled:opacity-50"
+            disabled={llmProvider !== "LM_STUDIO"}
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Uses LM Studio&#39;s OpenAI-compatible local endpoint.
+          </p>
+        </div>
+      </section>
+
+      <section className="space-y-3">
         <h2 className="text-lg font-medium">Timezone</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            const trimmedApiKey = openaiApiKey.trim();
+            const trimmedLmStudio = lmStudioUrl.trim();
+            if (llmProvider === "OPENAI" && !trimmedApiKey) {
+              toast.error("Enter your OpenAI API key to use the OpenAI provider.");
+              return;
+            }
+            if (llmProvider === "LM_STUDIO" && !trimmedLmStudio) {
+              toast.error("Provide the LM Studio URL to connect to your local model.");
+              return;
+            }
+            const normalizedLmStudioUrl = trimmedLmStudio || "http://localhost:1234";
+            if (trimmedApiKey !== openaiApiKey) {
+              setOpenaiApiKey(trimmedApiKey);
+            }
+            if (normalizedLmStudioUrl !== lmStudioUrl) {
+              setLmStudioUrl(normalizedLmStudioUrl);
+            }
             // Persist local preferences immediately
             if (typeof window !== "undefined") {
               window.localStorage.setItem("dayWindowStartHour", String(startHour));
@@ -178,6 +264,9 @@ function SettingsContent() {
               dayWindowEndHour: endHour,
               defaultDurationMinutes: defaultDuration,
               googleSyncEnabled: syncEnabled,
+              llmProvider,
+              openaiApiKey: trimmedApiKey || null,
+              lmStudioUrl: normalizedLmStudioUrl,
             });
           }}
           className="space-y-2 max-w-md"
