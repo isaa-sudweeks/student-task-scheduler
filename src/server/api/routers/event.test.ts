@@ -190,6 +190,22 @@ describe('eventRouter.ical', () => {
     expect(ics).toContain('BEGIN:VCALENDAR');
     expect(ics).toContain('SUMMARY:Test Event');
   });
+
+  it('escapes commas, semicolons, and newlines', async () => {
+    hoisted.findMany.mockResolvedValueOnce([
+      {
+        id: 'e1',
+        startAt: new Date('2023-01-01T10:00:00.000Z'),
+        endAt: new Date('2023-01-01T11:00:00.000Z'),
+        location: 'Room 1, Building; A\nSecond Line',
+        task: { title: 'Title, part; more\nLine' },
+      },
+    ]);
+
+    const ics = await eventRouter.createCaller(ctx).ical();
+    expect(ics).toContain('SUMMARY:Title\\, part\\; more\\nLine');
+    expect(ics).toContain('LOCATION:Room 1\\, Building\\; A\\nSecond Line');
+  });
 });
 
 describe('eventRouter.syncGoogle', () => {

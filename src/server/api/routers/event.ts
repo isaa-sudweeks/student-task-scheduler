@@ -184,6 +184,8 @@ export const eventRouter = router({
         const pad = (n: number) => `${n}`.padStart(2, '0');
         return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
       };
+      const escapeText = (text: string) =>
+        text.replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\r?\n/g, '\\n');
       const lines = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
@@ -195,8 +197,8 @@ export const eventRouter = router({
         lines.push(`DTSTAMP:${formatDate(new Date())}`);
         lines.push(`DTSTART:${formatDate(new Date(e.startAt))}`);
         lines.push(`DTEND:${formatDate(new Date(e.endAt))}`);
-        if (e.task?.title) lines.push(`SUMMARY:${e.task.title}`);
-        if (e.location) lines.push(`LOCATION:${e.location}`);
+        if (e.task?.title) lines.push(`SUMMARY:${escapeText(e.task.title)}`);
+        if (e.location) lines.push(`LOCATION:${escapeText(e.location)}`);
         lines.push('END:VEVENT');
       }
       lines.push('END:VCALENDAR');
