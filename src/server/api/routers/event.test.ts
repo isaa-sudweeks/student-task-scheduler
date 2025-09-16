@@ -168,6 +168,32 @@ describe('eventRouter.schedule', () => {
       },
     });
   });
+
+  it('rejects events that span across midnight', async () => {
+    hoisted.findMany.mockResolvedValueOnce([
+      {
+        startAt: new Date('2023-01-01T23:00:00.000Z'),
+        endAt: new Date('2023-01-03T01:00:00.000Z'),
+      },
+    ]);
+
+    await expect(
+      eventRouter.createCaller(ctx).schedule({
+        taskId: 't1',
+        startAt: new Date('2023-01-02T09:00:00.000Z'),
+        durationMinutes: 60,
+      }),
+    ).rejects.toThrow(TRPCError);
+
+    const sameDayStart = new Date('2023-01-02T00:00:00.000Z');
+    const sameDayEnd = new Date('2023-01-02T23:59:59.999Z');
+    expect(hoisted.findMany).toHaveBeenCalledWith({
+      where: {
+        task: { userId: ctx.session.user.id },
+        AND: { startAt: { lt: sameDayEnd }, endAt: { gt: sameDayStart } },
+      },
+    });
+  });
 });
 
 describe('eventRouter.ical', () => {
@@ -289,6 +315,36 @@ describe('eventRouter.move', () => {
       data: {
         startAt: new Date('2023-01-01T07:00:00.000Z'),
         endAt: new Date('2023-01-01T08:00:00.000Z'),
+      },
+    });
+  });
+
+  it('fails to move when another event spans midnight', async () => {
+    hoisted.findMany.mockResolvedValueOnce([
+      {
+        id: 'e2',
+        startAt: new Date('2023-01-01T23:00:00.000Z'),
+        endAt: new Date('2023-01-03T01:00:00.000Z'),
+      },
+    ]);
+
+    await expect(
+      eventRouter.createCaller(ctx).move({
+        eventId: 'e1',
+        startAt: new Date('2023-01-02T09:00:00.000Z'),
+        endAt: new Date('2023-01-02T10:00:00.000Z'),
+      }),
+    ).rejects.toThrow(TRPCError);
+
+    expect(hoisted.update).not.toHaveBeenCalled();
+
+    const sameDayStart = new Date('2023-01-02T00:00:00.000Z');
+    const sameDayEnd = new Date('2023-01-02T23:59:59.999Z');
+    expect(hoisted.findMany).toHaveBeenCalledWith({
+      where: {
+        task: { userId: ctx.session.user.id },
+        id: { not: 'e1' },
+        AND: { startAt: { lt: sameDayEnd }, endAt: { gt: sameDayStart } },
       },
     });
   });
