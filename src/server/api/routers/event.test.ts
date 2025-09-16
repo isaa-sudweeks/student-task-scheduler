@@ -6,6 +6,7 @@ const hoisted = vi.hoisted(() => {
     findMany: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    deleteMany: vi.fn(),
     eventFindFirst: vi.fn(),
     taskFindFirst: vi.fn(),
     taskCreate: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock('@/server/db', () => ({
       findMany: hoisted.findMany,
       create: hoisted.create,
       update: hoisted.update,
+      deleteMany: hoisted.deleteMany,
       findFirst: hoisted.eventFindFirst,
     },
     task: { findFirst: hoisted.taskFindFirst, create: hoisted.taskCreate, update: hoisted.taskUpdate },
@@ -204,6 +206,7 @@ describe('eventRouter.syncGoogle', () => {
     hoisted.eventFindFirst.mockReset();
     hoisted.update.mockReset();
     hoisted.taskUpdate.mockReset();
+    hoisted.deleteMany.mockReset();
   });
 
   it('syncs events with Google calendar without duplication', async () => {
@@ -223,13 +226,19 @@ describe('eventRouter.syncGoogle', () => {
     hoisted.taskUpdate.mockResolvedValue({});
     googleMock.insert.mockResolvedValue({ data: { id: 'gid2' } });
 
-    const items = await eventRouter.createCaller(ctx).syncGoogle();
+    const ids = await eventRouter.createCaller(ctx).syncGoogle();
     expect(googleMock.list).toHaveBeenCalled();
     expect(hoisted.taskCreate).not.toHaveBeenCalled();
     expect(hoisted.create).not.toHaveBeenCalled();
     expect(googleMock.insert).toHaveBeenCalledTimes(1);
     expect(hoisted.update).toHaveBeenCalled();
-    expect(items).toHaveLength(1);
+    expect(ids).toEqual(['g1', 'gid2']);
+    expect(hoisted.deleteMany).toHaveBeenCalledWith({
+      where: {
+        task: { userId: ctx.session.user.id },
+        googleEventId: { notIn: ['g1', 'gid2'], not: null },
+      },
+    });
   });
 });
 

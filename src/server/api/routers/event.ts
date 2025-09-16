@@ -229,11 +229,13 @@ export const eventRouter = router({
 
     const res = await calendar.events.list({ calendarId: 'primary', maxResults: 10 });
     const items = res.data.items ?? [];
+    const googleIds = new Set<string>();
     for (const item of items) {
+      const id = item.id;
+      if (id) googleIds.add(id);
       const summary = item.summary;
       const start = item.start?.dateTime;
       const end = item.end?.dateTime;
-      const id = item.id;
       if (!summary || !start || !end || !id) continue;
 
       const existing = await db.event.findFirst({
@@ -274,13 +276,22 @@ export const eventRouter = router({
           end: { dateTime: e.endAt.toISOString() },
         },
       });
+      const insertedId = inserted.data.id || undefined;
+      if (insertedId) googleIds.add(insertedId);
       await db.event.update({
         where: { id: e.id },
-        data: { googleEventId: inserted.data.id || undefined },
+        data: { googleEventId: insertedId },
       });
     }
 
-    return items;
+    await db.event.deleteMany({
+      where: {
+        task: { userId },
+        googleEventId: { notIn: Array.from(googleIds), not: null },
+      },
+    });
+
+    return Array.from(googleIds);
   }),
 });
 
