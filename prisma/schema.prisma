@@ -175,8 +175,10 @@ model TaskTimeLog {
   id        String   @id @default(cuid())
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   taskId    String
+  userId    String
   startedAt DateTime
   endedAt   DateTime?
 
   @@index([taskId])
+  @@index([userId])
 }
