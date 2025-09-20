@@ -59,7 +59,7 @@ export function AccountMenu() {
         <div
           role="menu"
           aria-label="Account menu"
-          className="absolute right-0 z-10 mt-2 w-56 rounded border bg-white p-1 text-sm shadow-lg dark:border-white/10 dark:bg-zinc-900"
+          className="absolute right-0 z-50 mt-2 w-56 rounded border bg-white p-1 text-sm shadow-lg dark:border-white/10 dark:bg-zinc-900"
         >
           <Link
             role="menuitem"
