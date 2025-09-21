@@ -3,7 +3,7 @@ import { cleanup } from '@testing-library/react';
 // Force a deterministic timezone for date logic tests
 process.env.TZ = 'UTC';
 process.env.DATABASE_URL ??= 'postgres://localhost:5432/test';
-process.env.NEXTAUTH_SECRET ??= 'test-secret';
+process.env.NEXTAUTH_SECRET ??= 'Aa1!'.repeat(8);
 process.env.NEXTAUTH_URL ??= 'http://localhost:3000';
 process.env.GITHUB_ID ??= 'test-github-id';
 process.env.GITHUB_SECRET ??= 'test-github-secret';

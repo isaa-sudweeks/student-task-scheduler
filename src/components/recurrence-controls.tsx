@@ -91,7 +91,7 @@ export function RecurrenceControls({
           </div>
           {showConflict && (
             <p className="pl-28 text-sm text-red-600">
-              Choose either "End after" or "End on", not both.
+              Choose either &ldquo;End after&rdquo; or &ldquo;End on&rdquo;, not both.
             </p>
           )}
         </>
