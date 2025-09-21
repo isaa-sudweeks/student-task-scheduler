@@ -60,6 +60,9 @@
 - Validate with `npm run lint` and `npm test` before commits.
 - Keep PRs small and incremental; prefer typed, tRPC-first changes.
 
+## AI and related functions 
+- Any AI functions should use the most convienient and high performance agentic structure available in what ever programming language would be the best.
+
 ## Stats
 - The stats page adapts charts for light and dark themes using `next-themes`.
 - Maintain parallel color palettes for both themes and update tests when modifying visuals.
