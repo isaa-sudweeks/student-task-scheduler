@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 type ViewMode = 'day' | 'week' | 'month';
 type Task = RouterOutputs['task']['list'][number];
 type Event = RouterOutputs['event']['listRange'][number];
+type ScheduleSuggestion = RouterOutputs['task']['scheduleSuggestions']['suggestions'][number];
 
 export default function CalendarPage() {
   const [view, setView] = useState<ViewMode>('week');
@@ -60,10 +61,13 @@ export default function CalendarPage() {
   // Tasks and events for the current visible range (simplified for now)
   const tasksQ = api.task.list.useQuery(undefined, { enabled: !!session });
   const eventsQ = api.event.listRange.useQuery(undefined, { enabled: !!session });
+  const suggestionMutation = api.task.scheduleSuggestions.useMutation();
 
   const tasksData = useMemo(() => tasksQ.data ?? [], [tasksQ.data]);
   const eventsData = useMemo(() => eventsQ.data ?? [], [eventsQ.data]);
   const [eventsLocal, setEventsLocal] = useState<Event[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<ScheduleSuggestion[]>([]);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Keep local, optimistic copy of events for immediate UI updates
   useEffect(() => {
@@ -74,6 +78,11 @@ export default function CalendarPage() {
     const scheduledTaskIds = new Set(eventsData.map((e) => e.taskId));
     return tasksData.filter((t) => !scheduledTaskIds.has(t.id));
   }, [tasksData, eventsData]);
+
+  const suggestionFormatter = useMemo(
+    () => new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }),
+    [],
+  );
 
   const ITEM_SIZE = 48;
 
@@ -136,6 +145,33 @@ export default function CalendarPage() {
       scheduleMutate({ ...args, dayWindowStartHour: dayStart, dayWindowEndHour: dayEnd });
     },
     [scheduleMutate, dayStart, dayEnd]
+  );
+
+  const requestSuggestions = React.useCallback(async () => {
+    try {
+      setAiError(null);
+      const result = await suggestionMutation.mutateAsync();
+      setAiSuggestions(result.suggestions);
+    } catch (err) {
+      console.error(err);
+      setAiError(err instanceof Error ? err.message : 'Failed to generate suggestions');
+    }
+  }, [suggestionMutation]);
+
+  const acceptSuggestion = React.useCallback(
+    (suggestion: ScheduleSuggestion) => {
+      const durationMinutes = Math.max(
+        1,
+        Math.round((suggestion.endAt.getTime() - suggestion.startAt.getTime()) / 60000),
+      );
+      setAiSuggestions((prev) => prev.filter((s) => s.taskId !== suggestion.taskId));
+      scheduleWithPrefs({
+        taskId: suggestion.taskId,
+        startAt: new Date(suggestion.startAt),
+        durationMinutes,
+      });
+    },
+    [scheduleWithPrefs],
   );
   const moveMutateFn = move.mutate;
   const moveWithPrefs = React.useCallback(
@@ -432,6 +468,54 @@ export default function CalendarPage() {
             );
           })}
         </ul>
+
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">AI suggestions</h3>
+            <button
+              type="button"
+              className="rounded border px-2 py-1 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+              onClick={() => void requestSuggestions()}
+              disabled={suggestionMutation.isPending}
+            >
+              {suggestionMutation.isPending ? 'Generating…' : 'Generate'}
+            </button>
+          </div>
+          {aiError && (
+            <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+              {aiError}
+            </p>
+          )}
+          {aiSuggestions.length > 0 ? (
+            <ul className="space-y-2">
+              {aiSuggestions.map((s) => {
+                const task = tasksData.find((t) => t.id === s.taskId);
+                return (
+                  <li key={s.taskId} className="rounded border border-dashed px-3 py-2 text-xs dark:border-white/20">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium">{task?.title ?? s.taskId}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {suggestionFormatter.format(new Date(s.startAt))} – {suggestionFormatter.format(new Date(s.endAt))} ·{' '}
+                          {s.origin}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded border px-2 py-1 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+                        onClick={() => acceptSuggestion(s)}
+                      >
+                        Accept
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground">No AI suggestions yet.</p>
+          )}
+        </div>
 
         {/* Test-only helper to simulate a drop action */}
         {backlog[0] && (

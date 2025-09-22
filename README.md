@@ -72,6 +72,12 @@ Configure these variables in `.env`:
 5. Open **Settings** and toggle **Google Calendar Sync** to enable or disable synchronization.
 6. An iCal feed of scheduled events is available at `/api/trpc/event.ical` and can be consumed by other calendar clients.
 
+## AI Scheduling Suggestions
+
+- Configure an LLM provider under **Settings → Preferences** (OpenAI API key or LM Studio URL). If no model is configured, the scheduler falls back to a deterministic heuristic that still assigns every task.
+- Visit `/tasks/schedule-suggestions` to generate a full set of proposed start/end times for unscheduled tasks and accept them in bulk. Suggestions respect your working hour window and task metadata such as due dates and priority.
+- The calendar backlog now includes an **AI suggestions** panel so you can generate slots without leaving the calendar view and accept individual recommendations inline.
+
 ## Testing
 
 Run linting and the test suites locally:
