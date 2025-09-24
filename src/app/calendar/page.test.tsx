@@ -12,6 +12,10 @@ const focusStop = vi.fn();
 const scheduleMutate = vi.fn();
 const moveMutate = vi.fn();
 const taskCreate = vi.fn();
+const scheduleSuggestionsMutateAsync = vi.fn();
+
+let scheduleSuggestionsPending = false;
+let scheduleSuggestionsError: Error | null = null;
 
 const tasks = [
   { id: 't1', title: 'Unscheduled task', status: 'TODO', dueAt: null },
@@ -62,6 +66,13 @@ vi.mock('@/server/api/react', () => ({
             },
           }),
         },
+        scheduleSuggestions: {
+          useMutation: () => ({
+            mutateAsync: (...a: unknown[]) => scheduleSuggestionsMutateAsync(...a),
+            isPending: scheduleSuggestionsPending,
+            error: scheduleSuggestionsError,
+          }),
+        },
       },
       event: {
         listRange: {
@@ -88,6 +99,7 @@ describe('CalendarPage', () => {
     scheduleMutate.mockReset();
     moveMutate.mockReset();
     taskCreate.mockReset();
+    scheduleSuggestionsMutateAsync.mockReset();
     tasksLoading = false;
     eventsLoading = false;
     tasksQueryMock.error = null;
@@ -97,6 +109,8 @@ describe('CalendarPage', () => {
     window.localStorage.clear();
     window.localStorage.setItem('dayWindowStartHour', '6');
     window.localStorage.setItem('dayWindowEndHour', '20');
+    scheduleSuggestionsPending = false;
+    scheduleSuggestionsError = null;
   });
 
   it('defaults to Week view and can switch views', () => {
@@ -278,6 +292,27 @@ describe('CalendarPage', () => {
     expect(screen.getByLabelText(/loading calendar/i)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /backlog/i })).toBeNull();
     expect(screen.queryByTestId('calendar-grid')).toBeNull();
+  });
+
+  it('generates and accepts AI suggestions', async () => {
+    const suggestion = {
+      taskId: 't1',
+      startAt: new Date('2099-01-02T09:00:00Z'),
+      endAt: new Date('2099-01-02T09:30:00Z'),
+      origin: 'fallback' as const,
+    };
+    scheduleSuggestionsMutateAsync.mockResolvedValueOnce({ suggestions: [suggestion] });
+    render(<CalendarPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /generate/i }));
+    await screen.findByText(/fallback/i);
+    fireEvent.click(screen.getAllByRole('button', { name: /accept/i })[0]);
+
+    expect(scheduleMutate).toHaveBeenCalled();
+    const arg = scheduleMutate.mock.calls.at(-1)![0] as any;
+    expect(arg.taskId).toBe('t1');
+    expect(arg.startAt).toBeInstanceOf(Date);
+    expect(arg.durationMinutes).toBe(30);
   });
   it('navigates between weeks and resets to today', () => {
     vi.useFakeTimers();
