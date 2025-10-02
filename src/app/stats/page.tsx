@@ -65,17 +65,42 @@ export default function StatsPage() {
     return map;
   }, [focusData]);
 
-  const focusByTask = tasks
-    .map((t) => ({
-      id: t.id,
-      title: t.title,
-      minutes: Math.round((focusMap[t.id] ?? 0) / 60000),
-    }))
-    .filter((f) => f.minutes > 0);
+  const timeByTask = tasks
+    .map((t) => {
+      const plannedMinutes = t.effortMinutes ?? 0;
+      const actualMinutes = Math.round((focusMap[t.id] ?? 0) / 60000);
+      const deltaMinutes = actualMinutes - plannedMinutes;
+      return {
+        id: t.id,
+        title: t.title,
+        plannedMinutes,
+        actualMinutes,
+        deltaMinutes,
+      };
+    })
+    .filter((entry) => entry.plannedMinutes > 0 || entry.actualMinutes > 0);
 
-  const totalFocusMinutes = focusByTask.reduce((sum, f) => sum + f.minutes, 0);
+  const entriesWithActual = timeByTask.filter((entry) => entry.actualMinutes > 0);
+  const totalFocusMinutes = entriesWithActual.reduce(
+    (sum, entry) => sum + entry.actualMinutes,
+    0
+  );
   const averageFocusMinutes =
-    focusByTask.length === 0 ? 0 : Math.round(totalFocusMinutes / focusByTask.length);
+    entriesWithActual.length === 0
+      ? 0
+      : Math.round(totalFocusMinutes / entriesWithActual.length);
+
+  const totalPlannedMinutes = timeByTask.reduce(
+    (sum, entry) => sum + entry.plannedMinutes,
+    0
+  );
+  const totalActualMinutes = timeByTask.reduce(
+    (sum, entry) => sum + entry.actualMinutes,
+    0
+  );
+  const netDeltaMinutes = totalActualMinutes - totalPlannedMinutes;
+  const overSpentCount = timeByTask.filter((entry) => entry.deltaMinutes > 0).length;
+  const underSpentCount = timeByTask.filter((entry) => entry.deltaMinutes < 0).length;
 
   const focusSubjectTotals = tasks.reduce(
     (acc: Record<string, number>, task: Task) => {
@@ -104,7 +129,8 @@ export default function StatsPage() {
         IN_PROGRESS: isDark ? "#fbbf24" : "#ffc658",
         DONE: isDark ? "#34d399" : "#82ca9d",
       } as Record<Task["status"], string>,
-      focusBar: isDark ? "#34d399" : "#8884d8",
+      plannedBar: isDark ? "#a5b4fc" : "#c4b5fd",
+      actualBar: isDark ? "#34d399" : "#4ade80",
       pie: isDark
         ? ["#34d399", "#60a5fa", "#fbbf24", "#fb923c"]
         : ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"],
@@ -149,7 +175,7 @@ export default function StatsPage() {
     }));
 
   const handleExport = () => {
-    exportStatsToCSV({ tasks, statusData, subjectData, focusByTask });
+    exportStatsToCSV({ tasks, statusData, subjectData, timeByTask });
   };
 
   return (
@@ -293,7 +319,7 @@ export default function StatsPage() {
                   </YAxis>
                   <Tooltip />
                   <Legend wrapperStyle={{ color: chartColors.text }} />
-                  <Bar dataKey="minutes" fill={chartColors.focusBar} />
+                  <Bar dataKey="minutes" fill={chartColors.actualBar} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -338,17 +364,48 @@ export default function StatsPage() {
           </section>
 
           <section>
-            <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
-              <h2 className="text-xl font-medium">Focus Time by Task</h2>
-              <ul>
-                {focusByTask.map((f) => (
-                  <li key={f.id}>
-                    {f.title}: {f.minutes}m
+            <div className="space-y-3 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
+              <div className="space-y-1">
+                <h2 className="text-xl font-medium">Planned vs Actual by Task</h2>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                  Compare estimated effort to recorded focus time to spot over- or under-spent work.
+                </p>
+              </div>
+              <div className="grid gap-2 text-sm sm:grid-cols-3">
+                <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800">
+                  <p className="text-neutral-500 dark:text-neutral-400">Total planned</p>
+                  <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                    {totalPlannedMinutes}m
+                  </p>
+                </div>
+                <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800">
+                  <p className="text-neutral-500 dark:text-neutral-400">Total actual</p>
+                  <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                    {totalActualMinutes}m
+                  </p>
+                </div>
+                <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800">
+                  <p className="text-neutral-500 dark:text-neutral-400">Net delta</p>
+                  <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                    {netDeltaMinutes > 0 ? "+" : ""}
+                    {netDeltaMinutes}m
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                    Over plan: {overSpentCount} • Under plan: {underSpentCount}
+                  </p>
+                </div>
+              </div>
+              <ul className="space-y-1 text-sm">
+                {timeByTask.map((task) => (
+                  <li key={task.id}>
+                    {task.title}: planned {task.plannedMinutes}m • actual {task.actualMinutes}m • {" "}
+                    {task.deltaMinutes > 0 ? "+" : ""}
+                    {task.deltaMinutes}m
                   </li>
                 ))}
               </ul>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={focusByTask}>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={timeByTask}>
                   <XAxis
                     dataKey="title"
                     stroke={chartColors.axis}
@@ -370,7 +427,8 @@ export default function StatsPage() {
                   </YAxis>
                   <Tooltip />
                   <Legend wrapperStyle={{ color: chartColors.text }} />
-                  <Bar dataKey="minutes" fill={chartColors.focusBar} />
+                  <Bar dataKey="plannedMinutes" name="Planned" fill={chartColors.plannedBar} />
+                  <Bar dataKey="actualMinutes" name="Actual" fill={chartColors.actualBar} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

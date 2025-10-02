@@ -6,7 +6,13 @@ export interface StatsExportData {
   tasks: Task[];
   statusData: { status: string; count: number }[];
   subjectData: { subject: string; count: number }[];
-  focusByTask: { id: string; title: string; minutes: number }[];
+  timeByTask: {
+    id: string;
+    title: string;
+    plannedMinutes: number;
+    actualMinutes: number;
+    deltaMinutes: number;
+  }[];
 }
 
 function escapeValue(value: string | number): string {
@@ -31,9 +37,17 @@ export function statsToCSV(data: StatsExportData): string {
       [s.subject, s.count].map(escapeValue).join(',')
     ),
     '',
-    'id,title,minutes',
-    ...data.focusByTask.map((f) =>
-      [f.id, f.title, f.minutes].map(escapeValue).join(',')
+    'id,title,plannedMinutes,actualMinutes,deltaMinutes',
+    ...data.timeByTask.map((entry) =>
+      [
+        entry.id,
+        entry.title,
+        entry.plannedMinutes,
+        entry.actualMinutes,
+        entry.deltaMinutes,
+      ]
+        .map(escapeValue)
+        .join(',')
     ),
   ];
   return lines.join('\n');
