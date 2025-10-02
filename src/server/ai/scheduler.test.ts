@@ -110,5 +110,59 @@ describe('generateScheduleSuggestions', () => {
     expect(suggestions).toHaveLength(1);
     expect(suggestions[0].origin).toBe('fallback');
   });
+
+  it('respects the user timezone when allocating fallback slots', async () => {
+    const timezone = 'America/Los_Angeles';
+    const tasks = [makeTask({ id: 'a', effortMinutes: 60 })];
+
+    const suggestions = await generateScheduleSuggestions({
+      tasks,
+      user: {
+        ...baseUser,
+        timezone,
+        dayWindowStartHour: 9,
+        dayWindowEndHour: 17,
+      },
+      existingEvents: [
+        { startAt: new Date('2024-01-01T17:00:00Z'), endAt: new Date('2024-01-01T18:00:00Z') },
+      ],
+      now: new Date('2024-01-01T15:00:00Z'),
+    });
+
+    expect(suggestions).toHaveLength(1);
+    const [suggestion] = suggestions;
+    const localStart = new Date(suggestion.startAt.toLocaleString('en-US', { timeZone: timezone }));
+    const localEnd = new Date(suggestion.endAt.toLocaleString('en-US', { timeZone: timezone }));
+
+    expect(localStart.getHours()).toBeGreaterThanOrEqual(9);
+    expect(localEnd.getHours()).toBeLessThanOrEqual(17);
+    expect(localStart.getDate()).toBe(localEnd.getDate());
+    expect(suggestion.startAt.toISOString()).toBe('2024-01-01T18:00:00.000Z');
+  });
+
+  it('schedules on the next local day when current time is after the work window', async () => {
+    const timezone = 'America/New_York';
+    const tasks = [makeTask({ id: 'a', effortMinutes: 60 })];
+
+    const suggestions = await generateScheduleSuggestions({
+      tasks,
+      user: {
+        ...baseUser,
+        timezone,
+        dayWindowStartHour: 9,
+        dayWindowEndHour: 17,
+      },
+      existingEvents: [],
+      now: new Date('2024-01-01T23:00:00Z'),
+    });
+
+    expect(suggestions).toHaveLength(1);
+    const [suggestion] = suggestions;
+    const localStart = new Date(suggestion.startAt.toLocaleString('en-US', { timeZone: timezone }));
+
+    expect(localStart.getHours()).toBe(9);
+    expect(localStart.getDate()).toBe(2);
+    expect(suggestion.startAt.toISOString()).toBe('2024-01-02T14:00:00.000Z');
+  });
 });
 

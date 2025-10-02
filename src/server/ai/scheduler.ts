@@ -1,6 +1,7 @@
 import { LlmProvider, TaskPriority } from '@prisma/client';
 import { z } from 'zod';
 import { findNonOverlappingSlot, Interval } from '@/lib/scheduling';
+import { createTimezoneConverter } from './timezone';
 
 const isoString = z
   .string()
@@ -67,10 +68,15 @@ export async function generateScheduleSuggestions({
 }: SchedulerContext & { tasks: SchedulerTask[] }): Promise<ScheduleSuggestion[]> {
   if (tasks.length === 0) return [];
 
-  const baseIntervals = existingEvents.map((interval) => ({
-    startAt: new Date(interval.startAt),
-    endAt: new Date(interval.endAt),
-  }));
+  const timezoneConverter = createTimezoneConverter(user.timezone);
+  const nowLocal = timezoneConverter.toZoned(now);
+
+  const baseIntervals = existingEvents.map((interval) =>
+    timezoneConverter.intervalToZoned({
+      startAt: new Date(interval.startAt),
+      endAt: new Date(interval.endAt),
+    }),
+  );
 
   const modelSuggestions = await loadModelSuggestions(tasks, user, now).catch(() => []);
   const preferredStartByTask = new Map<string, { startAt: Date; endAt: Date; rationale?: string; confidence?: number }>();
@@ -106,22 +112,24 @@ export async function generateScheduleSuggestions({
   for (const task of sortedTasks) {
     const durationMinutes = Math.max(task.effortMinutes ?? user.defaultDurationMinutes, 15);
     const preferred = preferredStartByTask.get(task.id);
-    const desiredStart = preferred?.startAt
+    const desiredStartUtc = preferred?.startAt
       ? new Date(preferred.startAt)
       : computeBaselineStart(task, now, durationMinutes);
-    const slot = allocateSlot({
-      desiredStart,
+    const desiredStartLocal = timezoneConverter.toZoned(desiredStartUtc);
+    const slotLocal = allocateSlot({
+      desiredStart: desiredStartLocal,
       durationMinutes,
       intervals,
       dayWindowStartHour: user.dayWindowStartHour,
       dayWindowEndHour: user.dayWindowEndHour,
-      currentTime: now,
+      currentTime: nowLocal,
     });
-    intervals.push(slot);
+    intervals.push(slotLocal);
+    const slotUtc = timezoneConverter.intervalToUtc(slotLocal);
     results.push({
       taskId: task.id,
-      startAt: slot.startAt,
-      endAt: slot.endAt,
+      startAt: slotUtc.startAt,
+      endAt: slotUtc.endAt,
       origin: preferred ? 'model' : 'fallback',
       rationale: preferred?.rationale,
       confidence: preferred?.confidence,
