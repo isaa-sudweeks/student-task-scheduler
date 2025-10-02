@@ -136,7 +136,7 @@ exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
         <input
           class="h-9 w-full rounded-md border border-black/10 bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           type="date"
-          value="2025-08-27"
+          value="2025-09-25"
         />
       </label>
       <label
@@ -148,7 +148,7 @@ exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
         <input
           class="h-9 w-full rounded-md border border-black/10 bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           type="date"
-          value="2025-09-03"
+          value="2025-10-02"
         />
       </label>
     </section>
@@ -425,29 +425,107 @@ exports[`StatsPage > visual regression > matches dark theme snapshot 1`] = `
       </section>
       <section>
         <div
-          class="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900"
+          class="space-y-3 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900"
         >
-          <h2
-            class="text-xl font-medium"
+          <div
+            class="space-y-1"
           >
-            Focus Time by Task
-          </h2>
-          <ul>
+            <h2
+              class="text-xl font-medium"
+            >
+              Planned vs Actual by Task
+            </h2>
+            <p
+              class="text-sm text-neutral-600 dark:text-neutral-400"
+            >
+              Compare estimated effort to recorded focus time to spot over- or under-spent work.
+            </p>
+          </div>
+          <div
+            class="grid gap-2 text-sm sm:grid-cols-3"
+          >
+            <div
+              class="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800"
+            >
+              <p
+                class="text-neutral-500 dark:text-neutral-400"
+              >
+                Total planned
+              </p>
+              <p
+                class="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
+              >
+                90
+                m
+              </p>
+            </div>
+            <div
+              class="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800"
+            >
+              <p
+                class="text-neutral-500 dark:text-neutral-400"
+              >
+                Total actual
+              </p>
+              <p
+                class="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
+              >
+                3
+                m
+              </p>
+            </div>
+            <div
+              class="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800"
+            >
+              <p
+                class="text-neutral-500 dark:text-neutral-400"
+              >
+                Net delta
+              </p>
+              <p
+                class="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
+              >
+                -87
+                m
+              </p>
+              <p
+                class="mt-1 text-xs text-neutral-500 dark:text-neutral-400"
+              >
+                Over plan: 
+                0
+                 • Under plan: 
+                2
+              </p>
+            </div>
+          </div>
+          <ul
+            class="space-y-1 text-sm"
+          >
             <li>
               Task 1
-              : 
+              : planned 
+              30
+              m • actual 
               1
+              m • 
+               
+              -29
               m
             </li>
             <li>
               Task 2
-              : 
+              : planned 
+              60
+              m • actual 
               2
+              m • 
+               
+              -58
               m
             </li>
           </ul>
           <div
-            height="200"
+            height="240"
             width="100%"
           >
             <div
@@ -597,7 +675,7 @@ exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
         <input
           class="h-9 w-full rounded-md border border-black/10 bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           type="date"
-          value="2025-08-27"
+          value="2025-09-25"
         />
       </label>
       <label
@@ -609,7 +687,7 @@ exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
         <input
           class="h-9 w-full rounded-md border border-black/10 bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
           type="date"
-          value="2025-09-03"
+          value="2025-10-02"
         />
       </label>
     </section>
@@ -886,29 +964,107 @@ exports[`StatsPage > visual regression > matches light theme snapshot 1`] = `
       </section>
       <section>
         <div
-          class="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900"
+          class="space-y-3 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900"
         >
-          <h2
-            class="text-xl font-medium"
+          <div
+            class="space-y-1"
           >
-            Focus Time by Task
-          </h2>
-          <ul>
+            <h2
+              class="text-xl font-medium"
+            >
+              Planned vs Actual by Task
+            </h2>
+            <p
+              class="text-sm text-neutral-600 dark:text-neutral-400"
+            >
+              Compare estimated effort to recorded focus time to spot over- or under-spent work.
+            </p>
+          </div>
+          <div
+            class="grid gap-2 text-sm sm:grid-cols-3"
+          >
+            <div
+              class="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800"
+            >
+              <p
+                class="text-neutral-500 dark:text-neutral-400"
+              >
+                Total planned
+              </p>
+              <p
+                class="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
+              >
+                90
+                m
+              </p>
+            </div>
+            <div
+              class="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800"
+            >
+              <p
+                class="text-neutral-500 dark:text-neutral-400"
+              >
+                Total actual
+              </p>
+              <p
+                class="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
+              >
+                3
+                m
+              </p>
+            </div>
+            <div
+              class="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800"
+            >
+              <p
+                class="text-neutral-500 dark:text-neutral-400"
+              >
+                Net delta
+              </p>
+              <p
+                class="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
+              >
+                -87
+                m
+              </p>
+              <p
+                class="mt-1 text-xs text-neutral-500 dark:text-neutral-400"
+              >
+                Over plan: 
+                0
+                 • Under plan: 
+                2
+              </p>
+            </div>
+          </div>
+          <ul
+            class="space-y-1 text-sm"
+          >
             <li>
               Task 1
-              : 
+              : planned 
+              30
+              m • actual 
               1
+              m • 
+               
+              -29
               m
             </li>
             <li>
               Task 2
-              : 
+              : planned 
+              60
+              m • actual 
               2
+              m • 
+               
+              -58
               m
             </li>
           </ul>
           <div
-            height="200"
+            height="240"
             width="100%"
           >
             <div

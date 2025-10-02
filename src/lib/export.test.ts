@@ -16,8 +16,14 @@ describe('statsToCSV', () => {
         { subject: 'Math', count: 1 },
         { subject: 'Science', count: 1 },
       ],
-      focusByTask: [
-        { id: '1', title: 'Task 1', minutes: 30 },
+      timeByTask: [
+        {
+          id: '1',
+          title: 'Task 1',
+          plannedMinutes: 45,
+          actualMinutes: 30,
+          deltaMinutes: -15,
+        },
       ],
     });
     expect(csv).toBe(
@@ -34,8 +40,8 @@ describe('statsToCSV', () => {
         'Math,1',
         'Science,1',
         '',
-        'id,title,minutes',
-        '1,Task 1,30',
+        'id,title,plannedMinutes,actualMinutes,deltaMinutes',
+        '1,Task 1,45,30,-15',
       ].join('\n')
     );
   });
@@ -47,7 +53,7 @@ describe('statsToCSV', () => {
       ],
       statusData: [],
       subjectData: [],
-      focusByTask: [],
+      timeByTask: [],
     });
     expect(csv).toBe(
       [
@@ -58,7 +64,7 @@ describe('statsToCSV', () => {
         '',
         'subject,count',
         '',
-        'id,title,minutes',
+        'id,title,plannedMinutes,actualMinutes,deltaMinutes',
       ].join('\n')
     );
   });
@@ -71,7 +77,15 @@ describe('exportStatsToCSV', () => {
     ],
     statusData: [{ status: 'TODO', count: 1 }],
     subjectData: [{ subject: 'Math', count: 1 }],
-    focusByTask: [{ id: '1', title: 'Task 1', minutes: 30 }],
+    timeByTask: [
+      {
+        id: '1',
+        title: 'Task 1',
+        plannedMinutes: 45,
+        actualMinutes: 30,
+        deltaMinutes: -15,
+      },
+    ],
   };
 
   it('triggers download when DOM is available', () => {

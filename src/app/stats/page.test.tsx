@@ -85,9 +85,9 @@ const exportMock = exportStatsToCSV as ReturnType<typeof vi.fn>;
 expect.extend(matchers);
 
 const sampleTasks = [
-  { id: '1', status: 'TODO', subject: 'Math', title: 'Task 1' },
-  { id: '2', status: 'DONE', subject: 'Science', title: 'Task 2' },
-  { id: '3', status: 'DONE', subject: 'Math', title: 'Task 3' },
+  { id: '1', status: 'TODO', subject: 'Math', title: 'Task 1', effortMinutes: 30 },
+  { id: '2', status: 'DONE', subject: 'Science', title: 'Task 2', effortMinutes: 90 },
+  { id: '3', status: 'DONE', subject: 'Math', title: 'Task 3', effortMinutes: 45 },
 ];
 
 beforeAll(() => {
@@ -161,14 +161,26 @@ describe('StatsPage', () => {
     expect(screen.getByText('DONE: 2')).toBeInTheDocument();
     expect(screen.getByText('Math: 2')).toBeInTheDocument();
     expect(screen.getByText('Science: 1')).toBeInTheDocument();
-    expect(screen.getByText('Task 2: 2m')).toBeInTheDocument();
+    expect(screen.getByText('Total planned')).toBeInTheDocument();
+    expect(screen.getByText('Total actual')).toBeInTheDocument();
+    expect(screen.getByText('Net delta')).toBeInTheDocument();
+    expect(screen.getByText('Over plan: 0 • Under plan: 3')).toBeInTheDocument();
+    expect(
+      screen.getByText('Task 1: planned 30m • actual 0m • -30m')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Task 2: planned 90m • actual 2m • -88m')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Task 3: planned 45m • actual 0m • -45m')
+    ).toBeInTheDocument();
     expect(screen.getByText('Science: 2m')).toBeInTheDocument();
   });
 
   it('exports stats as csv when button clicked', () => {
     const taskData = [
-      { id: '1', status: 'TODO', subject: 'Math', title: 'Task 1' },
-      { id: '2', status: 'DONE', subject: 'Science', title: 'Task 2' },
+      { id: '1', status: 'TODO', subject: 'Math', title: 'Task 1', effortMinutes: 30 },
+      { id: '2', status: 'DONE', subject: 'Science', title: 'Task 2', effortMinutes: 90 },
     ];
     taskUseQueryMock.mockReturnValue({ data: taskData, isLoading: false });
     focusUseQueryMock.mockReturnValue({
@@ -188,8 +200,21 @@ describe('StatsPage', () => {
         { subject: 'Math', count: 1 },
         { subject: 'Science', count: 1 },
       ],
-      focusByTask: [
-        { id: '2', title: 'Task 2', minutes: 2 },
+      timeByTask: [
+        {
+          id: '1',
+          title: 'Task 1',
+          plannedMinutes: 30,
+          actualMinutes: 0,
+          deltaMinutes: -30,
+        },
+        {
+          id: '2',
+          title: 'Task 2',
+          plannedMinutes: 90,
+          actualMinutes: 2,
+          deltaMinutes: -88,
+        },
       ],
     });
   });
@@ -200,8 +225,8 @@ describe('StatsPage', () => {
       .mockImplementation(() => {});
     taskUseQueryMock.mockReturnValue({
       data: [
-        { id: '1', status: 'TODO', subject: 'Math', title: 'Task' },
-        { id: '2', status: 'DONE', subject: 'Science', title: 'Task' },
+        { id: '1', status: 'TODO', subject: 'Math', title: 'Task', effortMinutes: 25 },
+        { id: '2', status: 'DONE', subject: 'Science', title: 'Task', effortMinutes: 50 },
       ],
       isLoading: false,
     });
@@ -221,8 +246,12 @@ describe('StatsPage', () => {
       start: queryInput.start,
       end: queryInput.end,
     });
-    expect(screen.getByText('Task: 1m')).toBeInTheDocument();
-    expect(screen.getByText('Task: 2m')).toBeInTheDocument();
+    expect(
+      screen.getByText('Task: planned 25m • actual 1m • -24m')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Task: planned 50m • actual 2m • -48m')
+    ).toBeInTheDocument();
     expect(screen.getByText('Math: 1m')).toBeInTheDocument();
     expect(screen.getByText('Science: 2m')).toBeInTheDocument();
     expect(consoleErrorSpy).not.toHaveBeenCalled();
@@ -297,8 +326,8 @@ describe('StatsPage', () => {
 
   describe('visual regression', () => {
     const tasks = [
-      { id: '1', status: 'TODO', subject: 'Math', title: 'Task 1' },
-      { id: '2', status: 'DONE', subject: 'Science', title: 'Task 2' },
+      { id: '1', status: 'TODO', subject: 'Math', title: 'Task 1', effortMinutes: 30 },
+      { id: '2', status: 'DONE', subject: 'Science', title: 'Task 2', effortMinutes: 60 },
     ];
 
     beforeEach(() => {
