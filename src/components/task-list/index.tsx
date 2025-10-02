@@ -107,10 +107,65 @@ export function TaskList({
     const fuse = new Fuse(orderedTasks, {
       keys: ["title"],
       includeMatches: true,
-      threshold: 0.4,
+      includeScore: true,
+      threshold: 0.35,
       ignoreLocation: true,
     });
-    return fuse.search(query).map((r) => ({ item: r.item, matches: r.matches }));
+    const aggregated = new Map<
+      string,
+      { item: Task; matches: Fuse.FuseResultMatch[]; score: number }
+    >();
+    for (const result of fuse.search(query)) {
+      aggregated.set(result.item.id, {
+        item: result.item,
+        matches: result.matches ?? [],
+        score: result.score ?? 0,
+      });
+    }
+    const queryLower = query.toLowerCase();
+    const findIndices = (value: string) => {
+      const indices: [number, number][] = [];
+      const lower = value.toLowerCase();
+      let start = 0;
+      while (start <= lower.length) {
+        const idx = lower.indexOf(queryLower, start);
+        if (idx === -1) break;
+        indices.push([idx, idx + queryLower.length - 1]);
+        start = idx + queryLower.length;
+      }
+      return indices;
+    };
+    const upsertMatch = (
+      task: Task,
+      key: "subject" | "notes",
+      value: string,
+      score: number
+    ) => {
+      const indices = findIndices(value);
+      if (indices.length === 0) return;
+      const existing = aggregated.get(task.id);
+      const matches = [
+        ...(existing?.matches ?? []),
+        {
+          key,
+          value,
+          indices,
+        } as Fuse.FuseResultMatch,
+      ];
+      const nextScore = existing ? Math.min(existing.score, score) : score;
+      aggregated.set(task.id, { item: task, matches, score: nextScore });
+    };
+    for (const task of orderedTasks) {
+      if (task.subject) {
+        upsertMatch(task, "subject", task.subject, 0.4);
+      }
+      if (task.notes) {
+        upsertMatch(task, "notes", task.notes, 0.6);
+      }
+    }
+    return [...aggregated.values()]
+      .sort((a, b) => a.score - b.score)
+      .map(({ item, matches }) => ({ item, matches }));
   }, [orderedTasks, query]);
 
   const matchesById = React.useMemo(
@@ -289,6 +344,7 @@ export function TaskList({
               t={activeTask}
               isDragging
               depth={depthById.get(activeTask.id) ?? 0}
+              match={matchesById.get(activeTask.id)}
               onClick={() => setEditingTask(activeTask)}
               onStatusChange={(next) =>
                 setStatus.mutate({ id: activeTask.id, status: next })

@@ -20,6 +20,25 @@ function highlightMatches(text: string, indices: readonly [number, number][]) {
   return res;
 }
 
+function getHighlightedSnippet(
+  text: string,
+  match: Fuse.FuseResultMatch,
+  context = 40
+) {
+  if (!match.indices?.length) return null;
+  const first = match.indices[0];
+  const last = match.indices[match.indices.length - 1];
+  const start = Math.max(0, first[0] - context);
+  const end = Math.min(text.length, last[1] + context + 1);
+  const snippet = text.slice(start, end);
+  const adjusted = match.indices.map(([s, e]) => [s - start, e - start] as [number, number]);
+  return {
+    prefix: start > 0 ? "…" : "",
+    suffix: end < text.length ? "…" : "",
+    highlighted: highlightMatches(snippet, adjusted),
+  };
+}
+
 export const TaskCard = React.forwardRef<
   HTMLLIElement,
   {
@@ -52,6 +71,16 @@ export const TaskCard = React.forwardRef<
     matchTitle && matchTitle.indices
       ? highlightMatches(t.title, matchTitle.indices as any)
       : t.title;
+  const matchSubject = match?.find((m) => m.key === "subject");
+  const subjectNode =
+    t.subject && matchSubject?.indices?.length
+      ? highlightMatches(t.subject, matchSubject.indices as any)
+      : t.subject;
+  const matchNotes = match?.find((m) => m.key === "notes");
+  const notesSnippet =
+    t.notes && matchNotes?.indices?.length
+      ? getHighlightedSnippet(t.notes, matchNotes)
+      : null;
 
   return (
     <motion.li
@@ -97,7 +126,7 @@ export const TaskCard = React.forwardRef<
             {t.subject && (
               <span className="flex items-center gap-1">
                 <Tag className="h-4 w-4 text-neutral-400" />
-                {t.subject}
+                <span>{subjectNode}</span>
               </span>
             )}
             {t.effortMinutes && (
@@ -107,6 +136,16 @@ export const TaskCard = React.forwardRef<
               </span>
             )}
           </div>
+          {notesSnippet && (
+            <span
+              className="mt-2 text-sm text-neutral-600"
+              data-testid="task-notes-snippet"
+            >
+              {notesSnippet.prefix}
+              {notesSnippet.highlighted}
+              {notesSnippet.suffix}
+            </span>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2">
