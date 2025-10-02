@@ -31,6 +31,80 @@ vi.mock('@/server/api/react', () => ({
 }));
 
 describe('TaskList', () => {
+  it('matches query against subject and highlights the subject text', () => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: {
+        pages: [[
+          {
+            id: '1',
+            title: 'Alpha',
+            subject: 'Physics',
+            notes: 'Review weekly lecture notes.',
+            dueAt: null,
+            status: 'TODO',
+          },
+        ]],
+      },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    const { container } = render(
+      <TaskList
+        filter="all"
+        subject={null}
+        status={null}
+        priority={null}
+        courseId={null}
+        projectId={null}
+        query="Physics"
+      />
+    );
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    const highlighted = Array.from(container.querySelectorAll('mark')).map(
+      (el) => el.textContent
+    );
+    expect(highlighted).toContain('Physics');
+  });
+
+  it('matches query against notes and renders a highlighted snippet', () => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: {
+        pages: [[
+          {
+            id: '1',
+            title: 'Alpha',
+            subject: 'Physics',
+            notes: 'Review the outline for the upcoming presentation.',
+            dueAt: null,
+            status: 'TODO',
+          },
+        ]],
+      },
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    render(
+      <TaskList
+        filter="all"
+        subject={null}
+        status={null}
+        priority={null}
+        courseId={null}
+        projectId={null}
+        query="outline"
+      />
+    );
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    const snippet = screen.getByTestId('task-notes-snippet');
+    expect(snippet.querySelector('mark')?.textContent).toBe('outline');
+  });
+
   it('filters tasks based on query prop', () => {
     useInfiniteQueryMock.mockReturnValue({
       data: { pages: [[{ id: '1', title: 'Alpha', dueAt: null, status: 'TODO' }]] },
