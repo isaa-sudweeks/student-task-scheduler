@@ -3,6 +3,7 @@ import React, { useCallback, useState } from "react";
 import { TaskList } from "@/components/task-list";
 import { TaskModal } from "@/components/task-modal";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
 
 export default function CoursePage({ params }: { params: { id: string } }) {
@@ -11,17 +12,68 @@ export default function CoursePage({ params }: { params: { id: string } }) {
     { page: 1, limit: 100 },
     { select: (courses) => courses.find((c) => c.id === id) }
   );
-  const update = api.course.update.useMutation();
+  const utils = api.useUtils();
+  const update = api.course.update.useMutation({
+    onSuccess: () => utils.course.list.invalidate(),
+  });
   const [showModal, setShowModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
+      const inputEl = e.target;
+      const file = inputEl.files?.[0];
       if (!file) return;
-      const formData = new FormData();
-      formData.set("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      await update.mutateAsync({ id, syllabusUrl: data.url });
+
+      const MAX_FILE_SIZE_MB = 10;
+      const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+      const isPdf =
+        file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+      if (!isPdf) {
+        toast.error("Only PDF files can be uploaded.");
+        inputEl.value = "";
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        toast.error(`File must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
+        inputEl.value = "";
+        return;
+      }
+
+      setIsUploading(true);
+
+      try {
+        const formData = new FormData();
+        formData.set("file", file);
+
+        const response = await fetch("/api/upload", { method: "POST", body: formData });
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          const message =
+            (payload && typeof payload.error === "string" && payload.error) ||
+            "Upload failed. Please try again.";
+          throw new Error(message);
+        }
+
+        const url = payload?.url;
+        if (typeof url !== "string" || url.length === 0) {
+          throw new Error("Upload failed. Please try again.");
+        }
+
+        await update.mutateAsync({ id, syllabusUrl: url });
+        toast.success("Syllabus uploaded.");
+      } catch (error) {
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Upload failed. Please try again.";
+        toast.error(message);
+      } finally {
+        setIsUploading(false);
+        inputEl.value = "";
+      }
     },
     [id, update]
   );
@@ -53,8 +105,15 @@ export default function CoursePage({ params }: { params: { id: string } }) {
             type="file"
             accept=".pdf"
             aria-label="Upload syllabus"
+            aria-busy={isUploading}
+            disabled={isUploading}
             onChange={handleFileChange}
           />
+          {isUploading && (
+            <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
+              Uploading...
+            </p>
+          )}
           {syllabusUrl && (
             <a
               href={syllabusUrl}
