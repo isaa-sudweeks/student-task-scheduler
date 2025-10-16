@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { StatusDropdown } from "@/components/status-dropdown";
@@ -12,6 +12,11 @@ import SubtaskList from "./subtask-list";
 import type { RouterOutputs } from "@/server/api/root";
 
 type Task = RouterOutputs["task"]["list"][number];
+type Reminder = RouterOutputs["task"]["listReminders"][number];
+type ReminderChannel = Reminder["channel"];
+
+const reminderChannels: ReminderChannel[] = ["EMAIL", "PUSH", "SMS"];
+const MAX_REMINDERS = 5;
 
 interface TaskModalProps {
   open: boolean;
@@ -57,10 +62,19 @@ export function TaskModal({
   const [projectId, setProjectId] = useState<string | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
   const [subtaskTitle, setSubtaskTitle] = useState('');
+  const [reminders, setReminders] = useState<Array<{ id?: string; channel: ReminderChannel; offset: string }>>([
+    { channel: "EMAIL", offset: "60" },
+  ]);
+  const [reminderError, setReminderError] = useState<string | null>(null);
 
   const { data: subtasks = [] } = api.task.list.useQuery(
     { filter: 'all', parentId: task?.id },
     { enabled: isEdit && !!task }
+  );
+
+  const remindersQuery = api.task.listReminders.useQuery(
+    { taskId: task?.id ?? "" },
+    { enabled: isEdit && !!task && open },
   );
 
   useEffect(() => {
@@ -81,6 +95,15 @@ export function TaskModal({
       const hasDue = task.dueAt != null;
       setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
       setDueEnabled(hasDue);
+      if (remindersQuery.data) {
+        setReminders(remindersQuery.data.map((reminder) => ({
+          id: reminder.id,
+          channel: reminder.channel,
+          offset: reminder.offsetMin.toString(),
+        })));
+      } else {
+        setReminders([]);
+      }
     } else {
       setTitle(initialTitle ?? "");
       setSubject("");
@@ -99,16 +122,22 @@ export function TaskModal({
         setDue("");
         setDueEnabled(false);
       }
+      setReminders([{ channel: "EMAIL", offset: "60" }]);
     }
     setTitleError(null);
-  }, [open, isEdit, task, initialTitle, initialDueAt, initialProjectId, initialCourseId]);
+    setReminderError(null);
+  }, [
+    open,
+    isEdit,
+    task,
+    initialTitle,
+    initialDueAt,
+    initialProjectId,
+    initialCourseId,
+    remindersQuery.data,
+  ]);
 
-  const create = api.task.create.useMutation({
-    onSuccess: async () => {
-      await utils.task.list.invalidate();
-      onClose();
-    },
-  });
+  const create = api.task.create.useMutation();
 
   const createSubtask = api.task.create.useMutation({
     onSuccess: async () => {
@@ -117,12 +146,7 @@ export function TaskModal({
     },
   });
 
-  const update = api.task.update.useMutation({
-    onSuccess: async () => {
-      await utils.task.list.invalidate();
-      onClose();
-    },
-  });
+  const update = api.task.update.useMutation();
 
   const setStatus = api.task.setStatus.useMutation({
     onSuccess: async () => {
@@ -137,11 +161,103 @@ export function TaskModal({
     },
   });
 
+  const replaceReminders = api.task.replaceReminders.useMutation();
+
   if (create.error) throw create.error;
   if (update.error) throw update.error;
   if (setStatus.error) throw setStatus.error;
   if (del.error) throw del.error;
   if (createSubtask.error) throw createSubtask.error;
+  if (replaceReminders.error) throw replaceReminders.error;
+
+  const parsedReminders = useMemo(() => {
+    const sanitized = reminders
+      .map((reminder) => ({
+        id: reminder.id,
+        channel: reminder.channel,
+        offsetMin: Number(reminder.offset.trim()),
+        rawOffset: reminder.offset,
+      }))
+      .filter((reminder) => reminder.rawOffset !== "");
+    return sanitized;
+  }, [reminders]);
+
+  const reminderValidationError = useMemo(() => {
+    if (parsedReminders.length !== reminders.length && reminders.some((r) => r.offset.trim() === "")) {
+      return "Fill in the lead time for each reminder or remove unused rows.";
+    }
+    for (const reminder of parsedReminders) {
+      if (Number.isNaN(reminder.offsetMin)) return "Lead time must be a number.";
+      if (reminder.offsetMin < 0) return "Lead time must be zero or greater.";
+      if (reminder.offsetMin > 10080) return "Lead time cannot exceed one week.";
+    }
+    if (parsedReminders.length > MAX_REMINDERS) return `You can only add up to ${MAX_REMINDERS} reminders.`;
+    return null;
+  }, [parsedReminders, reminders]);
+
+  const handleSave = async () => {
+    if (recurrenceConflict) return;
+    if (reminderValidationError) {
+      setReminderError(reminderValidationError);
+      return;
+    }
+
+    const parsedDue = parseLocalDateTime(due);
+    const dueAt = dueEnabled && parsedDue ? parsedDue : null;
+    const recurrenceUntilDate = recurrenceUntil ? new Date(`${recurrenceUntil}T23:59:59`) : undefined;
+    const recurrenceCountVal = recurrenceCount === '' ? undefined : recurrenceCount;
+
+    if (!isEdit && !title.trim()) {
+      setTitleError("Title is required");
+      return;
+    }
+
+    let saved: Task;
+    if (isEdit && task) {
+      saved = await update.mutateAsync({
+        id: task.id,
+        title: title.trim() || task.title,
+        subject: subject.trim() || null,
+        notes: notes.trim() || null,
+        dueAt,
+        priority,
+        recurrenceType,
+        recurrenceInterval,
+        recurrenceCount: recurrenceCountVal,
+        recurrenceUntil: recurrenceUntilDate,
+        projectId,
+        courseId,
+      });
+    } else {
+      saved = await create.mutateAsync({
+        title: title.trim(),
+        subject: subject.trim() || undefined,
+        notes: notes.trim() || undefined,
+        dueAt,
+        priority,
+        recurrenceType,
+        recurrenceInterval,
+        recurrenceCount: recurrenceCountVal,
+        recurrenceUntil: recurrenceUntilDate,
+        projectId: projectId || undefined,
+        courseId: courseId || undefined,
+      }) as Task;
+    }
+
+    const reminderPayload = parsedReminders.map((reminder) => ({
+      channel: reminder.channel,
+      offsetMin: reminder.offsetMin,
+    }));
+
+    await replaceReminders.mutateAsync({
+      taskId: saved.id,
+      reminders: reminderPayload,
+    });
+
+    await utils.task.list.invalidate();
+    await utils.task.listReminders.invalidate({ taskId: saved.id });
+    onClose();
+  };
 
   const footer = (
     <>
@@ -158,50 +274,13 @@ export function TaskModal({
         Cancel
       </Button>
       <Button
-        disabled={create.isPending || update.isPending || recurrenceConflict}
-        onClick={() => {
-          if (recurrenceConflict) return;
-          const parsedDue = parseLocalDateTime(due);
-          const dueAt = dueEnabled && parsedDue ? parsedDue : null;
-          const recurrenceUntilDate =
-            recurrenceUntil ? new Date(`${recurrenceUntil}T23:59:59`) : undefined;
-          const recurrenceCountVal =
-            recurrenceCount === '' ? undefined : recurrenceCount;
-          if (isEdit && task) {
-            update.mutate({
-              id: task.id,
-              title: title.trim() || task.title,
-              subject: subject.trim() || null,
-              notes: notes.trim() || null,
-              dueAt,
-              priority,
-              recurrenceType,
-              recurrenceInterval,
-              recurrenceCount: recurrenceCountVal,
-              recurrenceUntil: recurrenceUntilDate,
-              projectId,
-              courseId,
-            });
-          } else {
-            if (!title.trim()) {
-              setTitleError("Title is required");
-              return;
-            }
-            create.mutate({
-              title: title.trim(),
-              subject: subject || undefined,
-              notes: notes || undefined,
-              dueAt,
-              priority,
-              recurrenceType,
-              recurrenceInterval,
-              recurrenceCount: recurrenceCountVal,
-              recurrenceUntil: recurrenceUntilDate,
-              projectId: projectId || undefined,
-              courseId: courseId || undefined,
-            });
-          }
-        }}
+        disabled={
+          create.isPending ||
+          update.isPending ||
+          replaceReminders.isPending ||
+          recurrenceConflict
+        }
+        onClick={() => void handleSave()}
       >
         {isEdit ? "Save" : "Create"}
       </Button>
@@ -272,6 +351,95 @@ export function TaskModal({
             disabled={createSubtask.isPending}
           />
         )}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Reminders</span>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={reminders.length >= MAX_REMINDERS}
+              onClick={() => {
+                setReminders((prev) => [
+                  ...prev,
+                  { channel: "EMAIL", offset: "" },
+                ]);
+                setReminderError(null);
+              }}
+            >
+              Add reminder
+            </Button>
+          </div>
+          {reminders.length === 0 && <p className="text-sm text-muted-foreground">No reminders configured.</p>}
+          <div className="flex flex-col gap-2">
+            {reminders.map((reminder, index) => (
+              <div key={reminder.id ?? index} className="flex flex-wrap items-center gap-2">
+                <label className="sr-only" htmlFor={`reminder-channel-${index}`}>
+                  Reminder channel {index + 1}
+                </label>
+                <select
+                  id={`reminder-channel-${index}`}
+                  className="rounded border border-input bg-background px-2 py-1 text-sm"
+                  value={reminder.channel}
+                  onChange={(event) => {
+                    const next = event.target.value as ReminderChannel;
+                    setReminders((prev) =>
+                      prev.map((item, idx) =>
+                        idx === index ? { ...item, channel: next } : item,
+                      ),
+                    );
+                    setReminderError(null);
+                  }}
+                >
+                  {reminderChannels.map((channel) => (
+                    <option key={channel} value={channel}>
+                      {channel === "EMAIL"
+                        ? "Email"
+                        : channel === "PUSH"
+                        ? "Push notification"
+                        : "SMS"}
+                    </option>
+                  ))}
+                </select>
+                <label className="sr-only" htmlFor={`reminder-offset-${index}`}>
+                  Reminder lead time {index + 1}
+                </label>
+                <input
+                  id={`reminder-offset-${index}`}
+                  type="number"
+                  min={0}
+                  max={10080}
+                  className="w-24 rounded border border-input bg-background px-2 py-1 text-sm"
+                  value={reminder.offset}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setReminders((prev) =>
+                      prev.map((item, idx) =>
+                        idx === index ? { ...item, offset: value } : item,
+                      ),
+                    );
+                    setReminderError(null);
+                  }}
+                />
+                <span className="text-sm text-muted-foreground">minutes before</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setReminders((prev) => prev.filter((_, idx) => idx !== index));
+                    setReminderError(null);
+                  }}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+          {(reminderError ?? reminderValidationError) && (
+            <p className="text-sm text-destructive">
+              {reminderError ?? reminderValidationError}
+            </p>
+          )}
+        </div>
       </div>
     </Modal>
   );

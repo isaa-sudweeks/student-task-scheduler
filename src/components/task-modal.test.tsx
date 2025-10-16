@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { TaskModal } from './task-modal';
@@ -13,41 +13,88 @@ expect.extend(matchers);
 
 const mutateUpdate = vi.fn();
 const mutateCreate = vi.fn();
+const mutateReplaceReminders = vi.fn();
 
-const createMutation = { mutate: (...a: unknown[]) => mutateCreate(...a), isPending: false, error: undefined as any };
-const updateMutation = { mutate: (...a: unknown[]) => mutateUpdate(...a), isPending: false, error: undefined as any };
+const createMutation = {
+  mutate: (...a: unknown[]) => mutateCreate(...a),
+  mutateAsync: (...a: unknown[]) => Promise.resolve(mutateCreate(...a)),
+  isPending: false,
+  error: undefined as any,
+};
+const updateMutation = {
+  mutate: (...a: unknown[]) => mutateUpdate(...a),
+  mutateAsync: (...a: unknown[]) => Promise.resolve(mutateUpdate(...a)),
+  isPending: false,
+  error: undefined as any,
+};
 const deleteMutation = { mutate: vi.fn(), isPending: false, error: undefined as any };
 const setStatusMutation = { mutate: vi.fn(), isPending: false, error: undefined as any };
+const replaceRemindersMutation = {
+  mutateAsync: vi.fn((...a: unknown[]) => Promise.resolve(mutateReplaceReminders(...a))),
+  isPending: false,
+  error: undefined as any,
+};
+let reminderListData: Array<{ id: string; channel: 'EMAIL' | 'PUSH' | 'SMS'; offsetMin: number }> = [];
 
-vi.mock('@/server/api/react', () => ({
-  api: {
-    useUtils: () => ({ task: { list: { invalidate: vi.fn() } } }),
-    task: {
-      create: { useMutation: () => createMutation },
-      update: { useMutation: () => updateMutation },
-      delete: { useMutation: () => deleteMutation },
-      setStatus: { useMutation: () => setStatusMutation },
-      list: { useQuery: () => ({ data: [] }) },
-    },
-    project: { list: { useQuery: () => ({ data: [{ id: 'p1', title: 'Project 1' }] }) } },
-    course: {
-      list: {
-        useQuery: () => ({
-          data: [{ id: 'c1', title: 'Course 1', term: null, color: null, nextDueAt: null }],
-        }),
+vi.mock('@/server/api/react', async () => {
+  const actual = await vi.importActual<typeof import('@/server/api/react')>(
+    '@/server/api/react'
+  );
+  return {
+    ...actual,
+    api: {
+      ...actual.api,
+      useUtils: () => ({
+        task: {
+          list: { invalidate: vi.fn() },
+          listReminders: { invalidate: vi.fn() },
+        },
+      }),
+      task: {
+        ...actual.api.task,
+        create: { useMutation: () => createMutation },
+        update: { useMutation: () => updateMutation },
+        delete: { useMutation: () => deleteMutation },
+        setStatus: { useMutation: () => setStatusMutation },
+        list: { useQuery: () => ({ data: [] }) },
+        listReminders: { useQuery: () => ({ data: reminderListData }) },
+        replaceReminders: { useMutation: () => replaceRemindersMutation },
+      },
+      project: {
+        ...actual.api.project,
+        list: { useQuery: () => ({ data: [{ id: 'p1', title: 'Project 1' }] }) },
+      },
+      course: {
+        ...actual.api.course,
+        list: {
+          useQuery: () => ({
+            data: [
+              { id: 'c1', title: 'Course 1', term: null, color: null, nextDueAt: null },
+            ],
+          }),
+        },
       },
     },
-  },
-}));
+  };
+});
 
 describe('TaskModal due date editing', () => {
   beforeEach(() => {
     mutateUpdate.mockReset();
     mutateCreate.mockReset();
+    mutateReplaceReminders.mockReset();
+    replaceRemindersMutation.mutateAsync.mockClear();
+    replaceRemindersMutation.mutateAsync.mockImplementation((...args: unknown[]) =>
+      Promise.resolve(mutateReplaceReminders(...args))
+    );
     createMutation.error = undefined;
     updateMutation.error = undefined;
     deleteMutation.error = undefined;
     setStatusMutation.error = undefined;
+    replaceRemindersMutation.error = undefined;
+    reminderListData = [];
+    mutateUpdate.mockImplementation(() => ({ id: 't1' }));
+    mutateCreate.mockImplementation(() => ({ id: 'new-task' }));
   });
 
   it('adds a due date to a task that previously had none when saving', () => {
@@ -87,6 +134,10 @@ describe('TaskModal status changes', () => {
   beforeEach(() => {
     setStatusMutation.mutate.mockReset();
     setStatusMutation.error = undefined;
+    mutateReplaceReminders.mockReset();
+    replaceRemindersMutation.mutateAsync.mockClear();
+    replaceRemindersMutation.error = undefined;
+    reminderListData = [];
   });
 
   it('calls setStatus when status is updated', () => {
@@ -106,6 +157,11 @@ describe('TaskModal validation', () => {
   beforeEach(() => {
     mutateCreate.mockReset();
     createMutation.error = undefined;
+    mutateReplaceReminders.mockReset();
+    replaceRemindersMutation.mutateAsync.mockClear();
+    replaceRemindersMutation.error = undefined;
+    reminderListData = [];
+    mutateCreate.mockImplementation(() => ({ id: 'new-task' }));
   });
 
   it('shows an error when title is missing', () => {
@@ -122,6 +178,12 @@ describe('TaskModal recurrence options', () => {
     mutateUpdate.mockReset();
     createMutation.error = undefined;
     updateMutation.error = undefined;
+    mutateReplaceReminders.mockReset();
+    replaceRemindersMutation.mutateAsync.mockClear();
+    replaceRemindersMutation.error = undefined;
+    reminderListData = [];
+    mutateCreate.mockImplementation(() => ({ id: 'new-task' }));
+    mutateUpdate.mockImplementation(() => ({ id: 't1' }));
   });
 
   it('disables end date when end count is set', () => {
@@ -152,7 +214,7 @@ describe('TaskModal recurrence options', () => {
     } as any;
     render(<TaskModal open mode="edit" onClose={() => {}} task={task} />);
     expect(
-      screen.getByText('Choose either "End after" or "End on", not both.')
+      screen.getByText(/Choose either .*End after.*or .*End on.*not both/i)
     ).toBeInTheDocument();
     expect(screen.getByText('Save')).toBeDisabled();
   });
@@ -162,6 +224,11 @@ describe('TaskModal recurrence options', () => {
   beforeEach(() => {
     mutateCreate.mockReset();
     createMutation.error = undefined;
+    mutateReplaceReminders.mockReset();
+    replaceRemindersMutation.mutateAsync.mockClear();
+    replaceRemindersMutation.error = undefined;
+    reminderListData = [];
+    mutateCreate.mockImplementation(() => ({ id: 'new-task' }));
   });
     it('sends selected project and course when creating', () => {
       render(<TaskModal open mode="create" onClose={() => {}} />);
@@ -190,6 +257,11 @@ describe('TaskModal recurrence options', () => {
 describe('TaskModal accessibility', () => {
   beforeEach(() => {
     createMutation.error = undefined;
+    mutateReplaceReminders.mockReset();
+    replaceRemindersMutation.mutateAsync.mockClear();
+    replaceRemindersMutation.error = undefined;
+    reminderListData = [];
+    mutateCreate.mockImplementation(() => ({ id: 'new-task' }));
   });
   it('traps focus within the modal and focuses the first element initially', () => {
     const onClose = vi.fn();
@@ -220,6 +292,10 @@ describe('TaskModal subtasks', () => {
   beforeEach(() => {
     mutateCreate.mockReset();
     createMutation.error = undefined;
+    mutateReplaceReminders.mockReset();
+    replaceRemindersMutation.mutateAsync.mockClear();
+    replaceRemindersMutation.error = undefined;
+    reminderListData = [];
   });
 
   it('creates a subtask for the given parent', () => {
@@ -231,5 +307,73 @@ describe('TaskModal subtasks', () => {
       expect.objectContaining({ title: 'Child', parentId: 't1' })
     );
   });
+});
+
+describe('TaskModal reminders', () => {
+  let updateCalled = false;
+  let replaceCalled = false;
+  let mutateAsyncCalled = false;
+  beforeEach(() => {
+    reminderListData = [
+      { id: 'r1', channel: 'EMAIL', offsetMin: 30 },
+      { id: 'r2', channel: 'PUSH', offsetMin: 5 },
+    ];
+    mutateUpdate.mockReset();
+    mutateReplaceReminders.mockReset();
+    replaceRemindersMutation.mutateAsync.mockClear();
+    mutateAsyncCalled = false;
+    replaceRemindersMutation.mutateAsync.mockImplementation((...args: unknown[]) => {
+      mutateAsyncCalled = true;
+      return Promise.resolve(mutateReplaceReminders(...args));
+    });
+    updateCalled = false;
+    replaceCalled = false;
+    mutateUpdate.mockImplementation(() => {
+      updateCalled = true;
+      return { id: 't1' };
+    });
+    mutateReplaceReminders.mockImplementation(() => {
+      replaceCalled = true;
+    });
+    replaceRemindersMutation.error = undefined;
+  });
+
+  it('loads existing reminders when editing', () => {
+    const task = { id: 't1', title: 'Task', subject: null, notes: null, dueAt: null } as Task;
+    render(<TaskModal open mode="edit" onClose={() => {}} task={task} />);
+
+    expect(screen.getAllByLabelText(/Reminder channel/)).toHaveLength(2);
+    const firstLeadTime = screen.getByLabelText('Reminder lead time 1') as HTMLInputElement;
+    expect(firstLeadTime.value).toBe('30');
+  });
+
+  it('sends reminder payload when saving', async () => {
+    const task = { id: 't1', title: 'Task', subject: null, notes: null, dueAt: null } as Task;
+    render(<TaskModal open mode="edit" onClose={() => {}} task={task} />);
+
+    const leadInput = screen.getByLabelText('Reminder lead time 2');
+    expect((leadInput as HTMLInputElement).value).toBe('5');
+    fireEvent.change(leadInput, { target: { value: '45' } });
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    expect(saveButton).not.toBeDisabled();
+    fireEvent.click(saveButton);
+    expect(updateCalled).toBe(true);
+    expect(screen.queryByText(/Lead time/)).toBeNull();
+
+    await Promise.resolve();
+    expect(replaceRemindersMutation.mutateAsync).toHaveBeenCalled();
+    expect(mutateReplaceReminders).toHaveBeenCalled();
+    expect(replaceCalled).toBe(true);
+    expect(mutateAsyncCalled).toBe(true);
+    expect(screen.queryByText(/Lead time must/)).toBeNull();
+    expect(screen.queryByText(/Fill in the lead time/)).toBeNull();
+    expect(mutateReplaceReminders).toHaveBeenCalledWith({
+      taskId: 't1',
+      reminders: [
+        { channel: 'EMAIL', offsetMin: 30 },
+        { channel: 'PUSH', offsetMin: 45 },
+      ],
+    });
+  }, 10000);
 });
 
