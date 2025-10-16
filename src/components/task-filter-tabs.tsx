@@ -54,7 +54,11 @@ export function TaskFilterTabs({
   }, [subjectsQuery.data]);
 
   return (
-    <div role="tablist" aria-label="Task filter" className="flex gap-2 items-center">
+    <div
+      role="tablist"
+      aria-label="Task filter"
+      className="flex w-full flex-wrap items-center justify-center gap-2 md:justify-start"
+    >
       {options.map((opt) => (
         <button
           key={opt.value}
@@ -72,12 +76,12 @@ export function TaskFilterTabs({
         </button>
       ))}
       {onSubjectChange && (
-        <div className="relative ml-2">
+        <div className="relative w-full sm:ml-2 sm:w-auto">
           <Tag className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <select
             aria-label="Subject filter"
             title="Filter by subject"
-            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="w-full appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800 sm:w-auto"
             value={subject ?? ''}
             onChange={(e) => onSubjectChange(e.target.value || null)}
           >
@@ -92,12 +96,12 @@ export function TaskFilterTabs({
         </div>
       )}
       {onPriorityChange && (
-        <div className="relative ml-2">
+        <div className="relative w-full sm:ml-2 sm:w-auto">
           <Flag className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <select
             aria-label="Priority filter"
             title="Filter by priority"
-            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="w-full appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800 sm:w-auto"
             value={priority ?? ''}
             onChange={(e) => onPriorityChange(e.target.value ? (e.target.value as TaskPriority) : null)}
           >
@@ -110,12 +114,12 @@ export function TaskFilterTabs({
         </div>
       )}
       {onCourseChange && (
-        <div className="relative ml-2">
+        <div className="relative w-full sm:ml-2 sm:w-auto">
           <BookOpen className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <select
             aria-label="Course filter"
             title="Filter by course"
-            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="w-full appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800 sm:w-auto"
             value={courseId ?? ''}
             onChange={(e) => onCourseChange(e.target.value || null)}
           >
@@ -130,12 +134,12 @@ export function TaskFilterTabs({
         </div>
       )}
       {onProjectChange && (
-        <div className="relative ml-2">
+        <div className="relative w-full sm:ml-2 sm:w-auto">
           <Folder className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <select
             aria-label="Project filter"
             title="Filter by project"
-            className="appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="w-full appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800 sm:w-auto"
             value={projectId ?? ''}
             onChange={(e) => onProjectChange(e.target.value || null)}
           >
