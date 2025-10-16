@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { render, screen, fireEvent, within, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 
+import { useSession } from 'next-auth/react';
 import CalendarPage from './page';
 
 const focusStart = vi.fn();
@@ -41,6 +42,28 @@ const eventsQueryMock = {
   error: null as Error | null,
   refetch: vi.fn(),
 };
+type MockUserSettings = {
+  timezone: string;
+  dayWindowStartHour: number;
+  dayWindowEndHour: number;
+  defaultDurationMinutes: number;
+  googleSyncEnabled: boolean;
+  llmProvider?: 'NONE' | 'OPENAI' | 'LM_STUDIO';
+  openaiApiKey?: string | null;
+  lmStudioUrl?: string | null;
+};
+const userSettingsQueryMock: {
+  data: MockUserSettings | undefined;
+  isLoading: boolean;
+  error: Error | null;
+  refetch: ReturnType<typeof vi.fn>;
+} = {
+  data: undefined,
+  isLoading: false,
+  error: null,
+  refetch: vi.fn(),
+};
+const setSettingsMock = vi.fn();
 
 vi.mock('@/server/api/react', () => ({
     api: {
@@ -48,6 +71,7 @@ vi.mock('@/server/api/react', () => ({
         task: { list: { invalidate: vi.fn() } },
         event: { listRange: { invalidate: vi.fn() } },
         focus: { status: { invalidate: vi.fn() } },
+        user: { getSettings: { invalidate: vi.fn() } },
       }),
       task: {
         list: {
@@ -85,12 +109,31 @@ vi.mock('@/server/api/react', () => ({
         schedule: { useMutation: () => ({ mutate: (...a: unknown[]) => scheduleMutate(...a) }) },
         move: { useMutation: () => ({ mutate: (...a: unknown[]) => moveMutate(...a) }) },
       },
+      user: {
+        getSettings: {
+        useQuery: (_input?: unknown, opts?: { enabled?: boolean }) => ({
+          ...userSettingsQueryMock,
+          data: opts?.enabled === false ? undefined : userSettingsQueryMock.data,
+          isLoading: userSettingsQueryMock.isLoading,
+        }),
+        },
+        setSettings: {
+          useMutation: (opts?: { onSuccess?: () => void }) => ({
+            mutate: (args: unknown) => {
+              setSettingsMock(args);
+              opts?.onSuccess?.();
+            },
+          }),
+        },
+      },
     focus: {
       start: { useMutation: () => ({ mutate: (...a: unknown[]) => focusStart(...a) }) },
       stop: { useMutation: () => ({ mutate: (...a: unknown[]) => focusStop(...a) }) },
     },
   },
 }));
+
+const useSessionMock = vi.mocked(useSession);
 
 describe('CalendarPage', () => {
   beforeEach(() => {
@@ -106,9 +149,17 @@ describe('CalendarPage', () => {
     tasksQueryMock.refetch.mockReset();
     eventsQueryMock.error = null;
     eventsQueryMock.refetch.mockReset();
+    userSettingsQueryMock.data = undefined;
+    userSettingsQueryMock.isLoading = false;
+    userSettingsQueryMock.error = null;
+    userSettingsQueryMock.refetch.mockReset();
+    setSettingsMock.mockReset();
+    useSessionMock.mockReset();
+    useSessionMock.mockReturnValue({ data: { user: { name: 'Test User', image: null } }, status: 'authenticated' });
     window.localStorage.clear();
     window.localStorage.setItem('dayWindowStartHour', '6');
     window.localStorage.setItem('dayWindowEndHour', '20');
+    window.localStorage.setItem('defaultDurationMinutes', '30');
     scheduleSuggestionsPending = false;
     scheduleSuggestionsError = null;
   });
@@ -370,5 +421,72 @@ describe('CalendarPage', () => {
     expect(screen.getByLabelText('month-day-2099-02-01')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /previous/i }));
     expect(screen.getByLabelText('month-day-2099-01-01')).toBeInTheDocument();
+  });
+
+  it('prefers server-sourced scheduling preferences and syncs updates back to the API', async () => {
+    userSettingsQueryMock.data = {
+      timezone: 'America/New_York',
+      dayWindowStartHour: 9,
+      dayWindowEndHour: 21,
+      defaultDurationMinutes: 45,
+      googleSyncEnabled: true,
+      llmProvider: 'NONE',
+      openaiApiKey: null,
+      lmStudioUrl: 'http://localhost:5678',
+    };
+
+    render(<CalendarPage />);
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem('dayWindowStartHour')).toBe('9');
+      expect(window.localStorage.getItem('dayWindowEndHour')).toBe('21');
+      expect(window.localStorage.getItem('defaultDurationMinutes')).toBe('45');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    const modal = screen.getByRole('dialog', { name: /calendar settings/i });
+    const inputs = within(modal).getAllByRole('spinbutton');
+    expect(inputs[0]).toHaveValue(9);
+    expect(inputs[1]).toHaveValue(21);
+    expect(inputs[2]).toHaveValue(45);
+    expect(setSettingsMock).not.toHaveBeenCalled();
+
+    fireEvent.change(inputs[0], { target: { value: '10' } });
+
+    await waitFor(() => {
+      expect(setSettingsMock).toHaveBeenCalledTimes(1);
+    });
+    expect(setSettingsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timezone: 'America/New_York',
+        dayWindowStartHour: 10,
+        dayWindowEndHour: 21,
+        defaultDurationMinutes: 45,
+        googleSyncEnabled: true,
+        llmProvider: 'NONE',
+        openaiApiKey: null,
+        lmStudioUrl: 'http://localhost:5678',
+      })
+    );
+    await waitFor(() => {
+      expect(window.localStorage.getItem('dayWindowStartHour')).toBe('10');
+    });
+  });
+
+  it('falls back to stored preferences when the user is unauthenticated', () => {
+    useSessionMock.mockReturnValue({ data: null, status: 'unauthenticated' });
+    window.localStorage.setItem('dayWindowStartHour', '7');
+    window.localStorage.setItem('dayWindowEndHour', '19');
+    window.localStorage.setItem('defaultDurationMinutes', '50');
+
+    render(<CalendarPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    const modal = screen.getByRole('dialog', { name: /calendar settings/i });
+    const inputs = within(modal).getAllByRole('spinbutton');
+    expect(inputs[0]).toHaveValue(7);
+    expect(inputs[1]).toHaveValue(19);
+    expect(inputs[2]).toHaveValue(50);
+    expect(setSettingsMock).not.toHaveBeenCalled();
   });
 });

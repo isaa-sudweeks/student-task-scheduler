@@ -47,6 +47,7 @@ vi.mock('@/server/api/react', () => {
         task: { list: { invalidate: vi.fn() } },
         event: { listRange: { invalidate: vi.fn() } },
         focus: { status: { invalidate: vi.fn() } },
+        user: { getSettings: { invalidate: vi.fn() } },
       }),
       task: {
         list: { useQuery: () => ({ data: [], isLoading: false, error: undefined }) },
@@ -101,8 +102,9 @@ vi.mock('recharts', () => {
 
 // Mock next-auth for components using session hooks in unit tests
 vi.mock('next-auth/react', () => {
+  const useSession = vi.fn(() => ({ data: { user: { name: 'Test User', image: null } }, status: 'authenticated' }));
   return {
-    useSession: () => ({ data: { user: { name: 'Test User', image: null } }, status: 'authenticated' }),
+    useSession,
     signIn: vi.fn(),
     signOut: vi.fn(),
     SessionProvider: ({ children }: any) => children,

@@ -23,6 +23,7 @@ export default function CalendarPage() {
   const [baseDate, setBaseDate] = useState<Date>(new Date());
   const utils = api.useUtils();
   const { data: session } = useSession();
+  const isAuthenticated = !!session;
 
   const [dayStart, setDayStart] = useState(8);
   const [dayEnd, setDayEnd] = useState(18);
@@ -31,15 +32,42 @@ export default function CalendarPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskStart, setNewTaskStart] = useState<Date | null>(null);
+  const parseStoredNumber = React.useCallback((value: string | null) => {
+    if (value == null) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, []);
+  const userSettingsQuery = api.user.getSettings.useQuery(undefined, { enabled: isAuthenticated });
+  const userSettings = userSettingsQuery.data;
+  const { mutate: setSettingsMutate } = api.user.setSettings.useMutation({
+    onSuccess: async () => {
+      try {
+        await utils.user.getSettings.invalidate();
+      } catch {}
+    },
+  });
+  const lastSyncedRef = useRef<{
+    dayWindowStartHour: number;
+    dayWindowEndHour: number;
+    defaultDurationMinutes: number;
+  } | null>(null);
+  const hasLoadedServerSettingsRef = useRef(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const s = window.localStorage.getItem('dayWindowStartHour');
-    const e = window.localStorage.getItem('dayWindowEndHour');
-    const d = window.localStorage.getItem('defaultDurationMinutes');
-    if (s) setDayStart(Number(s));
-    if (e) setDayEnd(Number(e));
-    if (d) setDefaultDuration(Number(d));
-  }, []);
+    const s = parseStoredNumber(window.localStorage.getItem('dayWindowStartHour'));
+    const e = parseStoredNumber(window.localStorage.getItem('dayWindowEndHour'));
+    const d = parseStoredNumber(window.localStorage.getItem('defaultDurationMinutes'));
+    if (s != null) setDayStart(s);
+    if (e != null) setDayEnd(e);
+    if (d != null) setDefaultDuration(d);
+  }, [parseStoredNumber]);
+  useEffect(() => {
+    if (!userSettings) return;
+    hasLoadedServerSettingsRef.current = false;
+    setDayStart(userSettings.dayWindowStartHour);
+    setDayEnd(userSettings.dayWindowEndHour);
+    setDefaultDuration(userSettings.defaultDurationMinutes);
+  }, [userSettings]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -47,6 +75,51 @@ export default function CalendarPage() {
     window.localStorage.setItem('dayWindowEndHour', String(dayEnd));
     window.localStorage.setItem('defaultDurationMinutes', String(defaultDuration));
   }, [dayStart, dayEnd, defaultDuration]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !userSettings) return;
+
+    const current = {
+      dayWindowStartHour: dayStart,
+      dayWindowEndHour: dayEnd,
+      defaultDurationMinutes: defaultDuration,
+    };
+
+    const matchesServer =
+      current.dayWindowStartHour === userSettings.dayWindowStartHour &&
+      current.dayWindowEndHour === userSettings.dayWindowEndHour &&
+      current.defaultDurationMinutes === userSettings.defaultDurationMinutes;
+
+    if (!hasLoadedServerSettingsRef.current) {
+      if (matchesServer) {
+        hasLoadedServerSettingsRef.current = true;
+        lastSyncedRef.current = current;
+      }
+      return;
+    }
+
+    const last = lastSyncedRef.current;
+    if (
+      last &&
+      last.dayWindowStartHour === current.dayWindowStartHour &&
+      last.dayWindowEndHour === current.dayWindowEndHour &&
+      last.defaultDurationMinutes === current.defaultDurationMinutes
+    ) {
+      return;
+    }
+
+    lastSyncedRef.current = current;
+    setSettingsMutate({
+      timezone: userSettings.timezone,
+      dayWindowStartHour: current.dayWindowStartHour,
+      dayWindowEndHour: current.dayWindowEndHour,
+      defaultDurationMinutes: current.defaultDurationMinutes,
+      googleSyncEnabled: userSettings.googleSyncEnabled,
+      llmProvider: userSettings.llmProvider ?? 'NONE',
+      openaiApiKey: userSettings.openaiApiKey ?? null,
+      lmStudioUrl: userSettings.lmStudioUrl ?? 'http://localhost:1234',
+    });
+  }, [isAuthenticated, userSettings, dayStart, dayEnd, defaultDuration, setSettingsMutate]);
 
   // Make dragging/resizing more reliable across mouse/touch
   const sensors = useSensors(
