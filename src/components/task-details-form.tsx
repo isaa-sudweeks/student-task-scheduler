@@ -22,6 +22,8 @@ interface TaskDetailsFormProps {
   onPriorityChange: (p: "LOW" | "MEDIUM" | "HIGH") => void;
   notes: string;
   onNotesChange: (value: string) => void;
+  effortMinutes: string;
+  onEffortMinutesChange: (value: string) => void;
   recurrenceControls?: React.ReactNode;
   onDraftDueChange?: (due: Date | null) => void;
 }
@@ -46,6 +48,8 @@ export function TaskDetailsForm({
   onPriorityChange,
   notes,
   onNotesChange,
+  effortMinutes,
+  onEffortMinutesChange,
   recurrenceControls,
   onDraftDueChange,
 }: TaskDetailsFormProps) {
@@ -118,6 +122,23 @@ export function TaskDetailsForm({
             disabled={!dueEnabled}
           />
         </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <label htmlFor="effortMinutes" className="w-28 text-sm font-medium">
+          Estimated effort (minutes)
+        </label>
+        <input
+          id="effortMinutes"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          step={1}
+          className="flex-1 rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+          placeholder="e.g., 45"
+          value={effortMinutes}
+          onChange={(e) => onEffortMinutesChange(e.target.value)}
+        />
       </div>
 
       <div className="flex items-center gap-4">

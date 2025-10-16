@@ -3,26 +3,31 @@ import { LlmProvider, TaskPriority, TaskStatus } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { taskScheduleRouter } from './taskSchedule';
 
-const generateScheduleSuggestions = vi.fn();
-
-vi.mock('@/server/ai/scheduler', () => ({
-  generateScheduleSuggestions: (...args: unknown[]) => generateScheduleSuggestions(...args),
+const mocks = vi.hoisted(() => ({
+  generateScheduleSuggestions: vi.fn(),
+  userFindUnique: vi.fn(),
+  taskFindMany: vi.fn(),
+  eventFindMany: vi.fn(),
 }));
 
-const userFindUnique = vi.fn();
-const taskFindMany = vi.fn();
-const eventFindMany = vi.fn();
+vi.mock('@/server/ai/scheduler', () => ({
+  generateScheduleSuggestions: (...args: unknown[]) => mocks.generateScheduleSuggestions(...args),
+}));
 
 vi.mock('@/server/db', () => ({
   db: {
-    user: { findUnique: userFindUnique },
-    task: { findMany: taskFindMany },
-    event: { findMany: eventFindMany },
+    user: { findUnique: mocks.userFindUnique },
+    task: { findMany: mocks.taskFindMany },
+    event: { findMany: mocks.eventFindMany },
   },
 }));
 
 describe('taskScheduleRouter.scheduleSuggestions', () => {
   const ctx = { session: { user: { id: 'user1' } } } as any;
+  const generateScheduleSuggestions = mocks.generateScheduleSuggestions;
+  const userFindUnique = mocks.userFindUnique;
+  const taskFindMany = mocks.taskFindMany;
+  const eventFindMany = mocks.eventFindMany;
 
   beforeEach(() => {
     userFindUnique.mockReset();
@@ -77,9 +82,17 @@ describe('taskScheduleRouter.scheduleSuggestions', () => {
     });
     taskFindMany.mockResolvedValue([task]);
     eventFindMany.mockResolvedValue([]);
-    generateScheduleSuggestions.mockResolvedValue([
-      { taskId: 'task1', startAt: new Date('2024-01-04T10:00:00Z'), endAt: new Date('2024-01-04T10:45:00Z'), origin: 'fallback' },
-    ]);
+    generateScheduleSuggestions.mockImplementation(async (args: any) => {
+      expect(args.tasks[0].effortMinutes).toBe(45);
+      return [
+        {
+          taskId: 'task1',
+          startAt: new Date('2024-01-04T10:00:00Z'),
+          endAt: new Date('2024-01-04T10:45:00Z'),
+          origin: 'fallback',
+        },
+      ];
+    });
 
     const result = await taskScheduleRouter.createCaller(ctx).scheduleSuggestions({});
 
@@ -112,4 +125,3 @@ describe('taskScheduleRouter.scheduleSuggestions', () => {
     expect(result.suggestions).toHaveLength(1);
   });
 });
-
