@@ -14,6 +14,49 @@ const formatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 });
 
+export function createAcceptSuggestionHandler({
+  eventSchedule,
+  settings,
+  setSuggestions,
+  setAcceptedIds,
+  toast,
+}: {
+  eventSchedule: Pick<ReturnType<typeof api.event.schedule.useMutation>, "mutateAsync">;
+  settings: RouterOutputs["user"]["getSettings"] | undefined;
+  setSuggestions: React.Dispatch<React.SetStateAction<Suggestion[]>>;
+  setAcceptedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  toast: typeof toast;
+}) {
+  return async (suggestion: Suggestion) => {
+    const durationMinutes = Math.max(
+      1,
+      Math.round((suggestion.endAt.getTime() - suggestion.startAt.getTime()) / 60000),
+    );
+    try {
+      const result = await eventSchedule.mutateAsync({
+        taskId: suggestion.taskId,
+        startAt: suggestion.startAt,
+        durationMinutes,
+        dayWindowStartHour: settings?.dayWindowStartHour ?? 8,
+        dayWindowEndHour: settings?.dayWindowEndHour ?? 18,
+      });
+      setSuggestions((prev) => prev.filter((s) => s.taskId !== suggestion.taskId));
+      setAcceptedIds((prev) => {
+        const next = new Set(prev);
+        next.add(suggestion.taskId);
+        return next;
+      });
+      toast.success("Scheduled task");
+      if (result.googleSyncWarning) {
+        toast.info("Event saved locally, but Google Calendar sync failed.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to schedule task");
+    }
+  };
+}
+
 export default function ScheduleSuggestionsPage() {
   const utils = api.useUtils();
   const tasksQuery = api.task.list.useQuery();
@@ -52,33 +95,15 @@ export default function ScheduleSuggestionsPage() {
     }
   }, [suggestionsMutation]);
 
-  const acceptSuggestion = React.useCallback(
-    async (suggestion: Suggestion) => {
-      const settings = settingsQuery.data;
-      const durationMinutes = Math.max(
-        1,
-        Math.round((suggestion.endAt.getTime() - suggestion.startAt.getTime()) / 60000),
-      );
-      try {
-        await eventSchedule.mutateAsync({
-          taskId: suggestion.taskId,
-          startAt: suggestion.startAt,
-          durationMinutes,
-          dayWindowStartHour: settings?.dayWindowStartHour ?? 8,
-          dayWindowEndHour: settings?.dayWindowEndHour ?? 18,
-        });
-        setSuggestions((prev) => prev.filter((s) => s.taskId !== suggestion.taskId));
-        setAcceptedIds((prev) => {
-          const next = new Set(prev);
-          next.add(suggestion.taskId);
-          return next;
-        });
-        toast.success("Scheduled task");
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to schedule task");
-      }
-    },
+  const acceptSuggestion = React.useMemo(
+    () =>
+      createAcceptSuggestionHandler({
+        eventSchedule,
+        settings: settingsQuery.data,
+        setSuggestions,
+        setAcceptedIds,
+        toast,
+      }),
     [eventSchedule, settingsQuery.data],
   );
 

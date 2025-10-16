@@ -12,6 +12,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast';
 
 type ViewMode = 'day' | 'week' | 'month';
 type Task = RouterOutputs['task']['list'][number];
@@ -124,7 +125,10 @@ export default function CalendarPage() {
   const focusStartMutate = React.useMemo(() => focusStart.mutate, [focusStart]);
   const focusStopMutate = React.useMemo(() => focusStop.mutate, [focusStop]);
   const schedule = api.event.schedule.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      if (result?.googleSyncWarning) {
+        toast.info('Event saved locally, but Google Calendar sync failed.');
+      }
       try {
         await utils.event.listRange.invalidate();
         await utils.task.list.invalidate();

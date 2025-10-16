@@ -72,6 +72,7 @@ export const eventRouter = router({
       }
 
       let googleEventId: string | undefined;
+      let googleSyncWarning = false;
       const user = await db.user.findUnique({
         where: { id: userId },
         select: { googleSyncEnabled: true },
@@ -98,15 +99,23 @@ export const eventRouter = router({
               },
             });
             googleEventId = res.data.id || undefined;
-          } catch {
-            throw new TRPCError({ code: 'BAD_GATEWAY', message: 'Failed to sync with Google Calendar' });
+          } catch (error) {
+            console.error('Failed to sync with Google Calendar', error);
+            googleSyncWarning = true;
           }
         }
       }
 
-      return db.event.create({
-        data: { taskId: input.taskId, startAt: slot.startAt, endAt: slot.endAt, googleEventId },
+      const event = await db.event.create({
+        data: {
+          taskId: input.taskId,
+          startAt: slot.startAt,
+          endAt: slot.endAt,
+          ...(googleEventId ? { googleEventId } : {}),
+        },
       });
+
+      return { event, googleSyncWarning };
     }),
   move: protectedProcedure
     .input(

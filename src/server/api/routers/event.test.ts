@@ -134,16 +134,17 @@ describe('eventRouter.schedule', () => {
 
   it('pushes events to Google when sync enabled', async () => {
     hoisted.findMany.mockResolvedValueOnce([]);
-    hoisted.create.mockResolvedValueOnce({
+    const created = {
       startAt: new Date('2023-01-01T08:00:00.000Z'),
       endAt: new Date('2023-01-01T09:00:00.000Z'),
       googleEventId: 'gid1',
-    });
+    };
+    hoisted.create.mockResolvedValueOnce(created as any);
     hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true });
     hoisted.accountFindFirst.mockResolvedValueOnce({ access_token: 'a', refresh_token: 'r' });
     googleMock.insert.mockResolvedValueOnce({ data: { id: 'gid1' } });
 
-    await eventRouter.createCaller(ctx).schedule({
+    const result = await eventRouter.createCaller(ctx).schedule({
       taskId: 't1',
       startAt: new Date('2023-01-01T06:00:00.000Z'),
       durationMinutes: 60,
@@ -158,6 +159,44 @@ describe('eventRouter.schedule', () => {
         googleEventId: 'gid1',
       },
     });
+    expect(result.googleSyncWarning).toBe(false);
+    expect(result.event).toEqual(created);
+  });
+
+  it('continues when Google sync fails', async () => {
+    hoisted.findMany.mockResolvedValueOnce([]);
+    const created = {
+      id: 'local-event',
+      startAt: new Date('2023-01-01T08:00:00.000Z'),
+      endAt: new Date('2023-01-01T09:00:00.000Z'),
+      googleEventId: null,
+    };
+    hoisted.create.mockResolvedValueOnce(created as any);
+    hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true });
+    hoisted.accountFindFirst.mockResolvedValueOnce({ access_token: 'a', refresh_token: 'r' });
+    const syncError = new Error('google down');
+    googleMock.insert.mockRejectedValueOnce(syncError);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await eventRouter.createCaller(ctx).schedule({
+      taskId: 't1',
+      startAt: new Date('2023-01-01T06:00:00.000Z'),
+      durationMinutes: 60,
+    });
+
+    expect(googleMock.insert).toHaveBeenCalled();
+    expect(result.googleSyncWarning).toBe(true);
+    expect(result.event).toEqual(created);
+    expect(hoisted.create).toHaveBeenCalledWith({
+      data: {
+        taskId: 't1',
+        startAt: new Date('2023-01-01T08:00:00.000Z'),
+        endAt: new Date('2023-01-01T09:00:00.000Z'),
+      },
+    });
+    expect(errorSpy).toHaveBeenCalledWith('Failed to sync with Google Calendar', syncError);
+
+    errorSpy.mockRestore();
   });
 
   it('rejects events that span across midnight', async () => {
