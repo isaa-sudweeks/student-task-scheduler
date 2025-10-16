@@ -5,8 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { TaskList } from "@/components/task-list";
 import { TaskModal } from "@/components/task-modal";
 import { Button } from "@/components/ui/button";
-import { clsx } from "clsx";
+import { TaskFilterTabs } from "@/components/task-filter-tabs";
 import type { TaskStatus } from "@/components/status-dropdown";
+import type { TaskPriority } from "@prisma/client";
 // Controls moved to global nav bar: AccountMenu, ThemeToggle, ShortcutsPopover
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
@@ -40,14 +41,18 @@ function HomePageContent() {
     statusParam === "CANCELLED"
       ? (statusParam as TaskStatus)
       : null;
-  const subject = subjectParam;
-  const [priority] = useState<Priority | null>(null);
-  const [courseId] = useState<string | null>(null);
-  const [projectId] = useState<string | null>(null);
+  const [subject, setSubject] = useState<string | null>(subjectParam);
+  const [priority, setPriority] = useState<Priority | null>(null);
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [taskCount, setTaskCount] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSubject(subjectParam);
+  }, [subjectParam]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -91,42 +96,43 @@ function HomePageContent() {
     <>
       <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur dark:bg-slate-950/80">
         <div className="mx-auto max-w-4xl px-3.5 py-2.5 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center gap-3 md:flex-row md:gap-4">
+          <div className="flex flex-wrap items-start gap-3 md:flex-nowrap md:items-center md:gap-4">
             <div className="flex items-center gap-2 md:mr-auto">
               <h1 className="text-2xl font-semibold">Tasks</h1>
               <span className="text-sm text-muted-foreground">· {taskCount}</span>
             </div>
-            <div className="order-last flex items-center gap-2 md:order-none md:ml-auto">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.currentTarget.value)}
-                placeholder="Search tasks..."
-                className="h-9 w-40 md:w-80 rounded-md border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
-                ref={searchRef}
-              />
-              <Button className="h-9" onClick={() => setShowModal(true)}>
-                + New Task
-              </Button>
-            </div>
-            <div className="flex justify-center md:mx-auto">
-              <div className="inline-flex rounded-lg border bg-white p-1">
-                {[
-                  { key: "all", label: "All" },
-                  { key: "today", label: "Today" },
-                  { key: "overdue", label: "Overdue" },
-                ].map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setFilter(tab.key as any)}
-                    className={clsx(
-                      "rounded-md px-3 py-1 text-sm",
-                      filter === tab.key && "bg-neutral-100"
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center md:justify-end">
+              <div className="flex w-full flex-wrap items-center justify-center gap-2 md:w-auto md:justify-end">
+                <TaskFilterTabs
+                  value={filter}
+                  onChange={setFilter}
+                  subject={subject}
+                  onSubjectChange={setSubject}
+                  priority={priority as TaskPriority | null}
+                  onPriorityChange={(value) =>
+                    setPriority((value ?? null) as Priority | null)
+                  }
+                  courseId={courseId}
+                  onCourseChange={setCourseId}
+                  projectId={projectId}
+                  onProjectChange={setProjectId}
+                />
+              </div>
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-center md:w-auto md:justify-end">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.currentTarget.value)}
+                  placeholder="Search tasks..."
+                  className="h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground sm:w-64 md:w-80"
+                  ref={searchRef}
+                />
+                <Button
+                  className="h-9 w-full sm:w-auto"
+                  onClick={() => setShowModal(true)}
+                >
+                  + New Task
+                </Button>
               </div>
             </div>
           </div>
