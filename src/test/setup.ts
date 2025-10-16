@@ -126,6 +126,7 @@ vi.mock('@prisma/client', () => {
     TaskPriority: { LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH' },
     TaskStatus: { TODO: 'TODO', IN_PROGRESS: 'IN_PROGRESS', DONE: 'DONE', CANCELLED: 'CANCELLED' },
     RecurrenceType: { NONE: 'NONE', DAILY: 'DAILY', WEEKLY: 'WEEKLY', MONTHLY: 'MONTHLY' },
+    LlmProvider: { NONE: 'NONE', OPENAI: 'OPENAI', LM_STUDIO: 'LM_STUDIO' },
     Prisma: {},
   } as any;
 });

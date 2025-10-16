@@ -56,6 +56,7 @@ export function TaskModal({
   const { data: courses = [] } = api.course.list.useQuery({ page: 1, limit: 100 });
   const [projectId, setProjectId] = useState<string | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
+  const [effortMinutes, setEffortMinutes] = useState<string>('');
   const [subtaskTitle, setSubtaskTitle] = useState('');
 
   const { data: subtasks = [] } = api.task.list.useQuery(
@@ -78,6 +79,7 @@ export function TaskModal({
       );
       setProjectId((task as any).projectId ?? null);
       setCourseId((task as any).courseId ?? null);
+      setEffortMinutes(task.effortMinutes != null ? String(task.effortMinutes) : '');
       const hasDue = task.dueAt != null;
       setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
       setDueEnabled(hasDue);
@@ -92,6 +94,7 @@ export function TaskModal({
       setRecurrenceUntil('');
       setProjectId(initialProjectId ?? null);
       setCourseId(initialCourseId ?? null);
+      setEffortMinutes('');
       if (initialDueAt) {
         setDueEnabled(true);
         setDue(formatLocalDateTime(new Date(initialDueAt)));
@@ -167,6 +170,13 @@ export function TaskModal({
             recurrenceUntil ? new Date(`${recurrenceUntil}T23:59:59`) : undefined;
           const recurrenceCountVal =
             recurrenceCount === '' ? undefined : recurrenceCount;
+          const trimmedEffort = effortMinutes.trim();
+          const hasEffort = trimmedEffort.length > 0;
+          const parsedEffort = hasEffort ? Number.parseInt(trimmedEffort, 10) : undefined;
+          const createEffort =
+            typeof parsedEffort === 'number' && !Number.isNaN(parsedEffort) ? parsedEffort : undefined;
+          const updateEffort =
+            typeof parsedEffort === 'number' && !Number.isNaN(parsedEffort) ? parsedEffort : null;
           if (isEdit && task) {
             update.mutate({
               id: task.id,
@@ -181,6 +191,7 @@ export function TaskModal({
               recurrenceUntil: recurrenceUntilDate,
               projectId,
               courseId,
+              effortMinutes: updateEffort,
             });
           } else {
             if (!title.trim()) {
@@ -199,6 +210,7 @@ export function TaskModal({
               recurrenceUntil: recurrenceUntilDate,
               projectId: projectId || undefined,
               courseId: courseId || undefined,
+              ...(typeof createEffort !== 'undefined' ? { effortMinutes: createEffort } : {}),
             });
           }
         }}
@@ -246,6 +258,8 @@ export function TaskModal({
           onPriorityChange={setPriority}
           notes={notes}
           onNotesChange={setNotes}
+          effortMinutes={effortMinutes}
+          onEffortMinutesChange={setEffortMinutes}
           onDraftDueChange={onDraftDueChange}
           recurrenceControls={
             <RecurrenceControls

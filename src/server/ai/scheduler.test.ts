@@ -54,6 +54,28 @@ describe('generateScheduleSuggestions', () => {
     expect(suggestions[0].startAt.getTime()).toBeLessThan(suggestions[1].startAt.getTime());
   });
 
+  it('respects task-specific effort durations when scheduling', async () => {
+    const tasks = [
+      makeTask({
+        id: 'focus-task',
+        dueAt: new Date('2024-01-02T14:00:00Z'),
+        effortMinutes: 30,
+      }),
+    ];
+
+    const suggestions = await generateScheduleSuggestions({
+      tasks,
+      user: baseUser,
+      existingEvents: [],
+      now: new Date('2024-01-01T08:00:00Z'),
+    });
+
+    expect(suggestions).toHaveLength(1);
+    const durationMinutes =
+      (suggestions[0].endAt.getTime() - suggestions[0].startAt.getTime()) / 60_000;
+    expect(durationMinutes).toBe(30);
+  });
+
   it('uses model suggestions when provider returns valid data', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
