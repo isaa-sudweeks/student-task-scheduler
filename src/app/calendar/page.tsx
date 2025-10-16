@@ -68,6 +68,8 @@ export default function CalendarPage() {
   const [eventsLocal, setEventsLocal] = useState<Event[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<ScheduleSuggestion[]>([]);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [selectedBacklogIds, setSelectedBacklogIds] = useState<Set<string>>(new Set());
+  const hasInitializedBacklogSelection = useRef(false);
 
   // Keep local, optimistic copy of events for immediate UI updates
   useEffect(() => {
@@ -78,6 +80,40 @@ export default function CalendarPage() {
     const scheduledTaskIds = new Set(eventsData.map((e) => e.taskId));
     return tasksData.filter((t) => !scheduledTaskIds.has(t.id));
   }, [tasksData, eventsData]);
+
+  useEffect(() => {
+    setSelectedBacklogIds((prev) => {
+      const available = new Set(backlog.map((task) => task.id));
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (available.has(id)) {
+          next.add(id);
+        }
+      }
+      if (!hasInitializedBacklogSelection.current) {
+        if (available.size === 0) {
+          return next;
+        }
+        hasInitializedBacklogSelection.current = true;
+        return new Set(available);
+      }
+      if (available.size === 0) {
+        hasInitializedBacklogSelection.current = false;
+        return next;
+      }
+      return next;
+    });
+  }, [backlog]);
+
+  useEffect(() => {
+    if (
+      selectedBacklogIds.size > 0 &&
+      aiError &&
+      aiError.toLowerCase().includes('select at least one backlog task')
+    ) {
+      setAiError(null);
+    }
+  }, [selectedBacklogIds, aiError]);
 
   const suggestionFormatter = useMemo(
     () => new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }),
@@ -148,15 +184,33 @@ export default function CalendarPage() {
   );
 
   const requestSuggestions = React.useCallback(async () => {
+    if (selectedBacklogIds.size === 0) {
+      setAiError('Select at least one backlog task before generating suggestions.');
+      return;
+    }
     try {
       setAiError(null);
-      const result = await suggestionMutation.mutateAsync();
+      const result = await suggestionMutation.mutateAsync({
+        taskIds: Array.from(selectedBacklogIds),
+      });
       setAiSuggestions(result.suggestions);
     } catch (err) {
       console.error(err);
       setAiError(err instanceof Error ? err.message : 'Failed to generate suggestions');
     }
-  }, [suggestionMutation]);
+  }, [selectedBacklogIds, suggestionMutation]);
+
+  const toggleBacklogSelection = React.useCallback((taskId: string) => {
+    setSelectedBacklogIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  }, []);
 
   const acceptSuggestion = React.useCallback(
     (suggestion: ScheduleSuggestion) => {
@@ -446,8 +500,17 @@ export default function CalendarPage() {
           {backlog.map((t) => {
             const labelId = `backlog-task-${t.id}-label`;
             const descId = t.notes ? `backlog-task-${t.id}-desc` : undefined;
+            const checkboxId = `backlog-select-${t.id}`;
             return (
               <li key={t.id} className="flex items-center gap-2">
+                <input
+                  id={checkboxId}
+                  type="checkbox"
+                  aria-label={`Select ${t.title}`}
+                  checked={selectedBacklogIds.has(t.id)}
+                  onChange={() => toggleBacklogSelection(t.id)}
+                  className="h-4 w-4 rounded border border-black/30 text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-white/20 dark:bg-slate-900"
+                />
                 <DraggableTask
                   id={t.id}
                   title={t.title}
@@ -469,6 +532,12 @@ export default function CalendarPage() {
           })}
         </ul>
 
+        {backlog.length > 0 && selectedBacklogIds.size === 0 && (
+          <p className="text-xs text-red-600 dark:text-red-400">
+            Select at least one backlog task to enable AI suggestions.
+          </p>
+        )}
+
         <div className="mt-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold">AI suggestions</h3>
@@ -476,7 +545,7 @@ export default function CalendarPage() {
               type="button"
               className="rounded border px-2 py-1 text-xs hover:bg-black/5 dark:hover:bg-white/10"
               onClick={() => void requestSuggestions()}
-              disabled={suggestionMutation.isPending}
+              disabled={suggestionMutation.isPending || selectedBacklogIds.size === 0}
             >
               {suggestionMutation.isPending ? 'Generating…' : 'Generate'}
             </button>
@@ -487,11 +556,15 @@ export default function CalendarPage() {
             </p>
           )}
           {aiSuggestions.length > 0 ? (
-            <ul className="space-y-2">
+            <ul className="space-y-2" data-testid="ai-suggestions-list">
               {aiSuggestions.map((s) => {
                 const task = tasksData.find((t) => t.id === s.taskId);
                 return (
-                  <li key={s.taskId} className="rounded border border-dashed px-3 py-2 text-xs dark:border-white/20">
+                  <li
+                    key={s.taskId}
+                    className="rounded border border-dashed px-3 py-2 text-xs dark:border-white/20"
+                    data-testid="ai-suggestion-item"
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <div className="text-sm font-medium">{task?.title ?? s.taskId}</div>

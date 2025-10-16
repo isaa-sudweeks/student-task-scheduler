@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import superjson from 'superjson';
 
 test.describe('calendar', () => {
   test('switches between day, week, and month', async ({ page }) => {
@@ -137,5 +138,67 @@ test.describe('calendar', () => {
     // Toggle off with Space and ensure focus page closes
     await page.keyboard.press(' ');
     await expect(page.getByText(new RegExp(`Focusing: ${title}`))).toHaveCount(0);
+  });
+
+  test('only requests AI suggestions for selected backlog tasks', async ({ page }) => {
+    const firstTitle = `AI Backlog ${Date.now()}`;
+    const secondTitle = `${firstTitle} B`;
+
+    await page.goto('/');
+    const input = page.getByPlaceholder('Add a task…');
+    await input.fill(firstTitle);
+    await page.keyboard.press('Enter');
+    await input.fill(secondTitle);
+    await page.keyboard.press('Enter');
+
+    await page.goto('/calendar');
+
+    const firstCheckbox = page.getByRole('checkbox', { name: new RegExp(`Select ${firstTitle}`, 'i') });
+    const secondCheckbox = page.getByRole('checkbox', { name: new RegExp(`Select ${secondTitle}`, 'i') });
+    await expect(firstCheckbox).toBeChecked();
+    await expect(secondCheckbox).toBeChecked();
+
+    await secondCheckbox.click();
+    await expect(firstCheckbox).toBeChecked();
+    await expect(secondCheckbox).not.toBeChecked();
+
+    const firstTaskButton = page.locator('[data-task-id]', { hasText: firstTitle }).first();
+    const secondTaskButton = page.locator('[data-task-id]', { hasText: secondTitle }).first();
+    const firstId = await firstTaskButton.getAttribute('data-task-id');
+    const secondId = await secondTaskButton.getAttribute('data-task-id');
+    if (!firstId || !secondId) throw new Error('Missing task identifiers');
+
+    await page.route('**/api/trpc/task.scheduleSuggestions?batch=1', async (route) => {
+      const postData = route.request().postData();
+      if (!postData) throw new Error('Missing body');
+      const parsed = JSON.parse(postData);
+      const firstKey = Object.keys(parsed)[0];
+      const input = parsed[firstKey]?.json ?? {};
+      expect(input.taskIds).toEqual([firstId]);
+      expect(input.taskIds).not.toContain(secondId);
+
+      const payload = superjson.stringify({
+        suggestions: [
+          {
+            taskId: firstId,
+            startAt: new Date('2099-04-01T10:00:00Z'),
+            endAt: new Date('2099-04-01T11:00:00Z'),
+            origin: 'fallback',
+          },
+        ],
+      });
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ result: { data: JSON.parse(payload) } }),
+      });
+    });
+
+    await page.getByRole('button', { name: /generate/i }).click();
+    const suggestionItems = page.locator('[data-testid="ai-suggestion-item"]');
+    await expect(suggestionItems).toHaveCount(1);
+    await expect(suggestionItems.first()).toContainText(firstTitle);
+    await expect(suggestionItems.first()).not.toContainText(secondTitle);
   });
 });

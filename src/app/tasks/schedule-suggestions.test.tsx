@@ -44,7 +44,7 @@ describe('ScheduleSuggestionsPage', () => {
     invalidateEvents.mockReset();
   });
 
-  it('generates and accepts suggestions', async () => {
+  it('generates and accepts suggestions for the selected tasks', async () => {
     mutateAsync.mockResolvedValueOnce({
       suggestions: [
         {
@@ -59,7 +59,13 @@ describe('ScheduleSuggestionsPage', () => {
 
     render(<ScheduleSuggestionsPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /generate suggestions/i }));
+    const generate = screen.getByRole('button', { name: /generate suggestions/i });
+    expect(generate).toBeEnabled();
+
+    fireEvent.click(generate);
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({ taskIds: ['t1'] }),
+    );
     await screen.findByText(/Task 1/);
 
     fireEvent.click(screen.getByRole('button', { name: /accept/i }));
@@ -67,6 +73,19 @@ describe('ScheduleSuggestionsPage', () => {
     const arg = scheduleMutateAsync.mock.calls[0][0] as any;
     expect(arg.taskId).toBe('t1');
     expect(arg.durationMinutes).toBe(60);
+  });
+
+  it('disables generation when no tasks are selected', () => {
+    render(<ScheduleSuggestionsPage />);
+
+    const checkbox = screen.getByRole('checkbox', { name: /select task 1/i });
+    fireEvent.click(checkbox);
+
+    expect(screen.getByText(/select at least one task/i)).toBeInTheDocument();
+    const generate = screen.getByRole('button', { name: /generate suggestions/i });
+    expect(generate).toBeDisabled();
+    fireEvent.click(generate);
+    expect(mutateAsync).not.toHaveBeenCalled();
   });
 });
 
