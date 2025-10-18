@@ -71,4 +71,20 @@ describe('userRouter.setSettings', () => {
     ).rejects.toThrow(/openai api key/i);
     expect(hoisted.update).not.toHaveBeenCalled();
   });
+
+  it('rejects when the day window end hour is not after the start hour', async () => {
+    await expect(
+      caller.setSettings({
+        timezone: 'UTC',
+        dayWindowStartHour: 18,
+        dayWindowEndHour: 18,
+        defaultDurationMinutes: 30,
+        googleSyncEnabled: true,
+        llmProvider: LlmProvider.NONE,
+        openaiApiKey: null,
+        lmStudioUrl: 'http://localhost:1234',
+      })
+    ).rejects.toThrow(/end hour must be later than the start hour/i);
+    expect(hoisted.update).not.toHaveBeenCalled();
+  });
 });

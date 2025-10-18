@@ -47,6 +47,12 @@ export const userRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       const trimmedApiKey = input.openaiApiKey?.trim() ?? null;
+      if (input.dayWindowEndHour <= input.dayWindowStartHour) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Day window end hour must be later than the start hour.',
+        });
+      }
       if (input.llmProvider === LlmProvider.OPENAI && !trimmedApiKey) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
