@@ -1,13 +1,21 @@
-import { z } from 'zod';
-import { router, protectedProcedure } from '../trpc';
-import { db } from '@/server/db';
+import { TRPCError } from '@trpc/server';
 import type { TaskTimeLog } from '@prisma/client';
+import { z } from 'zod';
+
+import { db } from '@/server/db';
+import { router, protectedProcedure } from '../trpc';
 
 export const focusRouter = router({
   start: protectedProcedure
     .input(z.object({ taskId: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session.user.id;
+      const task = await db.task.findFirst({
+        where: { id: input.taskId, userId },
+      });
+      if (!task) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'UNAUTHORIZED/NOT_FOUND' });
+      }
       // End any existing open log for this user's tasks
       await db.taskTimeLog.updateMany({
         where: { endedAt: null, task: { userId } },
