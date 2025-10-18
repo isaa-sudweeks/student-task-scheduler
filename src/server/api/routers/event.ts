@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { protectedProcedure, router } from '../trpc';
-import { db } from '@/server/db';
-import { findNonOverlappingSlot, Interval } from '@/lib/scheduling';
-import type { Event as EventModel, Prisma } from '@prisma/client';
 import { google } from 'googleapis';
 import type { calendar_v3 } from 'googleapis';
+import type { Event as EventModel, Prisma } from '@prisma/client';
+
+import { findNonOverlappingSlot, Interval } from '@/lib/scheduling';
+import { createTimezoneConverter } from '@/server/ai/timezone';
+import { db } from '@/server/db';
+import { protectedProcedure, router } from '../trpc';
 
 export const eventRouter = router({
   listRange: protectedProcedure
@@ -37,16 +39,27 @@ export const eventRouter = router({
       const userId = ctx.session?.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
 
-      const task = await db.task.findFirst({
-        where: { id: input.taskId, userId },
-        select: { id: true, title: true },
-      });
+      const [task, user] = await Promise.all([
+        db.task.findFirst({
+          where: { id: input.taskId, userId },
+          select: { id: true, title: true },
+        }),
+        db.user.findUnique({
+          where: { id: userId },
+          select: { timezone: true, googleSyncEnabled: true },
+        }),
+      ]);
       if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
 
-      const sameDayStart = new Date(desiredStart);
-      sameDayStart.setHours(0, 0, 0, 0);
-      const sameDayEnd = new Date(desiredStart);
-      sameDayEnd.setHours(23, 59, 59, 999);
+      const timezoneConverter = createTimezoneConverter(user.timezone);
+      const desiredStartLocal = timezoneConverter.toZoned(desiredStart);
+      const sameDayStartLocal = new Date(desiredStartLocal);
+      sameDayStartLocal.setHours(0, 0, 0, 0);
+      const sameDayEndLocal = new Date(desiredStartLocal);
+      sameDayEndLocal.setHours(23, 59, 59, 999);
+      const sameDayStart = timezoneConverter.toUtc(sameDayStartLocal);
+      const sameDayEnd = timezoneConverter.toUtc(sameDayEndLocal);
 
       const existing: EventModel[] = await db.event.findMany({
         where: {
@@ -56,10 +69,12 @@ export const eventRouter = router({
         },
       });
 
-      const intervals: Interval[] = existing.map((e) => ({ startAt: new Date(e.startAt), endAt: new Date(e.endAt) }));
+      const intervals: Interval[] = existing.map((e) =>
+        timezoneConverter.intervalToZoned({ startAt: new Date(e.startAt), endAt: new Date(e.endAt) })
+      );
 
-      const slot = findNonOverlappingSlot({
-        desiredStart,
+      const slotLocal = findNonOverlappingSlot({
+        desiredStart: desiredStartLocal,
         durationMinutes: duration,
         dayWindowStartHour,
         dayWindowEndHour,
@@ -67,17 +82,15 @@ export const eventRouter = router({
         stepMinutes: 15,
       });
 
-      if (!slot) {
+      if (!slotLocal) {
         throw new TRPCError({ code: 'CONFLICT', message: 'No available time slot without overlap' });
       }
 
+      const slot = timezoneConverter.intervalToUtc(slotLocal);
+
       let googleEventId: string | undefined;
       let googleSyncWarning = false;
-      const user = await db.user.findUnique({
-        where: { id: userId },
-        select: { googleSyncEnabled: true },
-      });
-      if (user?.googleSyncEnabled) {
+      if (user.googleSyncEnabled) {
         const account = await db.account.findFirst({
           where: { userId, provider: 'google' },
           select: { access_token: true, refresh_token: true },
@@ -134,13 +147,21 @@ export const eventRouter = router({
 
       const userId = ctx.session?.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
-      const existingEvent = await db.event.findFirst({ where: { id: input.eventId, task: { userId } } });
+      const [existingEvent, user] = await Promise.all([
+        db.event.findFirst({ where: { id: input.eventId, task: { userId } } }),
+        db.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
+      ]);
       if (!existingEvent) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
 
-      const sameDayStart = new Date(input.startAt);
-      sameDayStart.setHours(0, 0, 0, 0);
-      const sameDayEnd = new Date(input.startAt);
-      sameDayEnd.setHours(23, 59, 59, 999);
+      const timezoneConverter = createTimezoneConverter(user.timezone);
+      const requestedStartLocal = timezoneConverter.toZoned(input.startAt);
+      const sameDayStartLocal = new Date(requestedStartLocal);
+      sameDayStartLocal.setHours(0, 0, 0, 0);
+      const sameDayEndLocal = new Date(requestedStartLocal);
+      sameDayEndLocal.setHours(23, 59, 59, 999);
+      const sameDayStart = timezoneConverter.toUtc(sameDayStartLocal);
+      const sameDayEnd = timezoneConverter.toUtc(sameDayEndLocal);
 
       const existing: EventModel[] = await db.event.findMany({
         where: {
@@ -154,18 +175,21 @@ export const eventRouter = router({
       if (overlaps) {
         // Try to reslot forward on same day using the requested duration
         const durationMin = Math.round((input.endAt.getTime() - input.startAt.getTime()) / 60000);
-        const intervals: Interval[] = existing.map((e) => ({ startAt: e.startAt, endAt: e.endAt }));
-        const slot = findNonOverlappingSlot({
-          desiredStart: input.startAt,
+        const intervals: Interval[] = existing.map((e) =>
+          timezoneConverter.intervalToZoned({ startAt: new Date(e.startAt), endAt: new Date(e.endAt) })
+        );
+        const slotLocal = findNonOverlappingSlot({
+          desiredStart: requestedStartLocal,
           durationMinutes: durationMin,
           dayWindowStartHour: input.dayWindowStartHour,
           dayWindowEndHour: input.dayWindowEndHour,
           existing: intervals,
           stepMinutes: 15,
         });
-        if (!slot) {
+        if (!slotLocal) {
           throw new TRPCError({ code: 'CONFLICT', message: 'Cannot move without overlapping any event' });
         }
+        const slot = timezoneConverter.intervalToUtc(slotLocal);
         return db.event.update({ where: { id: input.eventId }, data: { startAt: slot.startAt, endAt: slot.endAt } });
       }
 
