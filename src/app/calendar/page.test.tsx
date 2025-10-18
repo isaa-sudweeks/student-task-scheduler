@@ -345,7 +345,7 @@ describe('CalendarPage', () => {
     expect(screen.queryByTestId('calendar-grid')).toBeNull();
   });
 
-  it('generates and accepts AI suggestions', async () => {
+  it('generates and accepts AI suggestions for the selected backlog tasks', async () => {
     const suggestion = {
       taskId: 't1',
       startAt: new Date('2099-01-02T09:00:00Z'),
@@ -355,7 +355,12 @@ describe('CalendarPage', () => {
     scheduleSuggestionsMutateAsync.mockResolvedValueOnce({ suggestions: [suggestion] });
     render(<CalendarPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /generate/i }));
+    const generate = screen.getByRole('button', { name: /generate/i });
+    expect(generate).toBeEnabled();
+    fireEvent.click(generate);
+    await waitFor(() =>
+      expect(scheduleSuggestionsMutateAsync).toHaveBeenCalledWith({ taskIds: ['t1'] }),
+    );
     await screen.findByText(/fallback/i);
     fireEvent.click(screen.getAllByRole('button', { name: /accept/i })[0]);
 
@@ -364,6 +369,22 @@ describe('CalendarPage', () => {
     expect(arg.taskId).toBe('t1');
     expect(arg.startAt).toBeInstanceOf(Date);
     expect(arg.durationMinutes).toBe(30);
+  });
+
+  it('disables AI suggestion generation without a backlog selection', () => {
+    render(<CalendarPage />);
+
+    const checkbox = screen.getByRole('checkbox', { name: /select unscheduled task/i });
+    fireEvent.click(checkbox);
+
+    expect(
+      screen.getByText(/select at least one backlog task to enable ai suggestions/i),
+    ).toBeInTheDocument();
+
+    const generate = screen.getByRole('button', { name: /generate/i });
+    expect(generate).toBeDisabled();
+    fireEvent.click(generate);
+    expect(scheduleSuggestionsMutateAsync).not.toHaveBeenCalled();
   });
   it('navigates between weeks and resets to today', () => {
     vi.useFakeTimers();
