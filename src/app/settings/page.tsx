@@ -71,6 +71,11 @@ function SettingsContent() {
   const [lmStudioUrl, setLmStudioUrl] = React.useState(
     settings?.lmStudioUrl ?? "http://localhost:1234"
   );
+  const dayWindowError = React.useMemo(() => {
+    return endHour <= startHour
+      ? "Day end hour must be later than the start hour."
+      : null;
+  }, [endHour, startHour]);
   React.useEffect(() => {
     if (!settings) return;
     setTz(settings.timezone);
@@ -144,6 +149,11 @@ function SettingsContent() {
             onChange={(e) => setEndHour(Number(e.target.value))}
             className="w-20 rounded border px-2 py-1"
           />
+          {dayWindowError && (
+            <p className="text-sm text-red-600" role="alert">
+              {dayWindowError}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor="default-duration" className="w-48">
@@ -234,6 +244,10 @@ function SettingsContent() {
             e.preventDefault();
             const trimmedApiKey = openaiApiKey.trim();
             const trimmedLmStudio = lmStudioUrl.trim();
+            if (dayWindowError) {
+              toast.error(dayWindowError);
+              return;
+            }
             if (llmProvider === "OPENAI" && !trimmedApiKey) {
               toast.error("Enter your OpenAI API key to use the OpenAI provider.");
               return;
@@ -288,7 +302,7 @@ function SettingsContent() {
           <button
             type="submit"
             className="px-3 py-1 border rounded"
-            disabled={saveSettings.isPending}
+            disabled={saveSettings.isPending || Boolean(dayWindowError)}
           >
             Save
           </button>
