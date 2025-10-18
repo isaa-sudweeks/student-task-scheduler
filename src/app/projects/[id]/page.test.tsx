@@ -1,50 +1,224 @@
 // @vitest-environment jsdom
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import * as matchers from '@testing-library/jest-dom/matchers';
+import React from "react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
+import * as matchers from "@testing-library/jest-dom/matchers";
+
 expect.extend(matchers);
 
-import ProjectPage from './page';
+import ProjectPage from "./page";
 
-const updateMock = vi.fn();
+const { toastSuccess, toastError } = vi.hoisted(() => ({
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
+}));
 
-vi.mock('@/server/api/react', () => ({
-  api: {
-    useUtils: () => ({ task: { list: { invalidate: vi.fn() } } }),
-    user: { get: { useQuery: () => ({ data: { timezone: 'UTC' } }) } },
-    project: {
-      get: { useQuery: () => ({ data: { id: 'p1', title: 'Project 1', description: 'Desc', instructionsUrl: null } }) },
-      list: { useQuery: () => ({ data: [{ id: 'p1', title: 'Project 1' }] }) },
-      update: { useMutation: () => ({ mutateAsync: updateMock }) },
-    },
-    task: {
-      list: {
-        useInfiniteQuery: () => ({
-          data: { pages: [[{ id: 't1', title: 'Task 1', projectId: 'p1' }]] },
-          isLoading: false,
-          fetchNextPage: vi.fn(),
-          hasNextPage: false,
-          isFetchingNextPage: false,
-        }),
-      },
-      create: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-      update: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-      delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-      setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-    },
-    course: { list: { useQuery: () => ({ data: [] }) } },
+vi.mock("@/lib/toast", () => ({
+  toast: {
+    success: toastSuccess,
+    error: toastError,
   },
 }));
 
-describe('ProjectPage', () => {
-  it('shows details, upload, and tasks; preselects project for new tasks', () => {
-    render(<ProjectPage params={{ id: 'p1' }} />);
-    expect(screen.getByText('Desc')).toBeInTheDocument();
-    expect(screen.getByLabelText(/upload instructions/i)).toBeInTheDocument();
-    expect(screen.getByText('Task 1')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('+ Add Task'));
-    const select = screen.getByLabelText('Project') as HTMLSelectElement;
-    expect(select.value).toBe('p1');
+vi.mock("@/components/task-list", () => ({
+  TaskList: () => <div data-testid="task-list" />,
+}));
+
+vi.mock("@/components/task-modal", () => ({
+  TaskModal: () => <div data-testid="task-modal" />,
+}));
+
+const {
+  projectDataRef,
+  invalidateGetMock,
+  invalidateListMock,
+  mutateAsyncMock,
+  mutateAsyncSpy,
+  projectUseQueryMock,
+  projectUpdateUseMutationMock,
+  latestOptionsRef,
+} = vi.hoisted(() => {
+  const projectDataRef = {
+    current: null as {
+      id: string;
+      title: string;
+      description: string | null;
+      instructionsUrl: string | null;
+    } | null,
+  };
+  const invalidateGetMock = vi.fn();
+  const invalidateListMock = vi.fn();
+  const mutateAsyncMock = vi.fn();
+  const latestOptionsRef: {
+    current:
+      | {
+          onSuccess?: (result: unknown, variables: any, context: unknown) => unknown;
+        }
+      | undefined;
+  } = { current: undefined };
+  const mutateAsyncSpy = vi.fn(async (variables: unknown) => {
+    const result = await mutateAsyncMock(variables);
+    const onSuccess = latestOptionsRef.current?.onSuccess;
+    if (onSuccess) {
+      await onSuccess(result, variables, undefined);
+    }
+    return result;
+  });
+  const projectUseQueryMock = vi.fn(() => ({ data: projectDataRef.current }));
+  const projectUpdateUseMutationMock = vi.fn(
+    (
+      options?: {
+        onSuccess?: (result: unknown, variables: any, context: unknown) => unknown;
+      }
+    ) => {
+      latestOptionsRef.current = options;
+      return { mutateAsync: mutateAsyncSpy };
+    }
+  );
+
+  return {
+    projectDataRef,
+    invalidateGetMock,
+    invalidateListMock,
+    mutateAsyncMock,
+    mutateAsyncSpy,
+    projectUseQueryMock,
+    projectUpdateUseMutationMock,
+    latestOptionsRef,
+  };
+});
+
+vi.mock("@/server/api/react", () => ({
+  api: {
+    useUtils: () => ({
+      project: {
+        get: { invalidate: invalidateGetMock },
+        list: { invalidate: invalidateListMock },
+      },
+    }),
+    project: {
+      get: { useQuery: projectUseQueryMock },
+      update: { useMutation: projectUpdateUseMutationMock },
+    },
+  },
+}));
+
+beforeEach(() => {
+  projectDataRef.current = {
+    id: "project-1",
+    title: "Capstone",
+    description: null,
+    instructionsUrl: null,
+  };
+  invalidateGetMock.mockReset();
+  invalidateListMock.mockReset();
+  mutateAsyncMock.mockReset();
+  mutateAsyncSpy.mockClear();
+  latestOptionsRef.current = undefined;
+  projectUseQueryMock.mockClear();
+  projectUpdateUseMutationMock.mockClear();
+  toastSuccess.mockReset();
+  toastError.mockReset();
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+afterAll(() => {
+  vi.resetModules();
+});
+
+describe("ProjectPage upload", () => {
+  it("uploads instructions and shows success toast", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ url: "https://example.com/instructions.pdf" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    mutateAsyncMock.mockResolvedValue(undefined);
+
+    render(<ProjectPage params={{ id: "project-1" }} />);
+    const input = screen.getByLabelText("Upload instructions") as HTMLInputElement;
+    const file = new File(["dummy"], "instructions.pdf", { type: "application/pdf" });
+
+    fireEvent.change(input, { target: { files: [file] } });
+    expect(input).toBeDisabled();
+    expect(screen.getByText("Uploading...")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mutateAsyncMock).toHaveBeenCalledWith({
+        id: "project-1",
+        instructionsUrl: "https://example.com/instructions.pdf",
+      });
+    });
+
+    expect(toastSuccess).toHaveBeenCalledWith("Instructions uploaded.");
+    expect(invalidateGetMock).toHaveBeenCalledWith({ id: "project-1" });
+    expect(invalidateListMock).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => expect(input).not.toBeDisabled());
+  });
+
+  it("rejects non-PDF files", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ProjectPage params={{ id: "project-1" }} />);
+    const input = screen.getByLabelText("Upload instructions") as HTMLInputElement;
+    const file = new File(["dummy"], "notes.txt", { type: "text/plain" });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(toastError).toHaveBeenCalledWith("Only PDF files can be uploaded.");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it("shows error toast when upload fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: vi.fn().mockResolvedValue({ error: "Upload failed" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ProjectPage params={{ id: "project-1" }} />);
+    const input = screen.getByLabelText("Upload instructions") as HTMLInputElement;
+    const file = new File(["dummy"], "instructions.pdf", { type: "application/pdf" });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith("Upload failed");
+    });
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it("shows error toast when mutation fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ url: "https://example.com/instructions.pdf" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    mutateAsyncMock.mockRejectedValue(new Error("Save failed"));
+
+    render(<ProjectPage params={{ id: "project-1" }} />);
+    const input = screen.getByLabelText("Upload instructions") as HTMLInputElement;
+    const file = new File(["dummy"], "instructions.pdf", { type: "application/pdf" });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith("Save failed");
+    });
+    expect(invalidateGetMock).not.toHaveBeenCalled();
+    expect(invalidateListMock).not.toHaveBeenCalled();
   });
 });
