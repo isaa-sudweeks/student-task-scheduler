@@ -44,6 +44,20 @@ Notes:
 - No postinstall hook (avoids prisma generate before schema copy in Docker).
 - TypeScript 5.7.x + tRPC 11.4.4 + ESLint 8.57 aligned with Next 14.2.x.
 
+## Authentication & Protected Routes
+
+The scheduler requires users to sign in before accessing application pages. The following routes (and their nested paths) are protected by middleware and redirect unauthenticated requests to the sign-in flow:
+
+- `/` (dashboard)
+- `/calendar`
+- `/courses`
+- `/projects`
+- `/settings`
+- `/stats`
+- `/tasks`
+
+Add new authenticated sections to `src/middleware.ts` so they inherit the same protection.
+
 ## Environment Variables
 
 Configure these variables in `.env`:
