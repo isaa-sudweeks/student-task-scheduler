@@ -5,8 +5,6 @@ describe('env validation', () => {
     'DATABASE_URL',
     'NEXTAUTH_SECRET',
     'NEXTAUTH_URL',
-    'GITHUB_ID',
-    'GITHUB_SECRET',
   ])('throws when %s is missing', async (key) => {
     const original = process.env[key];
     delete process.env[key];
@@ -35,6 +33,26 @@ describe('env validation', () => {
     vi.resetModules();
     await expect(import('./env')).rejects.toThrow();
     process.env.NEXTAUTH_SECRET = original;
+    vi.resetModules();
+  });
+
+  it('allows importing without GitHub credentials', async () => {
+    const originalId = process.env.GITHUB_ID;
+    const originalSecret = process.env.GITHUB_SECRET;
+    delete process.env.GITHUB_ID;
+    delete process.env.GITHUB_SECRET;
+    vi.resetModules();
+    await expect(import('./env')).resolves.toBeDefined();
+    if (originalId === undefined) {
+      delete process.env.GITHUB_ID;
+    } else {
+      process.env.GITHUB_ID = originalId;
+    }
+    if (originalSecret === undefined) {
+      delete process.env.GITHUB_SECRET;
+    } else {
+      process.env.GITHUB_SECRET = originalSecret;
+    }
     vi.resetModules();
   });
 });
