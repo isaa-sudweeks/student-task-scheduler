@@ -86,7 +86,7 @@ describe('eventRouter.schedule', () => {
     hoisted.taskFindFirst.mockReset();
     hoisted.taskFindFirst.mockResolvedValue({ id: 't1', title: 'Task' });
     hoisted.userFindUnique.mockReset();
-    hoisted.userFindUnique.mockResolvedValue({ googleSyncEnabled: false });
+    hoisted.userFindUnique.mockResolvedValue({ googleSyncEnabled: false, timezone: null });
     hoisted.accountFindFirst.mockReset();
     googleMock.insert.mockClear();
   });
@@ -132,6 +132,31 @@ describe('eventRouter.schedule', () => {
     expect(googleMock.insert).not.toHaveBeenCalled();
   });
 
+  it('honours day window for non-UTC timezone', async () => {
+    hoisted.findMany.mockResolvedValueOnce([]);
+    hoisted.create.mockResolvedValueOnce({
+      startAt: new Date('2023-01-01T13:00:00.000Z'),
+      endAt: new Date('2023-01-01T14:00:00.000Z'),
+    });
+    hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: false, timezone: 'America/New_York' });
+
+    await eventRouter.createCaller(ctx).schedule({
+      taskId: 't1',
+      startAt: new Date('2023-01-01T11:00:00.000Z'),
+      durationMinutes: 60,
+      dayWindowStartHour: 8,
+      dayWindowEndHour: 20,
+    });
+
+    expect(hoisted.create).toHaveBeenCalledWith({
+      data: {
+        taskId: 't1',
+        startAt: new Date('2023-01-01T13:00:00.000Z'),
+        endAt: new Date('2023-01-01T14:00:00.000Z'),
+      },
+    });
+  });
+
   it('pushes events to Google when sync enabled', async () => {
     hoisted.findMany.mockResolvedValueOnce([]);
     const created = {
@@ -140,7 +165,7 @@ describe('eventRouter.schedule', () => {
       googleEventId: 'gid1',
     };
     hoisted.create.mockResolvedValueOnce(created as any);
-    hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true });
+    hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true, timezone: 'UTC' });
     hoisted.accountFindFirst.mockResolvedValueOnce({ access_token: 'a', refresh_token: 'r' });
     googleMock.insert.mockResolvedValueOnce({ data: { id: 'gid1' } });
 
@@ -172,7 +197,7 @@ describe('eventRouter.schedule', () => {
       googleEventId: null,
     };
     hoisted.create.mockResolvedValueOnce(created as any);
-    hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true });
+    hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true, timezone: 'UTC' });
     hoisted.accountFindFirst.mockResolvedValueOnce({ access_token: 'a', refresh_token: 'r' });
     const syncError = new Error('google down');
     googleMock.insert.mockRejectedValueOnce(syncError);
@@ -280,7 +305,7 @@ describe('eventRouter.syncGoogle', () => {
   });
 
   it('syncs events with Google calendar without duplication', async () => {
-    hoisted.userFindUnique.mockResolvedValue({ googleSyncEnabled: true });
+    hoisted.userFindUnique.mockResolvedValue({ googleSyncEnabled: true, timezone: 'UTC' });
     hoisted.accountFindFirst.mockResolvedValue({ access_token: 'a', refresh_token: 'r' });
     hoisted.eventFindFirst.mockResolvedValueOnce({ id: 'e1', taskId: 't1', task: { id: 't1', title: 'Old' } });
     hoisted.eventFindFirst.mockResolvedValueOnce(null);
@@ -347,6 +372,8 @@ describe('eventRouter.move', () => {
     hoisted.update.mockReset();
     hoisted.eventFindFirst.mockReset();
     hoisted.eventFindFirst.mockResolvedValue({ id: 'e1' });
+    hoisted.userFindUnique.mockReset();
+    hoisted.userFindUnique.mockResolvedValue({ timezone: null });
   });
 
   it('reschedules to the next available slot when overlaps occur', async () => {
