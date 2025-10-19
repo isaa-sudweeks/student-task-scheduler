@@ -11,8 +11,14 @@ let mutateSpy = vi.fn();
 
 vi.mock('@/server/api/react', () => ({
   api: {
-    useUtils: () => ({ task: { list: { invalidate: vi.fn() } } }),
+    useUtils: () => ({
+      task: {
+        list: { invalidate: vi.fn() },
+        listReminders: { invalidate: vi.fn() },
+      },
+    }),
     task: {
+      subjectOptions: { useQuery: () => ({ data: [], isLoading: false }) },
       list: { useQuery: () => ({ data: [], isLoading: false }) },
       create: {
         useMutation: () => ({
@@ -32,6 +38,8 @@ vi.mock('@/server/api/react', () => ({
       delete: { useMutation: () => ({ mutate: vi.fn() }) },
       updateTitle: { useMutation: () => ({ mutate: vi.fn() }) },
       setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      listReminders: { useQuery: () => ({ data: [], isLoading: false }) },
+      replaceReminders: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false, error: undefined }) },
     },
     project: { list: { useQuery: () => ({ data: [] }) } },
     course: { list: { useQuery: () => ({ data: [] }) } },

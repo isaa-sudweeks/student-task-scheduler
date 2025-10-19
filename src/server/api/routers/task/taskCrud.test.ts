@@ -5,8 +5,10 @@ const mocks = vi.hoisted(() => ({
   taskCreate: vi.fn(),
   taskUpdate: vi.fn(),
   taskFindFirst: vi.fn(),
+  taskFindMany: vi.fn(),
   invalidateTaskListCache: vi.fn(),
   buildListCacheKey: vi.fn(() => 'cache-key'),
+  buildSubjectOptionsCacheKey: vi.fn((userId: string) => `subject-key:${userId}`),
   validateRecurrence: vi.fn(),
 }));
 
@@ -24,7 +26,7 @@ vi.mock('@/server/db', () => ({
       create: mocks.taskCreate,
       update: mocks.taskUpdate,
       findFirst: mocks.taskFindFirst,
-      findMany: vi.fn(),
+      findMany: mocks.taskFindMany,
       delete: vi.fn(),
     },
     reminder: {
@@ -40,6 +42,7 @@ vi.mock('@/server/db', () => ({
 vi.mock('./utils', () => ({
   buildListCacheKey: mocks.buildListCacheKey,
   invalidateTaskListCache: mocks.invalidateTaskListCache,
+  buildSubjectOptionsCacheKey: mocks.buildSubjectOptionsCacheKey,
   requireUserId: (ctx: any) => {
     const id = ctx.session?.user?.id;
     if (!id) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -52,8 +55,9 @@ vi.mock('./index', () => ({
   validateTaskRelationships: vi.fn(),
 }));
 
+import { cache } from '@/server/cache';
 import { taskCrudRouter } from './taskCrud';
-import { invalidateTaskListCache } from './utils';
+import { buildSubjectOptionsCacheKey, invalidateTaskListCache } from './utils';
 import * as taskModule from './index';
 
 const caller = () => taskCrudRouter.createCaller({ session: { user: { id: 'user-1' } } } as any);
@@ -62,15 +66,60 @@ const validateTaskRelationships = vi.mocked(taskModule.validateTaskRelationships
 const taskCreate = mocks.taskCreate;
 const taskUpdate = mocks.taskUpdate;
 const taskFindFirst = mocks.taskFindFirst;
+const taskFindMany = mocks.taskFindMany;
 const invalidateTaskListCacheMock = vi.mocked(invalidateTaskListCache);
+const cacheGet = vi.mocked(cache.get);
+const cacheSet = vi.mocked(cache.set);
+const buildSubjectOptionsCacheKeyMock = mocks.buildSubjectOptionsCacheKey;
 
 describe('taskCrudRouter', () => {
   beforeEach(() => {
     taskCreate.mockReset();
     taskUpdate.mockReset();
     taskFindFirst.mockReset();
+    taskFindMany.mockReset();
     invalidateTaskListCacheMock.mockReset();
     validateTaskRelationships.mockReset();
+    cacheGet.mockReset();
+    cacheSet.mockReset();
+    buildSubjectOptionsCacheKeyMock.mockReset();
+    buildSubjectOptionsCacheKeyMock.mockImplementation((userId: string) => `subject-key:${userId}`);
+  });
+
+  describe('subjectOptions', () => {
+    it('returns unique sorted subjects and caches the result', async () => {
+      cacheGet.mockResolvedValue(null);
+      taskFindMany.mockResolvedValue([
+        { subject: 'Math' },
+        { subject: 'English' },
+        { subject: 'Math' },
+        { subject: null },
+      ] as any);
+
+      const result = await caller().subjectOptions();
+
+      expect(taskFindMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', subject: { not: null } },
+        select: { subject: true },
+        distinct: ['subject'],
+        orderBy: { subject: 'asc' },
+      });
+      expect(result).toEqual(['English', 'Math']);
+      expect(cacheSet).toHaveBeenCalledWith(
+        buildSubjectOptionsCacheKey('user-1'),
+        ['English', 'Math'],
+        300,
+      );
+    });
+
+    it('uses the cached value when available', async () => {
+      cacheGet.mockResolvedValue(['Cached Subject']);
+
+      const result = await caller().subjectOptions();
+
+      expect(result).toEqual(['Cached Subject']);
+      expect(taskFindMany).not.toHaveBeenCalled();
+    });
   });
 
   describe('create', () => {

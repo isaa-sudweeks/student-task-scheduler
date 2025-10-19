@@ -36,6 +36,9 @@ vi.mock('recharts', () => {
 vi.mock('@/server/api/react', () => ({
   api: {
     task: {
+      subjectOptions: {
+        useQuery: vi.fn(() => ({ data: ['Math', 'Science'], isLoading: false })),
+      },
       list: {
         useQuery: vi.fn(),
       },

@@ -50,6 +50,7 @@ vi.mock('@/server/api/react', () => {
         user: { getSettings: { invalidate: vi.fn() } },
       }),
       task: {
+        subjectOptions: { useQuery: () => ({ data: [], isLoading: false, error: undefined }) },
         list: { useQuery: () => ({ data: [], isLoading: false, error: undefined }) },
         create: { useMutation: fn },
         update: { useMutation: fn },

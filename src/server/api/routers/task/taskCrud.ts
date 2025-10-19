@@ -8,6 +8,7 @@ import { db } from '@/server/db';
 import { cache } from '@/server/cache';
 import {
   buildListCacheKey,
+  buildSubjectOptionsCacheKey,
   invalidateTaskListCache,
   requireUserId,
   validateRecurrence,
@@ -15,6 +16,31 @@ import {
 import { computeTodayBounds } from './timezone';
 
 export const taskCrudRouter = router({
+  subjectOptions: protectedProcedure.query(async ({ ctx }) => {
+    const userId = requireUserId(ctx);
+    const cacheKey = buildSubjectOptionsCacheKey(userId);
+    const cached = await cache.get<string[]>(cacheKey);
+    if (cached) return cached;
+
+    const subjects = await db.task.findMany({
+      where: { userId, subject: { not: null } },
+      select: { subject: true },
+      distinct: ['subject'],
+      orderBy: { subject: 'asc' },
+    });
+
+    const uniqueSubjects = Array.from(
+      new Set(
+        subjects
+          .map((record) => record.subject)
+          .filter((subject): subject is string => Boolean(subject)),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+
+    await cache.set(cacheKey, uniqueSubjects, 300);
+
+    return uniqueSubjects;
+  }),
   list: protectedProcedure
     .input(
       z

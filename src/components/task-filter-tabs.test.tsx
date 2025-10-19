@@ -9,6 +9,13 @@ import { TaskPriority } from '@prisma/client';
 vi.mock('@/server/api/react', () => ({
   api: {
     task: {
+      subjectOptions: {
+        useQuery: () => ({
+          data: ['math', 'science'],
+          isLoading: false,
+          error: undefined,
+        }),
+      },
       list: {
         useQuery: () => ({
           data: [

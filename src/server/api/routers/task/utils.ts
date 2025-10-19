@@ -4,6 +4,7 @@ import { cache } from '@/server/cache';
 import { db } from '@/server/db';
 
 export const TASK_LIST_CACHE_PREFIX = 'task:list:';
+export const TASK_SUBJECT_OPTIONS_CACHE_PREFIX = 'task:subjects:';
 
 const isPlainObject = (val: unknown): val is Record<string, unknown> =>
   Object.prototype.toString.call(val) === '[object Object]';
@@ -27,8 +28,13 @@ export const serializeSorted = (val: unknown): string => {
 export const buildListCacheKey = (input: unknown, userId: string | null) =>
   `${TASK_LIST_CACHE_PREFIX}${userId ?? 'null'}:${serializeSorted(input ?? {})}`;
 
-export const invalidateTaskListCache = (userId: string) =>
+export const buildSubjectOptionsCacheKey = (userId: string) =>
+  `${TASK_SUBJECT_OPTIONS_CACHE_PREFIX}${userId}`;
+
+export const invalidateTaskListCache = (userId: string) => {
   cache.deleteByPrefix(`${TASK_LIST_CACHE_PREFIX}${userId}:`);
+  cache.deleteByPrefix(buildSubjectOptionsCacheKey(userId));
+};
 
 export const requireUserId = (ctx: { session?: { user?: { id?: string } | null } | null }) => {
   const id = ctx.session?.user?.id;

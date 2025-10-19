@@ -39,19 +39,11 @@ export function TaskFilterTabs({
   ];
 
   const { data: session } = useSession();
-  const subjectsQuery = api.task.list.useQuery(
-    { filter: 'all' },
-    { enabled: !!session }
-  );
+  const { data: subjects = [] } = api.task.subjectOptions.useQuery(undefined, {
+    enabled: !!session,
+  });
   const { data: courses = [] } = api.course.list.useQuery({ page: 1, limit: 100 });
   const { data: projects = [] } = api.project.list.useQuery();
-  const subjects = React.useMemo(() => {
-    const set = new Set<string>();
-    subjectsQuery.data?.forEach((t: any) => {
-      if (t.subject) set.add(t.subject as string);
-    });
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [subjectsQuery.data]);
 
   return (
     <div
