@@ -10,8 +10,6 @@ export const envSchema = z.object({
       'NEXTAUTH_SECRET must include uppercase, lowercase, number, and special character',
     ),
   NEXTAUTH_URL: z.string().url(),
-  GITHUB_ID: z.string(),
-  GITHUB_SECRET: z.string(),
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
   REDIS_URL: z.string().url().optional(),
