@@ -17,8 +17,22 @@ const hoisted = vi.hoisted(() => {
 });
 
 const googleMock = vi.hoisted(() => {
+  const authInstances: Array<{
+    setCredentials: ReturnType<typeof vi.fn>;
+    refreshAccessToken: ReturnType<typeof vi.fn>;
+  }> = [];
+  const createAuthInstance = () => {
+    const instance = {
+      setCredentials: vi.fn(),
+      refreshAccessToken: vi.fn().mockResolvedValue({ credentials: {} }),
+    };
+    authInstances.push(instance);
+    return instance;
+  };
   return {
-    OAuth2: vi.fn().mockReturnValue({ setCredentials: vi.fn() }),
+    OAuth2: vi.fn(() => createAuthInstance()),
+    authInstances,
+    createAuthInstance,
     list: vi.fn(),
     insert: vi.fn().mockResolvedValue({}),
   };
@@ -89,6 +103,8 @@ describe('eventRouter.schedule', () => {
     hoisted.userFindUnique.mockResolvedValue({ googleSyncEnabled: false, timezone: null });
     hoisted.accountFindFirst.mockReset();
     googleMock.insert.mockClear();
+    googleMock.OAuth2.mockClear();
+    googleMock.authInstances.splice(0, googleMock.authInstances.length);
   });
 
   it('rejects overlapping times', async () => {
@@ -166,7 +182,7 @@ describe('eventRouter.schedule', () => {
     };
     hoisted.create.mockResolvedValueOnce(created as any);
     hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true, timezone: 'UTC' });
-    hoisted.accountFindFirst.mockResolvedValueOnce({ access_token: 'a', refresh_token: 'r' });
+    hoisted.accountFindFirst.mockResolvedValueOnce({ access_token: 'a', refresh_token: 'r', expires_at: null });
     googleMock.insert.mockResolvedValueOnce({ data: { id: 'gid1' } });
 
     const result = await eventRouter.createCaller(ctx).schedule({
@@ -198,7 +214,7 @@ describe('eventRouter.schedule', () => {
     };
     hoisted.create.mockResolvedValueOnce(created as any);
     hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true, timezone: 'UTC' });
-    hoisted.accountFindFirst.mockResolvedValueOnce({ access_token: 'a', refresh_token: 'r' });
+    hoisted.accountFindFirst.mockResolvedValueOnce({ access_token: 'a', refresh_token: 'r', expires_at: null });
     const syncError = new Error('google down');
     googleMock.insert.mockRejectedValueOnce(syncError);
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -220,6 +236,68 @@ describe('eventRouter.schedule', () => {
       },
     });
     expect(errorSpy).toHaveBeenCalledWith('Failed to sync with Google Calendar', syncError);
+
+    errorSpy.mockRestore();
+  });
+
+  it('refreshes expired Google tokens before syncing', async () => {
+    hoisted.findMany.mockResolvedValueOnce([]);
+    const created = {
+      startAt: new Date('2023-01-01T08:00:00.000Z'),
+      endAt: new Date('2023-01-01T09:00:00.000Z'),
+      googleEventId: 'gid1',
+    };
+    hoisted.create.mockResolvedValueOnce(created as any);
+    hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true, timezone: 'UTC' });
+    hoisted.accountFindFirst.mockResolvedValueOnce({
+      access_token: 'a',
+      refresh_token: 'r',
+      expires_at: Math.floor((Date.now() - 60_000) / 1000),
+    });
+    googleMock.insert.mockResolvedValueOnce({ data: { id: 'gid1' } });
+
+    const result = await eventRouter.createCaller(ctx).schedule({
+      taskId: 't1',
+      startAt: new Date('2023-01-01T06:00:00.000Z'),
+      durationMinutes: 60,
+    });
+
+    expect(googleMock.insert).toHaveBeenCalled();
+    expect(result.googleSyncWarning).toBe(false);
+    const authInstance = googleMock.authInstances.at(-1);
+    expect(authInstance?.refreshAccessToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces refresh failures when Google token refresh fails', async () => {
+    hoisted.findMany.mockResolvedValueOnce([]);
+    const created = {
+      startAt: new Date('2023-01-01T08:00:00.000Z'),
+      endAt: new Date('2023-01-01T09:00:00.000Z'),
+    };
+    hoisted.create.mockResolvedValueOnce(created as any);
+    hoisted.userFindUnique.mockResolvedValueOnce({ googleSyncEnabled: true, timezone: 'UTC' });
+    hoisted.accountFindFirst.mockResolvedValueOnce({
+      access_token: 'a',
+      refresh_token: 'r',
+      expires_at: Math.floor((Date.now() - 60_000) / 1000),
+    });
+    const refreshError = new Error('refresh failed');
+    googleMock.OAuth2.mockImplementationOnce(() => {
+      const instance = googleMock.createAuthInstance();
+      instance.refreshAccessToken.mockRejectedValueOnce(refreshError);
+      return instance;
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await eventRouter.createCaller(ctx).schedule({
+      taskId: 't1',
+      startAt: new Date('2023-01-01T06:00:00.000Z'),
+      durationMinutes: 60,
+    });
+
+    expect(googleMock.insert).not.toHaveBeenCalled();
+    expect(result.googleSyncWarning).toBe(true);
+    expect(errorSpy).toHaveBeenCalledWith('Failed to refresh Google access token', refreshError);
 
     errorSpy.mockRestore();
   });
@@ -293,6 +371,8 @@ describe('eventRouter.syncGoogle', () => {
   beforeEach(() => {
     googleMock.list.mockClear();
     googleMock.insert.mockClear();
+    googleMock.OAuth2.mockClear();
+    googleMock.authInstances.splice(0, googleMock.authInstances.length);
     hoisted.taskCreate.mockReset();
     hoisted.create.mockReset();
     hoisted.findMany.mockReset();
@@ -306,7 +386,7 @@ describe('eventRouter.syncGoogle', () => {
 
   it('syncs events with Google calendar without duplication', async () => {
     hoisted.userFindUnique.mockResolvedValue({ googleSyncEnabled: true, timezone: 'UTC' });
-    hoisted.accountFindFirst.mockResolvedValue({ access_token: 'a', refresh_token: 'r' });
+    hoisted.accountFindFirst.mockResolvedValue({ access_token: 'a', refresh_token: 'r', expires_at: null });
     hoisted.eventFindFirst.mockResolvedValueOnce({ id: 'e1', taskId: 't1', task: { id: 't1', title: 'Old' } });
     hoisted.eventFindFirst.mockResolvedValueOnce(null);
     hoisted.taskCreate.mockResolvedValueOnce({ id: 't2' });

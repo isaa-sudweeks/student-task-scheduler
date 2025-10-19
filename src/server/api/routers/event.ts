@@ -7,7 +7,44 @@ import type { Event as EventModel, Prisma } from '@prisma/client';
 import { findNonOverlappingSlot, Interval } from '@/lib/scheduling';
 import { createTimezoneConverter } from '@/server/ai/timezone';
 import { db } from '@/server/db';
+import { env } from '@/env';
 import { protectedProcedure, router } from '../trpc';
+
+type GoogleAccountCredentials = {
+  access_token: string | null;
+  refresh_token: string | null;
+  expires_at: number | null;
+};
+
+const createGoogleAuthClient = (account: GoogleAccountCredentials) => {
+  const auth = new google.auth.OAuth2(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET);
+  let credentialsState: {
+    access_token?: string;
+    refresh_token?: string;
+    expiry_date?: number;
+  } = {
+    access_token: account.access_token ?? undefined,
+    refresh_token: account.refresh_token ?? undefined,
+    expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
+  };
+  auth.setCredentials(credentialsState);
+
+  const refreshIfExpired = async () => {
+    if (!credentialsState.expiry_date || credentialsState.expiry_date > Date.now()) return;
+    if (!credentialsState.refresh_token) {
+      throw new Error('Google access token expired and refresh token is missing');
+    }
+    const { credentials } = await auth.refreshAccessToken();
+    credentialsState = {
+      access_token: credentials.access_token ?? credentialsState.access_token,
+      refresh_token: credentials.refresh_token ?? credentialsState.refresh_token,
+      expiry_date: credentials.expiry_date ?? credentialsState.expiry_date,
+    };
+    auth.setCredentials(credentialsState);
+  };
+
+  return { auth, refreshIfExpired };
+};
 
 export const eventRouter = router({
   listRange: protectedProcedure
@@ -93,28 +130,39 @@ export const eventRouter = router({
       if (user.googleSyncEnabled) {
         const account = await db.account.findFirst({
           where: { userId, provider: 'google' },
-          select: { access_token: true, refresh_token: true },
+          select: { access_token: true, refresh_token: true, expires_at: true },
         });
         if (account?.access_token) {
-          const auth = new google.auth.OAuth2();
-          auth.setCredentials({
-            access_token: account.access_token || undefined,
-            refresh_token: account.refresh_token || undefined,
+          const { auth, refreshIfExpired } = createGoogleAuthClient({
+            access_token: account.access_token,
+            refresh_token: account.refresh_token ?? null,
+            expires_at: account.expires_at ?? null,
           });
-          const calendar = google.calendar({ version: 'v3', auth });
+          let canSync = true;
           try {
-            const res = await calendar.events.insert({
-              calendarId: 'primary',
-              requestBody: {
-                summary: task.title,
-                start: { dateTime: slot.startAt.toISOString() },
-                end: { dateTime: slot.endAt.toISOString() },
-              },
-            });
-            googleEventId = res.data.id || undefined;
+            await refreshIfExpired();
           } catch (error) {
-            console.error('Failed to sync with Google Calendar', error);
+            console.error('Failed to refresh Google access token', error);
             googleSyncWarning = true;
+            canSync = false;
+          }
+
+          if (canSync) {
+            const calendar = google.calendar({ version: 'v3', auth });
+            try {
+              const res = await calendar.events.insert({
+                calendarId: 'primary',
+                requestBody: {
+                  summary: task.title,
+                  start: { dateTime: slot.startAt.toISOString() },
+                  end: { dateTime: slot.endAt.toISOString() },
+                },
+              });
+              googleEventId = res.data.id || undefined;
+            } catch (error) {
+              console.error('Failed to sync with Google Calendar', error);
+              googleSyncWarning = true;
+            }
           }
         }
       }
@@ -244,17 +292,28 @@ export const eventRouter = router({
 
     const account = await db.account.findFirst({
       where: { userId, provider: 'google' },
-      select: { access_token: true, refresh_token: true },
+      select: { access_token: true, refresh_token: true, expires_at: true },
     });
     if (!account?.access_token) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Missing Google auth' });
     }
 
-    const auth = new google.auth.OAuth2();
-    auth.setCredentials({
-      access_token: account.access_token || undefined,
-      refresh_token: account.refresh_token || undefined,
+    const { auth, refreshIfExpired } = createGoogleAuthClient({
+      access_token: account.access_token,
+      refresh_token: account.refresh_token ?? null,
+      expires_at: account.expires_at ?? null,
     });
+
+    try {
+      await refreshIfExpired();
+    } catch (error) {
+      console.error('Failed to refresh Google access token', error);
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Unable to refresh Google access token. Please reconnect Google sync.',
+      });
+    }
+
     const calendar = google.calendar({ version: 'v3', auth });
 
     const items: calendar_v3.Schema$Event[] = [];
