@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { TRPCError } from '@trpc/server';
 
 const hoisted = vi.hoisted(() => ({
   updateMany: vi.fn(),
@@ -6,10 +7,14 @@ const hoisted = vi.hoisted(() => ({
   findFirst: vi.fn(),
   update: vi.fn(),
   findMany: vi.fn(),
+  taskFindFirst: vi.fn(),
 }));
 
 vi.mock('@/server/db', () => ({
   db: {
+    task: {
+      findFirst: hoisted.taskFindFirst,
+    },
     taskTimeLog: {
       updateMany: hoisted.updateMany,
       create: hoisted.create,
@@ -24,11 +29,13 @@ import { focusRouter } from './focus';
 
 describe('focusRouter.start', () => {
   beforeEach(() => {
+    hoisted.taskFindFirst.mockReset();
     hoisted.updateMany.mockReset();
     hoisted.create.mockReset();
   });
 
   it('closes open logs and creates a new one', async () => {
+    hoisted.taskFindFirst.mockResolvedValueOnce({ id: 't1', userId: 'u1' });
     hoisted.updateMany.mockResolvedValueOnce({ count: 1 });
     const fakeLog = {
       id: '1',
@@ -42,6 +49,9 @@ describe('focusRouter.start', () => {
     const ctx = { session: { user: { id: 'u1' } } };
     const result = await focusRouter.createCaller(ctx).start({ taskId: 't1' });
 
+    expect(hoisted.taskFindFirst).toHaveBeenCalledWith({
+      where: { id: 't1', userId: 'u1' },
+    });
     expect(hoisted.updateMany).toHaveBeenCalledWith({
       where: { endedAt: null, task: { userId: 'u1' } },
       data: { endedAt: expect.any(Date) },
@@ -50,6 +60,17 @@ describe('focusRouter.start', () => {
       data: { taskId: 't1', userId: 'u1', startedAt: expect.any(Date), endedAt: null },
     });
     expect(result).toEqual(fakeLog);
+  });
+
+  it('rejects when task does not belong to user', async () => {
+    hoisted.taskFindFirst.mockResolvedValueOnce(null);
+
+    const ctx = { session: { user: { id: 'u1' } } };
+    const call = focusRouter.createCaller(ctx).start({ taskId: 't1' });
+
+    await expect(call).rejects.toThrowError(TRPCError);
+    expect(hoisted.updateMany).not.toHaveBeenCalled();
+    expect(hoisted.create).not.toHaveBeenCalled();
   });
 });
 
