@@ -207,8 +207,31 @@ export function TaskModal({
 
     const parsedDue = parseLocalDateTime(due);
     const dueAt = dueEnabled && parsedDue ? parsedDue : null;
-    const recurrenceUntilDate = recurrenceUntil ? new Date(`${recurrenceUntil}T23:59:59`) : undefined;
-    const recurrenceCountVal = recurrenceCount === '' ? undefined : recurrenceCount;
+    const isRecurring = recurrenceType !== 'NONE';
+    const recurrenceUntilDate =
+      isRecurring && recurrenceUntil ? new Date(`${recurrenceUntil}T23:59:59`) : undefined;
+    const recurrenceCountVal =
+      isRecurring && recurrenceCount !== '' ? recurrenceCount : undefined;
+    const recurringFields = isRecurring
+      ? {
+          recurrenceType,
+          recurrenceInterval,
+          ...(recurrenceCountVal !== undefined ? { recurrenceCount: recurrenceCountVal } : {}),
+          ...(recurrenceUntilDate ? { recurrenceUntil: recurrenceUntilDate } : {}),
+        }
+      : {};
+    const recurringUpdateFields = isRecurring
+      ? {
+          recurrenceType,
+          recurrenceInterval,
+          ...(recurrenceCountVal !== undefined
+            ? { recurrenceCount: recurrenceCountVal }
+            : { recurrenceCount: null }),
+          ...(recurrenceUntilDate
+            ? { recurrenceUntil: recurrenceUntilDate }
+            : { recurrenceUntil: null }),
+        }
+      : { recurrenceType: 'NONE' as const, recurrenceCount: null, recurrenceUntil: null };
     const trimmedEffort = effortMinutes.trim();
     const hasEffort = trimmedEffort.length > 0;
     const parsedEffort = hasEffort ? Number.parseInt(trimmedEffort, 10) : undefined;
@@ -231,10 +254,7 @@ export function TaskModal({
         notes: notes.trim() || null,
         dueAt,
         priority,
-        recurrenceType,
-        recurrenceInterval,
-        recurrenceCount: recurrenceCountVal,
-        recurrenceUntil: recurrenceUntilDate,
+        ...recurringUpdateFields,
         projectId,
         courseId,
         effortMinutes: updateEffort,
@@ -246,10 +266,7 @@ export function TaskModal({
         notes: notes.trim() || undefined,
         dueAt,
         priority,
-        recurrenceType,
-        recurrenceInterval,
-        recurrenceCount: recurrenceCountVal,
-        recurrenceUntil: recurrenceUntilDate,
+        ...recurringFields,
         projectId: projectId || undefined,
         courseId: courseId || undefined,
         ...(typeof createEffort !== "undefined" ? { effortMinutes: createEffort } : {}),
