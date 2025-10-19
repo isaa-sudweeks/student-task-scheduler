@@ -68,12 +68,16 @@ const setSettingsMock = vi.fn();
 vi.mock('@/server/api/react', () => ({
     api: {
       useUtils: () => ({
-        task: { list: { invalidate: vi.fn() } },
+        task: {
+          list: { invalidate: vi.fn() },
+          listReminders: { invalidate: vi.fn() },
+        },
         event: { listRange: { invalidate: vi.fn() } },
         focus: { status: { invalidate: vi.fn() } },
         user: { getSettings: { invalidate: vi.fn() } },
       }),
       task: {
+        subjectOptions: { useQuery: () => ({ data: [], isLoading: false }) },
         list: {
         useQuery: () => ({
           ...tasksQueryMock,
@@ -97,6 +101,8 @@ vi.mock('@/server/api/react', () => ({
             error: scheduleSuggestionsError,
           }),
         },
+        listReminders: { useQuery: () => ({ data: [], isLoading: false }) },
+        replaceReminders: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false, error: undefined }) },
       },
       event: {
         listRange: {

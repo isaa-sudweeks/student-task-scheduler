@@ -8,8 +8,14 @@ import TasksPage from './page';
 
 vi.mock('@/server/api/react', () => ({
   api: {
-    useUtils: () => ({ task: { list: { invalidate: vi.fn() } } }),
+    useUtils: () => ({
+      task: {
+        list: { invalidate: vi.fn() },
+        listReminders: { invalidate: vi.fn() },
+      },
+    }),
     task: {
+      subjectOptions: { useQuery: () => ({ data: [], isLoading: false }) },
       list: {
         useInfiniteQuery: () => ({
           data: { pages: [[]] },
@@ -42,6 +48,8 @@ vi.mock('@/server/api/react', () => ({
       reorder: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       bulkUpdate: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       bulkDelete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
+      listReminders: { useQuery: () => ({ data: [], isLoading: false }) },
+      replaceReminders: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false, error: undefined }) },
     },
     project: { list: { useQuery: () => ({ data: [] }) } },
     course: { list: { useQuery: () => ({ data: [] }) } },

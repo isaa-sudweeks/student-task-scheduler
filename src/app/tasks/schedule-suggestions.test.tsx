@@ -15,12 +15,18 @@ const invalidateEvents = vi.fn();
 vi.mock('@/server/api/react', () => ({
   api: {
     useUtils: () => ({
-      task: { list: { invalidate: invalidateTasks } },
+      task: {
+        list: { invalidate: invalidateTasks },
+        listReminders: { invalidate: vi.fn() },
+      },
       event: { listRange: { invalidate: invalidateEvents } },
     }),
     task: {
+      subjectOptions: { useQuery: () => ({ data: [], isLoading: false }) },
       list: { useQuery: () => ({ data: [{ id: 't1', title: 'Task 1', dueAt: null }], isLoading: false }) },
       scheduleSuggestions: { useMutation: () => ({ mutateAsync, isPending: false, error: null }) },
+      listReminders: { useQuery: () => ({ data: [], isLoading: false }) },
+      replaceReminders: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false, error: undefined }) },
     },
     event: {
       schedule: { useMutation: () => ({ mutateAsync: scheduleMutateAsync, isPending: false }) },

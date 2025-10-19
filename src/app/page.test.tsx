@@ -54,8 +54,16 @@ const projectListMock = vi.fn().mockReturnValue({ data: [] });
 
 vi.mock('@/server/api/react', () => ({
   api: {
-    useUtils: () => ({ task: { list: { invalidate: () => {} } } }),
+    useUtils: () => ({
+      task: {
+        list: { invalidate: () => {} },
+        listReminders: { invalidate: () => {} },
+      },
+    }),
     task: {
+      subjectOptions: {
+        useQuery: () => ({ data: [], isLoading: false, error: undefined }),
+      },
       list: {
         useInfiniteQuery: () => ({
           data: { pages: [[]] },
@@ -75,6 +83,8 @@ vi.mock('@/server/api/react', () => ({
       reorder: { useMutation: () => ({ mutate: () => {}, isPending: false, error: undefined }) },
       bulkUpdate: { useMutation: () => ({ mutate: () => {}, isPending: false, error: undefined }) },
       bulkDelete: { useMutation: () => ({ mutate: () => {}, isPending: false, error: undefined }) },
+      listReminders: { useQuery: () => ({ data: [], isLoading: false, error: undefined }) },
+      replaceReminders: { useMutation: () => ({ mutateAsync: () => Promise.resolve(), isPending: false, error: undefined }) },
     },
     project: { list: { useQuery: (...args: any[]) => projectListMock(...args) } },
     course: { list: { useQuery: (...args: any[]) => courseListMock(...args) } },
