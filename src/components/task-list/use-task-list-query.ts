@@ -70,7 +70,16 @@ export function useTaskListQuery({
   const [taskDataSnapshot, setTaskDataSnapshot] = useState<Task[]>();
   const prevFilterRef = useRef(filter);
   useEffect(() => {
-    if (flatTasks.length === 0) return;
+    if (flatTasks.length === 0) {
+      prevFilterRef.current = filter;
+      setTaskDataSnapshot((prev) => {
+        if (prev && prev.length === 0) {
+          return prev;
+        }
+        return [];
+      });
+      return;
+    }
     if (taskDataSnapshot === undefined || prevFilterRef.current !== filter) {
       setTaskDataSnapshot(flatTasks);
       prevFilterRef.current = filter;

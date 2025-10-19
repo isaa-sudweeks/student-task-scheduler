@@ -1,12 +1,19 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { act } from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 import { TaskList } from './task-list';
+import { useTaskListQuery } from './task-list/use-task-list-query';
 
 const useInfiniteQueryMock = vi.fn();
+
+beforeEach(() => {
+  useInfiniteQueryMock.mockReset();
+});
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: {} }) }));
 
 vi.mock('@/server/api/react', () => ({
@@ -22,6 +29,12 @@ vi.mock('@/server/api/react', () => ({
       list: {
         useInfiniteQuery: (...args: any[]) => useInfiniteQueryMock(...args),
         useQuery: () => ({ data: [], isLoading: false, error: undefined }),
+      },
+      listReminders: {
+        useQuery: () => ({ data: [], isLoading: false, error: undefined }),
+      },
+      replaceReminders: {
+        useMutation: () => ({ mutateAsync: vi.fn(), isPending: false, error: undefined }),
       },
       create: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       update: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
@@ -134,6 +147,55 @@ describe('TaskList', () => {
       />
     );
     expect(screen.getByText('Create your first task')).toBeInTheDocument();
+  });
+
+  it('shows empty state after deleting the final task', async () => {
+    const queryResult = {
+      isLoading: false,
+      error: undefined,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    };
+    let pages = [[{ id: '1', title: 'Alpha', dueAt: null, status: 'TODO' }]];
+    useInfiniteQueryMock.mockImplementation(() => ({
+      data: { pages },
+      ...queryResult,
+    }));
+
+    function Harness() {
+      const { taskData } = useTaskListQuery({
+        filter: 'all',
+        subject: null,
+        status: null,
+        priority: null,
+        courseId: null,
+        projectId: null,
+      });
+      if (taskData.length === 0) {
+        return <span>Create your first task</span>;
+      }
+      return (
+        <ul>
+          {taskData.map((task) => (
+            <li key={task.id}>{task.title}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    const { rerender } = render(<Harness />);
+
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+
+    await act(async () => {
+      pages = [[]];
+      rerender(<Harness />);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Create your first task')).toBeInTheDocument();
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
   });
 
   it.skip('moves selection with j key', () => {
