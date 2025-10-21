@@ -128,8 +128,8 @@ vi.mock('@prisma/client', () => {
   return {
     TaskPriority: { LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH' },
     TaskStatus: { TODO: 'TODO', IN_PROGRESS: 'IN_PROGRESS', DONE: 'DONE', CANCELLED: 'CANCELLED' },
-    LlmProvider: { NONE: 'NONE', OPENAI: 'OPENAI', LM_STUDIO: 'LM_STUDIO' },
     RecurrenceType: { NONE: 'NONE', DAILY: 'DAILY', WEEKLY: 'WEEKLY', MONTHLY: 'MONTHLY' },
+    ReminderChannel: { EMAIL: 'EMAIL', PUSH: 'PUSH', SMS: 'SMS' },
     LlmProvider: { NONE: 'NONE', OPENAI: 'OPENAI', LM_STUDIO: 'LM_STUDIO' },
     Prisma: {},
   } as any;

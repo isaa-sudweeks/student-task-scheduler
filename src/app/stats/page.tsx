@@ -138,7 +138,9 @@ export default function StatsPage() {
     [isDark]
   );
 
-  if (error) throw error;
+  if (error) {
+    return <main>Failed to load stats</main>;
+  }
   if (isLoading) return <main>Loading...</main>;
 
   const total = tasks.length;
@@ -178,26 +180,25 @@ export default function StatsPage() {
     exportStatsToCSV({ tasks, statusData, subjectData, timeByTask });
   };
 
-  return (
-    <ErrorBoundary fallback={<main>Failed to load stats</main>}>
-      <main className="space-y-6 text-neutral-900 dark:text-neutral-100">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-semibold">Task Statistics</h1>
-          <div className="flex items-center gap-3">
-            <TaskFilterTabs
-              value={filter}
-              onChange={setFilter}
-              subject={subject}
-              onSubjectChange={setSubject}
-            />
-            <Button onClick={handleExport}>Export CSV</Button>
-          </div>
-        </header>
+  const pageContent = (
+    <main className="space-y-6 text-neutral-900 dark:text-neutral-100">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-semibold">Task Statistics</h1>
+        <div className="flex items-center gap-3">
+          <TaskFilterTabs
+            value={filter}
+            onChange={setFilter}
+            subject={subject}
+            onSubjectChange={setSubject}
+          />
+          <Button onClick={handleExport}>Export CSV</Button>
+        </div>
+      </header>
 
-        <section className="flex items-end gap-2">
-          <label className="flex flex-col text-sm">
-            <span>Start</span>
-            <Input
+      <section className="flex items-end gap-2">
+        <label className="flex flex-col text-sm">
+          <span>Start</span>
+          <Input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -435,6 +436,11 @@ export default function StatsPage() {
           </section>
         </div>
       </main>
+  );
+
+  return (
+    <ErrorBoundary fallback={<main>Failed to load stats</main>}>
+      {pageContent}
     </ErrorBoundary>
   );
 }
