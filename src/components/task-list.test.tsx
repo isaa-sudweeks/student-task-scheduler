@@ -42,8 +42,6 @@ vi.mock('@/server/api/react', () => ({
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       setStatus: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
       reorder: { useMutation: () => ({ mutate: vi.fn(), isPending: false, error: undefined }) },
-      listReminders: { useQuery: () => ({ data: [], isLoading: false, error: undefined }) },
-      replaceReminders: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false, error: undefined }) },
     },
     project: { list: { useQuery: () => ({ data: [], isLoading: false, error: undefined }) } },
     course: { list: { useQuery: () => ({ data: [], isLoading: false, error: undefined }) } },

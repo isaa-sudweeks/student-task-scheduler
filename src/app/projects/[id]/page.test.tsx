@@ -7,7 +7,16 @@ import {
   waitFor,
   cleanup,
 } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  afterAll,
+} from "vitest";
 import * as matchers from "@testing-library/jest-dom/matchers";
 
 expect.extend(matchers);
@@ -109,6 +118,12 @@ vi.mock("@/server/api/react", () => ({
   },
 }));
 
+const FIXED_DATE = new Date("2099-01-01T00:00:00Z");
+
+beforeAll(() => {
+  vi.useRealTimers();
+});
+
 beforeEach(() => {
   projectDataRef.current = {
     id: "project-1",
@@ -133,6 +148,8 @@ afterEach(() => {
 });
 
 afterAll(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(FIXED_DATE);
   vi.resetModules();
 });
 
@@ -154,7 +171,7 @@ describe("ProjectPage upload", () => {
     expect(screen.getByText("Uploading...")).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(mutateAsyncMock).toHaveBeenCalledWith({
+      expect(mutateAsyncSpy).toHaveBeenCalledWith({
         id: "project-1",
         instructionsUrl: "https://example.com/instructions.pdf",
       });
@@ -179,7 +196,7 @@ describe("ProjectPage upload", () => {
 
     expect(toastError).toHaveBeenCalledWith("Only PDF files can be uploaded.");
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    expect(mutateAsyncSpy).not.toHaveBeenCalled();
   });
 
   it("shows error toast when upload fails", async () => {
@@ -198,7 +215,7 @@ describe("ProjectPage upload", () => {
     await waitFor(() => {
       expect(toastError).toHaveBeenCalledWith("Upload failed");
     });
-    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    expect(mutateAsyncSpy).not.toHaveBeenCalled();
   });
 
   it("shows error toast when mutation fails", async () => {

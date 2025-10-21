@@ -102,6 +102,11 @@ CI=true npm test
 npm run e2e
 ```
 
+> **Continuous Integration**
+>
+> The Vitest suite runs automatically via GitHub Actions on every push and pull request, so keep the tests green locally before
+> pushing changes.
+
 ## Caching
 
 `taskRouter.list` caches query results for 60 seconds using an in-memory store backed by [`@upstash/redis`](https://github.com/upstash/redis). Any mutation that changes tasks (create, update, delete, reorder, etc.) clears the cache so subsequent `list` calls return fresh data. Configure Redis via `REDIS_URL` and `REDIS_TOKEN` or leave them unset to fall back to a local in-memory cache.
