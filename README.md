@@ -1,6 +1,37 @@
-# Student Task Scheduler (Clean, Docker-friendly)
+# Student Task Scheduler
 
-## Run with Docker
+A Next.js 14 application that helps students orchestrate tasks, projects, and study sessions with calendar-aware automations and AI-assisted planning. The app's mission is to keep learners on track by turning assignments into an actionable schedule.
+
+## Table of Contents
+- [Key Features](#key-features)
+- [Architecture at a Glance](#architecture-at-a-glance)
+- [Quick Start](#quick-start)
+  - [Run with Docker](#run-with-docker)
+  - [Local Development (without Docker)](#local-development-without-docker)
+- [Test-First Development Workflow](#test-first-development-workflow)
+- [Quality Gates & Tooling](#quality-gates--tooling)
+- [Authentication & Protected Routes](#authentication--protected-routes)
+- [Environment Variables](#environment-variables)
+- [Google Authentication & Calendar Sync](#google-authentication--calendar-sync)
+- [AI Scheduling Suggestions](#ai-scheduling-suggestions)
+- [Caching Strategy](#caching-strategy)
+- [Troubleshooting](#troubleshooting)
+
+## Key Features
+- 📅 **Actionable scheduling:** Convert tasks into a prioritized agenda backed by Google Calendar integration.
+- 🤖 **AI assistance:** Generate smart scheduling suggestions or fall back to deterministic heuristics when no LLM is configured.
+- 🔒 **Secure access:** NextAuth-powered authentication protects all student data.
+- 📊 **Insights dashboard:** Light and dark themed statistics surfaces workload trends and completion streaks.
+
+## Architecture at a Glance
+- **Next.js 14** drives the UI with server and client components located in `src/app`.
+- **tRPC 11** powers typed API procedures in `src/server` and shares contracts with the frontend.
+- **Prisma ORM** (schema in `prisma/schema.prisma`) handles data access to PostgreSQL.
+- **Playwright & Vitest** enforce quality through end-to-end and unit tests.
+
+## Quick Start
+
+### Run with Docker
 ```bash
 cp .env.example .env    # optional for local runs
 docker compose build --no-cache
@@ -9,29 +40,18 @@ docker compose exec web npx prisma db push
 # open http://localhost:3000/tasks
 ```
 
-### Docker Dev (Hot Reload)
-For rapid iteration without rebuilds on code changes:
+#### Hot Reloading in Containers
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --watch
+# or use `make dev`
 ```
-- Runs Next.js in development mode with HMR.
-- Uses Docker Compose file sync (not bind mounts), which avoids iCloud/Network drive issues.
-- Auto behaviors:
-  - App code (TS/TSX/CSS): hot-reloads instantly via Next.js.
-  - Prisma schema (`prisma/schema.prisma`): auto `prisma generate` + `prisma db push`, then server continues.
-  - Config/env (`next.config.mjs`, `tsconfig.json`, `tailwind.config.ts`, `postcss.config.js`, `.env`): dev server auto-restarts.
-  - Dependencies (`package.json`/`package-lock.json`): Compose watch triggers an image rebuild + container restart.
-- Manual rebuild if needed:
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml build web
-```
+- Next.js runs in development mode with hot module reload.
+- Prisma schema edits trigger `prisma generate` and `prisma db push` automatically.
+- Config or environment file changes restart the dev server.
+- Dependency updates rebuild the `web` image.
+- Prefer the file-sync configuration over bind mounts for repos inside iCloud/Dropbox/OneDrive.
 
-Tip: In Docker Desktop, you can also toggle “Enable Watch” for the `web` service. If you prefer bind mounts instead of file sync, move the repo out of iCloud/Dropbox/OneDrive paths, then revert to a bind mount `.:/app` in `docker-compose.dev.yml`.
-
-Shortcut
-- Use `make dev` as a one-liner wrapper for the compose watch command.
-
-## Local (no Docker)
+### Local Development (without Docker)
 ```bash
 npm install
 cp .env.example .env
@@ -41,12 +61,33 @@ npm run dev
 ```
 
 Notes:
-- No postinstall hook (avoids prisma generate before schema copy in Docker).
-- TypeScript 5.7.x + tRPC 11.4.4 + ESLint 8.57 aligned with Next 14.2.x.
+- The repo intentionally omits a `postinstall` hook so Docker builds can copy the schema first.
+- Tooling versions align with Next.js 14.2.x: TypeScript 5.7.x, tRPC 11.4.4, ESLint 8.57.
+
+## Test-First Development Workflow
+1. **Capture intent in a test.** Before implementing a feature or bug fix, add or update a failing unit (`*.test.ts(x)`) or e2e (`*.spec.ts`) test that describes the desired behaviour.
+2. **Run the focused suite.** Execute only the relevant tests to confirm they fail for the right reason.
+   ```bash
+   CI=true npm test        # Vitest in CI mode (no watch)
+   npm run e2e             # Playwright specs
+   ```
+3. **Implement the code to go green.** Update application logic until the new test passes.
+4. **Lock in quality gates.** Finish by running linting and a production build to ensure type safety.
+   ```bash
+   npm run lint
+   npm run build
+   ```
+5. **Document changes.** Update this README or feature-specific docs whenever behaviour visible to users shifts.
+
+## Quality Gates & Tooling
+- **Linting:** `npm run lint`
+- **Unit tests:** `CI=true npm test`
+- **End-to-end tests:** `npm run e2e`
+- **Type checks/build:** `npm run build` followed by `npm start` for production verification.
+- **Docker production build:** `docker compose build --no-cache && docker compose up -d && docker compose exec web npx prisma db push`
 
 ## Authentication & Protected Routes
-
-The scheduler requires users to sign in before accessing application pages. The following routes (and their nested paths) are protected by middleware and redirect unauthenticated requests to the sign-in flow:
+The scheduler requires authentication before any core page loads. The following paths (and their nested routes) are protected via middleware and redirect unauthenticated users to the sign-in flow:
 
 - `/` (dashboard)
 - `/calendar`
@@ -56,76 +97,49 @@ The scheduler requires users to sign in before accessing application pages. The 
 - `/stats`
 - `/tasks`
 
-Add new authenticated sections to `src/middleware.ts` so they inherit the same protection.
+Add new authenticated sections in `src/middleware.ts` to inherit the same protection.
 
 ## Environment Variables
+Create a `.env` file and configure:
 
-Configure these variables in `.env`:
+- `DATABASE_URL` – PostgreSQL connection string. Defaults to `postgresql://postgres:postgres@localhost:5432/scheduler`.
+- `NEXTAUTH_SECRET` – Secret used to encrypt NextAuth JWTs. Set a strong production value.
+- `NEXTAUTH_URL` – Base URL for NextAuth callbacks (e.g., `http://localhost:3000`).
+- `GITHUB_ID`, `GITHUB_SECRET` – GitHub OAuth credentials for sign-in.
+- `REDIS_URL` – Redis connection string for caching (defaults to `redis://localhost:6379`).
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` – OAuth credentials for Google Calendar sync.
 
-- `DATABASE_URL` – PostgreSQL connection string. Defaults to `postgresql://postgres:postgres@localhost:5432/scheduler` for development.
-- `NEXTAUTH_SECRET` – Secret used to encrypt NextAuth JWTs. Defaults to `replace_me` in development; use a strong value in production.
-- `NEXTAUTH_URL` – Base URL used for NextAuth callbacks. Defaults to `http://localhost:3000`.
-- `GITHUB_ID` – GitHub OAuth app client ID for enabling GitHub sign-in.
-- `GITHUB_SECRET` – GitHub OAuth app client secret.
-- `REDIS_URL` – Redis connection string for caching. Defaults to `redis://localhost:6379`.
-- `GOOGLE_CLIENT_ID` – Google OAuth client ID for Calendar sync.
-- `GOOGLE_CLIENT_SECRET` – Google OAuth client secret.
+Never commit secrets. Re-run `npx prisma generate` whenever the Prisma schema changes.
 
 ## Google Authentication & Calendar Sync
-
 1. Create a Google Cloud project and enable the Calendar API.
-2. Create OAuth credentials for a Web application and set the authorized redirect URI to `http://localhost:3000/api/auth/callback/google`.
-3. Copy the credentials into `.env`:
-
+2. Configure OAuth credentials with redirect URI `http://localhost:3000/api/auth/callback/google`.
+3. Add credentials to `.env`:
    ```bash
    GOOGLE_CLIENT_ID=your_client_id
    GOOGLE_CLIENT_SECRET=your_client_secret
    ```
-
-4. Start the app and sign in with Google.
-5. Open **Settings** and toggle **Google Calendar Sync** to enable or disable synchronization.
-6. An iCal feed of scheduled events is available at `/api/trpc/event.ical` and can be consumed by other calendar clients.
+4. Start the app, sign in with Google, and toggle **Google Calendar Sync** in **Settings**.
+5. Retrieve your iCal feed at `/api/trpc/event.ical` for use in other calendar clients.
 
 ## AI Scheduling Suggestions
+- Configure an LLM provider under **Settings → Preferences** (OpenAI API key or LM Studio URL).
+- Without an AI provider, the scheduler falls back to deterministic heuristics that still assign every task.
+- Visit `/tasks/schedule-suggestions` to generate batch proposals and accept them in bulk.
+- The calendar backlog exposes an **AI suggestions** panel to accept recommendations inline.
 
-- Configure an LLM provider under **Settings → Preferences** (OpenAI API key or LM Studio URL). If no model is configured, the scheduler falls back to a deterministic heuristic that still assigns every task.
-- Visit `/tasks/schedule-suggestions` to generate a full set of proposed start/end times for unscheduled tasks and accept them in bulk. Suggestions respect your working hour window and task metadata such as due dates and priority.
-- The calendar backlog now includes an **AI suggestions** panel so you can generate slots without leaving the calendar view and accept individual recommendations inline.
-
-## Testing
-
-Run linting and the test suites locally:
-
-```bash
-npm run lint
-CI=true npm test
-npm run e2e
-```
-
-> **Continuous Integration**
->
-> The Vitest suite runs automatically via GitHub Actions on every push and pull request, so keep the tests green locally before
-> pushing changes.
-
-## Caching
-
-`taskRouter.list` caches query results for 60 seconds using an in-memory store backed by [`@upstash/redis`](https://github.com/upstash/redis). Any mutation that changes tasks (create, update, delete, reorder, etc.) clears the cache so subsequent `list` calls return fresh data. Configure Redis via `REDIS_URL` and `REDIS_TOKEN` or leave them unset to fall back to a local in-memory cache.
-
+## Caching Strategy
+`tRPC taskRouter.list` caches results for 60 seconds using an in-memory store backed by [`@upstash/redis`](https://github.com/upstash/redis). Mutations that modify tasks (create, update, delete, reorder, etc.) invalidate the cache to ensure fresh responses. Configure Redis via `REDIS_URL` and `REDIS_TOKEN` or allow the local in-memory fallback.
 
 ## Troubleshooting
+**Missing Next.js chunk (e.g., `Error: Cannot find module './948.js'`)**
+- Stop the dev server.
+- Run `npm run clean` to remove `.next` and caches.
+- Restart with `npm run dev`.
+- For Docker workflows, prefer `make dev`; if issues persist, run `make dev-clean` before restarting.
+- Avoid bind mounts when working from cloud-synced directories; the provided file-sync compose setup keeps `.next` inside the container.
 
-Missing Next.js chunk (e.g., Error: Cannot find module './948.js')
-- Cause: A stale or partially-synced `.next` directory can leave the dev server referencing a chunk that no longer exists. This is common when the repo is under iCloud/Dropbox/OneDrive or when switching between dev modes.
-- Quick fix (local):
-  - Stop the dev server.
-  - Run `npm run clean` to remove `.next` and caches.
-  - Start again with `npm run dev`.
-- Docker dev fix:
-  - Prefer `make dev` (Compose file sync) which ignores `.next`.
-  - If things get wedged, run `make dev-clean` and then `make dev`.
-- Cloud-synced folders:
-  - Avoid bind mounts when the repo lives under iCloud/Dropbox/OneDrive. Use the provided file-sync compose (`docker-compose.dev.yml`) so `.next` stays inside the container and isn’t synced.
-
-Login loop after Google sign-in
-- Cause: Using database sessions with `next-auth/middleware` prevents the middleware from reading the session, causing a redirect loop back to sign-in.
-- Fix: We use JWT sessions in NextAuth. Ensure your `.env` has `NEXTAUTH_SECRET` set and `NEXTAUTH_URL` matches how you access the app (e.g., `http://localhost:3000`).
+**Login loop after Google sign-in**
+- Ensure `NEXTAUTH_SECRET` is set.
+- Confirm `NEXTAUTH_URL` matches how you access the app (e.g., `http://localhost:3000`).
+- We use JWT sessions in NextAuth; database sessions can cause redirect loops when combined with `next-auth/middleware`.
