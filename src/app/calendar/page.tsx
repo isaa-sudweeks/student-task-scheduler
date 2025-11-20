@@ -115,7 +115,10 @@ export default function CalendarPage() {
       dayWindowStartHour: current.dayWindowStartHour,
       dayWindowEndHour: current.dayWindowEndHour,
       defaultDurationMinutes: current.defaultDurationMinutes,
-      googleSyncEnabled: userSettings.googleSyncEnabled,
+      calendarSyncProviders:
+        userSettings.calendarSyncProviders?.length
+          ? userSettings.calendarSyncProviders
+          : ['GOOGLE'],
       llmProvider: userSettings.llmProvider ?? 'NONE',
       openaiApiKey: userSettings.openaiApiKey ?? null,
       lmStudioUrl: userSettings.lmStudioUrl ?? 'http://localhost:1234',
@@ -235,8 +238,8 @@ export default function CalendarPage() {
   const focusStopMutate = React.useMemo(() => focusStop.mutate, [focusStop]);
   const schedule = api.event.schedule.useMutation({
     onSuccess: async (result) => {
-      if (result?.googleSyncWarning) {
-        toast.info('Event saved locally, but Google Calendar sync failed.');
+      if (result?.syncWarnings?.length) {
+        toast.info(result.syncWarnings[0] ?? 'Event saved locally, but calendar sync reported warnings.');
       }
       try {
         await utils.event.listRange.invalidate();
@@ -245,7 +248,10 @@ export default function CalendarPage() {
     },
   });
   const move = api.event.move.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      if (result?.syncWarnings?.length) {
+        toast.info(result.syncWarnings[0] ?? 'Event moved locally, but calendar sync reported warnings.');
+      }
       try {
         await utils.event.listRange.invalidate();
       } catch {}

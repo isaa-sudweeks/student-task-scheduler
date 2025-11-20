@@ -6,6 +6,31 @@ import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
 
 type LlmProviderOption = "NONE" | "OPENAI" | "LM_STUDIO";
+type CalendarProviderOption = "GOOGLE" | "MICROSOFT" | "APPLE";
+
+const CALENDAR_PROVIDER_OPTIONS: { value: CalendarProviderOption; label: string; description: string }[] = [
+  {
+    value: "GOOGLE",
+    label: "Google Calendar",
+    description: "Sync events using your connected Google account.",
+  },
+  {
+    value: "MICROSOFT",
+    label: "Microsoft Outlook / Office 365",
+    description: "Sync tasks to Microsoft calendars via Graph API.",
+  },
+  {
+    value: "APPLE",
+    label: "Apple Calendar",
+    description: "Sync using your iCloud (CalDAV) connection.",
+  },
+];
+
+const CALENDAR_PROVIDER_ORDER = CALENDAR_PROVIDER_OPTIONS.map((option) => option.value);
+const sortProviders = (values: Iterable<CalendarProviderOption>) => {
+  const set = new Set(values);
+  return CALENDAR_PROVIDER_ORDER.filter((value) => set.has(value));
+};
 
 function SettingsContent() {
   const router = useRouter();
@@ -38,16 +63,9 @@ function SettingsContent() {
   }, [defaultDuration]);
 
   // Google Calendar sync toggle (localStorage)
-  const [syncEnabled, setSyncEnabled] = React.useState(true);
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem("googleSyncEnabled");
-    setSyncEnabled(stored !== "false");
-  }, []);
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("googleSyncEnabled", String(syncEnabled));
-  }, [syncEnabled]);
+  const [calendarProviders, setCalendarProviders] = React.useState<CalendarProviderOption[]>(
+    sortProviders(["GOOGLE"]),
+  );
 
   // User settings (tRPC)
   type UserSettings = {
@@ -55,7 +73,7 @@ function SettingsContent() {
     dayWindowStartHour: number;
     dayWindowEndHour: number;
     defaultDurationMinutes: number;
-    googleSyncEnabled: boolean;
+    calendarSyncProviders: CalendarProviderOption[];
     llmProvider: LlmProviderOption;
     openaiApiKey: string | null;
     lmStudioUrl: string;
@@ -82,7 +100,9 @@ function SettingsContent() {
     setStartHour(settings.dayWindowStartHour);
     setEndHour(settings.dayWindowEndHour);
     setDefaultDuration(settings.defaultDurationMinutes);
-    setSyncEnabled(settings.googleSyncEnabled);
+    const nextProviders =
+      settings.calendarSyncProviders?.length ? settings.calendarSyncProviders : ["GOOGLE"];
+    setCalendarProviders(sortProviders(nextProviders));
     setLlmProvider(settings.llmProvider ?? "NONE");
     setOpenaiApiKey(settings.openaiApiKey ?? "");
     setLmStudioUrl(settings.lmStudioUrl || "http://localhost:1234");
@@ -91,7 +111,6 @@ function SettingsContent() {
       window.localStorage.setItem("dayWindowStartHour", String(settings.dayWindowStartHour));
       window.localStorage.setItem("dayWindowEndHour", String(settings.dayWindowEndHour));
       window.localStorage.setItem("defaultDurationMinutes", String(settings.defaultDurationMinutes));
-      window.localStorage.setItem("googleSyncEnabled", String(settings.googleSyncEnabled));
     }
   }, [settings]);
   const saveSettings = api.user.setSettings.useMutation({
@@ -172,14 +191,43 @@ function SettingsContent() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Integrations</h2>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={syncEnabled}
-            onChange={(e) => setSyncEnabled(e.target.checked)}
-          />
-          Enable Google Calendar sync
-        </label>
+        <div className="space-y-3">
+          {CALENDAR_PROVIDER_OPTIONS.map((option) => {
+            const checked = calendarProviders.includes(option.value);
+            return (
+              <label key={option.value} className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(event) => {
+                    const isChecked = event.target.checked;
+                    setCalendarProviders((prev) => {
+                      const next = new Set(prev);
+                      if (isChecked) {
+                        next.add(option.value);
+                      } else {
+                        next.delete(option.value);
+                      }
+                      if (next.size === 0) {
+                        // Keep at least one provider enabled to avoid disabling sync entirely accidentally.
+                        next.add("GOOGLE");
+                      }
+                      return sortProviders(next);
+                    });
+                  }}
+                  aria-label={option.label}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block font-medium leading-tight">{option.label}</span>
+                  <span className="block text-sm text-muted-foreground">
+                    {option.description}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
       </section>
 
       <section className="space-y-3">
@@ -268,7 +316,6 @@ function SettingsContent() {
               window.localStorage.setItem("dayWindowStartHour", String(startHour));
               window.localStorage.setItem("dayWindowEndHour", String(endHour));
               window.localStorage.setItem("defaultDurationMinutes", String(defaultDuration));
-              window.localStorage.setItem("googleSyncEnabled", String(syncEnabled));
             }
 
             // Persist all settings via API (always save all fields)
@@ -277,7 +324,7 @@ function SettingsContent() {
               dayWindowStartHour: startHour,
               dayWindowEndHour: endHour,
               defaultDurationMinutes: defaultDuration,
-              googleSyncEnabled: syncEnabled,
+              calendarSyncProviders,
               llmProvider,
               openaiApiKey: trimmedApiKey || null,
               lmStudioUrl: normalizedLmStudioUrl,
