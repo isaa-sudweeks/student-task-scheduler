@@ -19,13 +19,11 @@ export function createAcceptSuggestionHandler({
   settings,
   setSuggestions,
   setAcceptedIds,
-  toast,
 }: {
   eventSchedule: Pick<ReturnType<typeof api.event.schedule.useMutation>, "mutateAsync">;
   settings: RouterOutputs["user"]["getSettings"] | undefined;
   setSuggestions: React.Dispatch<React.SetStateAction<Suggestion[]>>;
   setAcceptedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-  toast: typeof toast;
 }) {
   return async (suggestion: Suggestion) => {
     const durationMinutes = Math.max(
@@ -152,7 +150,6 @@ export default function ScheduleSuggestionsPage() {
         settings: settingsQuery.data,
         setSuggestions,
         setAcceptedIds,
-        toast,
       }),
     [eventSchedule, settingsQuery.data],
   );

@@ -245,7 +245,7 @@ export function TaskModal({
       return;
     }
 
-    let saved: Task;
+    let saved: { id: string };
     if (isEdit && task) {
       saved = await update.mutateAsync({
         id: task.id,
@@ -387,7 +387,7 @@ export function TaskModal({
             <span className="text-sm font-medium">Reminders</span>
             <Button
               variant="secondary"
-              size="sm"
+              className="px-3 py-1 text-sm"
               disabled={reminders.length >= MAX_REMINDERS}
               onClick={() => {
                 setReminders((prev) => [
@@ -453,8 +453,8 @@ export function TaskModal({
                 />
                 <span className="text-sm text-muted-foreground">minutes before</span>
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  variant="tertiary"
+                  className="px-2 py-1 text-sm"
                   onClick={() => {
                     setReminders((prev) => prev.filter((_, idx) => idx !== index));
                     setReminderError(null);

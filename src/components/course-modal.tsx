@@ -10,6 +10,47 @@ import type { RouterOutputs } from "@/server/api/root";
 
 export type Course = RouterOutputs["course"]["list"][number];
 
+type MeetingDay =
+  | "SUNDAY"
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY"
+  | "SATURDAY";
+
+type MeetingFormState = {
+  dayOfWeek: MeetingDay;
+  startTime: string;
+  endTime: string;
+  location: string;
+};
+
+const WEEKDAY_OPTIONS: { value: MeetingDay; label: string }[] = [
+  { value: "MONDAY", label: "Monday" },
+  { value: "TUESDAY", label: "Tuesday" },
+  { value: "WEDNESDAY", label: "Wednesday" },
+  { value: "THURSDAY", label: "Thursday" },
+  { value: "FRIDAY", label: "Friday" },
+  { value: "SATURDAY", label: "Saturday" },
+  { value: "SUNDAY", label: "Sunday" },
+];
+
+const minutesToTime = (minutes: number) => {
+  const hrs = Math.floor(minutes / 60)
+    .toString()
+    .padStart(2, "0");
+  const mins = (minutes % 60).toString().padStart(2, "0");
+  return `${hrs}:${mins}`;
+};
+
+const createEmptyMeeting = (): MeetingFormState => ({
+  dayOfWeek: "MONDAY",
+  startTime: "",
+  endTime: "",
+  location: "",
+});
+
 interface CourseModalProps {
   open: boolean;
   mode: "create" | "edit";
@@ -33,6 +74,8 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
   const [descriptionError, setDescriptionError] = useState("");
   const [instructorEmailError, setInstructorEmailError] = useState("");
   const [officeHoursError, setOfficeHoursError] = useState("");
+  const [meetings, setMeetings] = useState<MeetingFormState[]>([]);
+  const [meetingError, setMeetingError] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -44,6 +87,15 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
       setInstructorName(course.instructorName ?? "");
       setInstructorEmail(course.instructorEmail ?? "");
       setOfficeHours((course.officeHours ?? []).join("\n"));
+      const parsedMeetings = Array.isArray(course.meetings)
+        ? course.meetings.map((meeting) => ({
+          dayOfWeek: meeting.dayOfWeek as MeetingDay,
+          startTime: minutesToTime(meeting.startMinutes),
+          endTime: minutesToTime(meeting.endMinutes),
+          location: meeting.location ?? "",
+        }))
+        : [];
+      setMeetings(parsedMeetings.length ? parsedMeetings : [createEmptyMeeting()]);
     } else {
       setTitle("");
       setTerm("");
@@ -52,12 +104,14 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
       setInstructorName("");
       setInstructorEmail("");
       setOfficeHours("");
+      setMeetings([createEmptyMeeting()]);
     }
     setTitleError("");
     setTermError("");
     setDescriptionError("");
     setInstructorEmailError("");
     setOfficeHoursError("");
+    setMeetingError("");
   }, [open, isEdit, course]);
 
   const create = api.course.create.useMutation({
@@ -118,6 +172,48 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
       setOfficeHoursError("Office hour entries must be 200 characters or fewer.");
       hasError = true;
     }
+    const cleanedMeetings = meetings
+      .map((meeting) => ({
+        ...meeting,
+        dayOfWeek: meeting.dayOfWeek,
+        startTime: meeting.startTime.trim(),
+        endTime: meeting.endTime.trim(),
+        location: meeting.location.trim(),
+      }))
+      .filter((meeting) => meeting.startTime || meeting.endTime || meeting.location);
+
+    if (cleanedMeetings.length > 0) {
+      for (let index = 0; index < cleanedMeetings.length; index++) {
+        const meeting = cleanedMeetings[index];
+        if (!meeting.startTime || !meeting.endTime) {
+          setMeetingError("Please provide start and end times for each meeting.");
+          hasError = true;
+          break;
+        }
+        const startParts = meeting.startTime.split(":").map(Number);
+        const endParts = meeting.endTime.split(":").map(Number);
+        if (startParts.length !== 2 || endParts.length !== 2) {
+          setMeetingError("Times must be in HH:MM format.");
+          hasError = true;
+          break;
+        }
+        const startMinutes = startParts[0] * 60 + startParts[1];
+        const endMinutes = endParts[0] * 60 + endParts[1];
+        if (endMinutes <= startMinutes) {
+          setMeetingError("Meeting end time must be after the start time.");
+          hasError = true;
+          break;
+        }
+      }
+    }
+    setMeetingError("");
+
+    const meetingPayload = cleanedMeetings.map((meeting) => ({
+      dayOfWeek: meeting.dayOfWeek,
+      startTime: meeting.startTime,
+      endTime: meeting.endTime,
+      location: meeting.location || undefined,
+    }));
     if (hasError) return;
     if (isEdit && course) {
       update.mutate({
@@ -129,6 +225,7 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         instructorName: name || null,
         instructorEmail: email || null,
         officeHours: officeHourEntries,
+        meetings: meetingPayload,
       });
     } else {
       create.mutate({
@@ -139,6 +236,7 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         instructorName: name || undefined,
         instructorEmail: email || undefined,
         officeHours: officeHourEntries,
+        meetings: meetingPayload.length ? meetingPayload : undefined,
       });
     }
   };
@@ -286,9 +384,120 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
           <p className="text-sm text-red-500">{officeHoursError}</p>
         )}
       </div>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium">Meeting schedule</label>
+          <Button
+            type="button"
+            variant="tertiary"
+            onClick={() => {
+              setMeetingError("");
+              setMeetings((prev) => [...prev, createEmptyMeeting()]);
+            }}
+          >
+            Add meeting
+          </Button>
+        </div>
+        {meetings.map((meeting, index) => (
+          <div key={index} className="grid grid-cols-1 gap-2 rounded-lg border p-3 md:grid-cols-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Day
+              </label>
+              <select
+                className="w-full rounded border border-black/10 bg-transparent px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                value={meeting.dayOfWeek}
+                onChange={(e) =>
+                  setMeetings((prev) => {
+                    const next = [...prev];
+                    next[index] = { ...next[index], dayOfWeek: e.target.value as MeetingDay };
+                    return next;
+                  })
+                }
+              >
+                {WEEKDAY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Start
+              </label>
+              <input
+                type="time"
+                className="w-full rounded border border-black/10 bg-transparent px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                value={meeting.startTime}
+                onChange={(e) => {
+                  setMeetingError("");
+                  setMeetings((prev) => {
+                    const next = [...prev];
+                    next[index] = { ...next[index], startTime: e.target.value };
+                    return next;
+                  });
+                }
+                }
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                End
+              </label>
+              <input
+                type="time"
+                className="w-full rounded border border-black/10 bg-transparent px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+                value={meeting.endTime}
+                onChange={(e) => {
+                  setMeetingError("");
+                  setMeetings((prev) => {
+                    const next = [...prev];
+                    next[index] = { ...next[index], endTime: e.target.value };
+                    return next;
+                  });
+                }
+                }
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Location (optional)
+              </label>
+              <Input
+                placeholder="Building / Room"
+                value={meeting.location}
+                onChange={(e) => {
+                  setMeetingError("");
+                  setMeetings((prev) => {
+                    const next = [...prev];
+                    next[index] = { ...next[index], location: e.target.value };
+                    return next;
+                  });
+                }
+                }
+              />
+            </div>
+            <div className="md:col-span-4 flex justify-end">
+              <Button
+                type="button"
+                variant="tertiary"
+                onClick={() => {
+                  setMeetingError("");
+                  setMeetings((prev) => prev.filter((_, idx) => idx !== index));
+                }}
+              >
+                Remove
+              </Button>
+            </div>
+          </div>
+        ))}
+        {meetingError && <p className="text-sm text-red-500">{meetingError}</p>}
+      </div>
     </Modal>
   );
 }
 
-export default CourseModal;
 

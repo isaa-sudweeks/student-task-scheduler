@@ -6,6 +6,8 @@ import { router, protectedProcedure } from '../../trpc';
 import { db } from '@/server/db';
 import { invalidateTaskListCache, requireUserId } from './utils';
 import { generateScheduleSuggestions, type SchedulerTask } from '@/server/ai/scheduler';
+import { createTimezoneConverter } from '@/server/ai/timezone';
+import { meetingsToIntervalsForDate } from '@/server/utils/courseMeetings';
 
 export const taskScheduleRouter = router({
   reorder: protectedProcedure
@@ -88,10 +90,29 @@ export const taskScheduleRouter = router({
         select: { startAt: true, endAt: true },
       });
 
+      const timezoneConverter = createTimezoneConverter(user.timezone);
+      const courses = await db.course.findMany({
+        where: { userId },
+        select: { meetings: true },
+      });
+      const allMeetings = courses.flatMap((course) => course.meetings ?? []);
+      const nowLocal = timezoneConverter.toZoned(new Date());
+      nowLocal.setHours(0, 0, 0, 0);
+      const meetingIntervals = [] as { startAt: Date; endAt: Date }[];
+      const searchDays = 30;
+      for (let dayOffset = 0; dayOffset < searchDays; dayOffset++) {
+        const dayLocal = new Date(nowLocal);
+        dayLocal.setDate(nowLocal.getDate() + dayOffset);
+        const intervalsLocal = meetingsToIntervalsForDate(allMeetings, dayLocal);
+        for (const interval of intervalsLocal) {
+          meetingIntervals.push(timezoneConverter.intervalToUtc(interval));
+        }
+      }
+
       const suggestions = await generateScheduleSuggestions({
         tasks,
         user,
-        existingEvents: events,
+        existingEvents: [...events, ...meetingIntervals],
       });
 
       return { suggestions };
