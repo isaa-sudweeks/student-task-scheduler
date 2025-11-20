@@ -81,6 +81,9 @@ model Course {
   color  String?
   description String?
   syllabusUrl String?
+  instructorName String?
+  instructorEmail String?
+  officeHours String[] @default([])
 
   tasks Task[]
 }

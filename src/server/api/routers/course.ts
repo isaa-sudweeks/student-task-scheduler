@@ -53,6 +53,9 @@ export const courseRouter = router({
         color: z.string().max(50).optional(),
         description: z.string().max(1000).optional(),
         syllabusUrl: z.string().url().optional(),
+        instructorName: z.string().min(1).max(200).optional(),
+        instructorEmail: z.string().email().optional(),
+        officeHours: z.array(z.string().min(1).max(200)).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -72,6 +75,9 @@ export const courseRouter = router({
         term: input.term ?? null,
         color: input.color ?? null,
         description: input.description ?? null,
+        instructorName: input.instructorName ?? null,
+        instructorEmail: input.instructorEmail ?? null,
+        officeHours: input.officeHours ?? [],
       };
       if (typeof input.syllabusUrl !== 'undefined') {
         (data as any).syllabusUrl = input.syllabusUrl ?? null;
@@ -87,6 +93,9 @@ export const courseRouter = router({
         color: z.string().max(50).nullable().optional(),
         description: z.string().max(1000).nullable().optional(),
         syllabusUrl: z.string().url().nullable().optional(),
+        instructorName: z.string().min(1).max(200).nullable().optional(),
+        instructorEmail: z.string().email().nullable().optional(),
+        officeHours: z.array(z.string().min(1).max(200)).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -94,7 +103,12 @@ export const courseRouter = router({
       const { id, ...rest } = input;
       const data: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(rest)) {
-        if (typeof value !== 'undefined') data[key] = value;
+        if (typeof value === 'undefined') continue;
+        if (key === 'officeHours') {
+          data.officeHours = { set: value as string[] };
+          continue;
+        }
+        data[key] = value;
       }
       if (Object.keys(data).length === 0) {
         return db.course.findUniqueOrThrow({ where: { id, userId } });

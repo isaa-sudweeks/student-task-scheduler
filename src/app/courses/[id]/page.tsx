@@ -82,10 +82,16 @@ export default function CoursePage({ params }: { params: { id: string } }) {
     return <div>Loading...</div>;
   }
 
-  // Some list queries may not carry syllabusUrl in the inferred type.
+  // Some list queries may not carry supplemental metadata in the inferred type.
   // It exists in the Course model; narrow softly for rendering.
-  const syllabusUrl = (course as unknown as { syllabusUrl?: string | null })
-    .syllabusUrl ?? null;
+  const courseWithMeta = course as unknown as {
+    syllabusUrl?: string | null;
+    instructorName?: string | null;
+    instructorEmail?: string | null;
+    officeHours?: string[];
+  };
+  const syllabusUrl = courseWithMeta.syllabusUrl ?? null;
+  const officeHours = courseWithMeta.officeHours ?? [];
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
@@ -95,6 +101,41 @@ export default function CoursePage({ params }: { params: { id: string } }) {
           <p className="text-sm text-muted-foreground">{course.term}</p>
         )}
       </div>
+      {(courseWithMeta.instructorName || courseWithMeta.instructorEmail || officeHours.length > 0) && (
+        <div className="rounded-xl border bg-white dark:bg-zinc-900 shadow-sm p-4 space-y-3">
+          <h2 className="text-lg font-medium">Instructor information</h2>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            {courseWithMeta.instructorName && (
+              <p>
+                <span className="font-medium text-foreground">Name:</span>{" "}
+                {courseWithMeta.instructorName}
+              </p>
+            )}
+            {courseWithMeta.instructorEmail && (
+              <p>
+                <span className="font-medium text-foreground">Email:</span>{" "}
+                <a
+                  href={`mailto:${courseWithMeta.instructorEmail}`}
+                  className="text-indigo-600 underline"
+                >
+                  {courseWithMeta.instructorEmail}
+                </a>
+              </p>
+            )}
+            {officeHours.length > 0 && (
+              <div>
+                <p className="font-medium text-foreground">Office hours</p>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  {officeHours.map((slot) => (
+                    <li key={slot}>{slot}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-xl border bg-white dark:bg-zinc-900 shadow-sm p-4 space-y-4">
         <div className="space-y-2">
           <label htmlFor="syllabus" className="block text-sm font-medium">

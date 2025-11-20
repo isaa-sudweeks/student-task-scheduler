@@ -2,7 +2,7 @@ import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion } from "framer-motion";
-import { Calendar, Tag, Clock, GripVertical, MoreVertical } from "lucide-react";
+import { Calendar, Tag, Clock, GripVertical, MoreVertical, Info } from "lucide-react";
 import type Fuse from "fuse.js";
 
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
@@ -114,7 +114,29 @@ export const TaskCard = React.forwardRef<
         <div className="flex flex-col flex-1">
           <span className={`font-medium ${done ? "line-through opacity-60" : ""}`}>{titleNode}</span>
           {t.course?.title && (
-            <span className="text-sm text-neutral-500">{t.course.title}</span>
+            (() => {
+              const course = t.course as typeof t.course & {
+                instructorName?: string | null;
+                instructorEmail?: string | null;
+                officeHours?: string[];
+              };
+              const tooltipParts: string[] = [];
+              if (course.instructorName) tooltipParts.push(`Instructor: ${course.instructorName}`);
+              if (course.instructorEmail) tooltipParts.push(`Email: ${course.instructorEmail}`);
+              if (course.officeHours?.length) {
+                tooltipParts.push(`Office hours: ${course.officeHours.join(", ")}`);
+              }
+              const tooltip = tooltipParts.length ? tooltipParts.join("\n") : undefined;
+              return (
+                <span
+                  className="text-sm text-neutral-500 flex items-center gap-1"
+                  title={tooltip}
+                >
+                  {tooltip && <Info className="h-3 w-3 text-neutral-400" aria-hidden />}
+                  {t.course!.title}
+                </span>
+              );
+            })()
           )}
           <div className="mt-1 flex flex-wrap items-center gap-4 text-xs text-neutral-500">
             {t.dueAt && (

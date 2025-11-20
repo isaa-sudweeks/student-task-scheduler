@@ -25,9 +25,14 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
   const [term, setTerm] = useState("");
   const [color, setColor] = useState("#000000");
   const [description, setDescription] = useState("");
+  const [instructorName, setInstructorName] = useState("");
+  const [instructorEmail, setInstructorEmail] = useState("");
+  const [officeHours, setOfficeHours] = useState("");
   const [titleError, setTitleError] = useState("");
   const [termError, setTermError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
+  const [instructorEmailError, setInstructorEmailError] = useState("");
+  const [officeHoursError, setOfficeHoursError] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -36,15 +41,23 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
       setTerm(course.term ?? "");
       setColor(course.color ?? "#000000");
       setDescription(course.description ?? "");
+      setInstructorName(course.instructorName ?? "");
+      setInstructorEmail(course.instructorEmail ?? "");
+      setOfficeHours((course.officeHours ?? []).join("\n"));
     } else {
       setTitle("");
       setTerm("");
       setColor("#000000");
       setDescription("");
+      setInstructorName("");
+      setInstructorEmail("");
+      setOfficeHours("");
     }
     setTitleError("");
     setTermError("");
     setDescriptionError("");
+    setInstructorEmailError("");
+    setOfficeHoursError("");
   }, [open, isEdit, course]);
 
   const create = api.course.create.useMutation({
@@ -78,6 +91,12 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
     const t = title.trim();
     const tm = term.trim();
     const d = description.trim();
+    const name = instructorName.trim();
+    const email = instructorEmail.trim();
+    const officeHourEntries = officeHours
+      .split(/\r?\n/)
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
     let hasError = false;
     if (t.length < 1 || t.length > 200) {
       setTitleError("Title must be between 1 and 200 characters.");
@@ -91,6 +110,14 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
       setDescriptionError("Description must be at most 1000 characters.");
       hasError = true;
     }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setInstructorEmailError("Enter a valid instructor email.");
+      hasError = true;
+    }
+    if (officeHourEntries.some((entry) => entry.length > 200)) {
+      setOfficeHoursError("Office hour entries must be 200 characters or fewer.");
+      hasError = true;
+    }
     if (hasError) return;
     if (isEdit && course) {
       update.mutate({
@@ -99,6 +126,9 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         term: tm || null,
         color: color || null,
         description: d || null,
+        instructorName: name || null,
+        instructorEmail: email || null,
+        officeHours: officeHourEntries,
       });
     } else {
       create.mutate({
@@ -106,6 +136,9 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         term: tm || undefined,
         color: color || undefined,
         description: d || undefined,
+        instructorName: name || undefined,
+        instructorEmail: email || undefined,
+        officeHours: officeHourEntries,
       });
     }
   };
@@ -203,6 +236,54 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         />
         {descriptionError && (
           <p className="text-sm text-red-500">{descriptionError}</p>
+        )}
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="course-instructor-name" className="text-sm font-medium">
+          Instructor name (optional)
+        </label>
+        <Input
+          id="course-instructor-name"
+          placeholder="Instructor name"
+          value={instructorName}
+          onChange={(e) => setInstructorName(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="course-instructor-email" className="text-sm font-medium">
+          Instructor email (optional)
+        </label>
+        <Input
+          id="course-instructor-email"
+          placeholder="name@example.edu"
+          value={instructorEmail}
+          onChange={(e) => {
+            setInstructorEmail(e.target.value);
+            if (instructorEmailError) setInstructorEmailError("");
+          }}
+          error={instructorEmailError}
+        />
+        {instructorEmailError && (
+          <p className="text-sm text-red-500">{instructorEmailError}</p>
+        )}
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="course-office-hours" className="text-sm font-medium">
+          Office hours (one per line)
+        </label>
+        <Textarea
+          id="course-office-hours"
+          placeholder="e.g. Monday 10:00-11:00 AM"
+          value={officeHours}
+          onChange={(e) => {
+            setOfficeHours(e.target.value);
+            if (officeHoursError) setOfficeHoursError("");
+          }}
+          rows={3}
+          error={officeHoursError}
+        />
+        {officeHoursError && (
+          <p className="text-sm text-red-500">{officeHoursError}</p>
         )}
       </div>
     </Modal>
