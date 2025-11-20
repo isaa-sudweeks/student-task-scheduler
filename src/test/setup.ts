@@ -20,6 +20,7 @@ vi.mock('@prisma/client', () => {
     TaskPriority: { LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH' },
     RecurrenceType: { NONE: 'NONE', DAILY: 'DAILY', WEEKLY: 'WEEKLY', MONTHLY: 'MONTHLY' },
     LlmProvider: { NONE: 'NONE', OPENAI: 'OPENAI', LM_STUDIO: 'LM_STUDIO' },
+    GoalType: { SUBJECT: 'SUBJECT', COURSE: 'COURSE' },
     Prisma: { PrismaClientKnownRequestError },
   } as any;
 });
