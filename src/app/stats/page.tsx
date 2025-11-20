@@ -25,7 +25,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Input } from "@/components/ui/input";
 import { TaskFilterTabs, type TaskFilter } from "@/components/task-filter-tabs";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, List } from "lucide-react";
+import { CheckCircle, Clock3, Flame, List, Target } from "lucide-react";
 
 type Task = RouterOutputs["task"]["list"][number];
 
@@ -56,6 +56,16 @@ export default function StatsPage() {
   });
   const tasks: RouterOutputs["task"]["list"] = data ?? [];
   const { data: focusData } = api.focus.aggregate.useQuery(range);
+  const { data: focusSummary } = api.focus.summary.useQuery(undefined, {
+    enabled: !!session,
+  });
+  const focusSummaryData = focusSummary ?? {
+    currentStreakDays: 0,
+    longestStreakDays: 0,
+    workIntervalsToday: 0,
+    workMinutesLast7Days: 0,
+    totalWorkMinutes: 0,
+  };
   const focusMap = React.useMemo(() => {
     const map: Record<string, number> = {};
     const totals = focusData ?? [];
@@ -231,6 +241,29 @@ export default function StatsPage() {
             icon={<List className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
             label="Avg Focus (m)"
             value={averageFocusMinutes}
+          />
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <StatCard
+            icon={<Flame className="h-6 w-6 text-orange-500 dark:text-orange-300" />}
+            label="Focus streak"
+            value={`${focusSummaryData.currentStreakDays} day${focusSummaryData.currentStreakDays === 1 ? '' : 's'} (${focusSummaryData.workIntervalsToday} today)`}
+          />
+          <StatCard
+            icon={<Target className="h-6 w-6 text-rose-500 dark:text-rose-300" />}
+            label="Longest streak"
+            value={`${focusSummaryData.longestStreakDays} day${focusSummaryData.longestStreakDays === 1 ? '' : 's'}`}
+          />
+          <StatCard
+            icon={<Clock3 className="h-6 w-6 text-sky-600 dark:text-sky-400" />}
+            label="Focus (7d)"
+            value={`${focusSummaryData.workMinutesLast7Days} min`}
+          />
+          <StatCard
+            icon={<Clock3 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />}
+            label="Total focus"
+            value={`${focusSummaryData.totalWorkMinutes} min`}
           />
         </section>
 

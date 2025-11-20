@@ -118,7 +118,7 @@ export function TaskList({
     for (const result of fuse.search(query)) {
       aggregated.set(result.item.id, {
         item: result.item,
-        matches: result.matches ?? [],
+        matches: result.matches ? [...result.matches] : [],
         score: result.score ?? 0,
       });
     }

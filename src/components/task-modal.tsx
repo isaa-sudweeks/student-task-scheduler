@@ -247,7 +247,7 @@ export function TaskModal({
 
     let saved: Task;
     if (isEdit && task) {
-      saved = await update.mutateAsync({
+      saved = (await update.mutateAsync({
         id: task.id,
         title: title.trim() || task.title,
         subject: subject.trim() || null,
@@ -258,7 +258,7 @@ export function TaskModal({
         projectId,
         courseId,
         effortMinutes: updateEffort,
-      });
+      })) as Task;
     } else {
       saved = await create.mutateAsync({
         title: title.trim(),

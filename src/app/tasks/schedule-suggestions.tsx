@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "@/server/api/react";
 import type { RouterOutputs } from "@/server/api/root";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/lib/toast";
+import { toast as toastClient } from "@/lib/toast";
 
 type Suggestion = RouterOutputs["task"]["scheduleSuggestions"]["suggestions"][number];
 
@@ -19,13 +19,13 @@ export function createAcceptSuggestionHandler({
   settings,
   setSuggestions,
   setAcceptedIds,
-  toast,
+  toast: toastApi,
 }: {
   eventSchedule: Pick<ReturnType<typeof api.event.schedule.useMutation>, "mutateAsync">;
   settings: RouterOutputs["user"]["getSettings"] | undefined;
   setSuggestions: React.Dispatch<React.SetStateAction<Suggestion[]>>;
   setAcceptedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-  toast: typeof toast;
+  toast: typeof toastClient;
 }) {
   return async (suggestion: Suggestion) => {
     const durationMinutes = Math.max(
@@ -46,13 +46,13 @@ export function createAcceptSuggestionHandler({
         next.add(suggestion.taskId);
         return next;
       });
-      toast.success("Scheduled task");
+      toastApi.success("Scheduled task");
       if (result.googleSyncWarning) {
-        toast.info("Event saved locally, but Google Calendar sync failed.");
+        toastApi.info("Event saved locally, but Google Calendar sync failed.");
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to schedule task");
+      toastApi.error("Failed to schedule task");
     }
   };
 }
@@ -152,7 +152,7 @@ export default function ScheduleSuggestionsPage() {
         settings: settingsQuery.data,
         setSuggestions,
         setAcceptedIds,
-        toast,
+        toast: toastClient,
       }),
     [eventSchedule, settingsQuery.data],
   );
