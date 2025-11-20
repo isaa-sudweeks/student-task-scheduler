@@ -6,8 +6,8 @@ const ANY_ROLES = [MemberRole.OWNER, MemberRole.EDITOR, MemberRole.VIEWER] as co
 
 type RoleSubset = readonly MemberRole[];
 
-function normalizeRoles(roles?: RoleSubset) {
-  return roles && roles.length > 0 ? roles : ANY_ROLES;
+function normalizeRoles(roles?: RoleSubset): MemberRole[] {
+  return roles && roles.length > 0 ? [...roles] : [...ANY_ROLES];
 }
 
 export async function assertTaskMember({

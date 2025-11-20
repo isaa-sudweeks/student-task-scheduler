@@ -95,7 +95,7 @@ export const courseRouter = router({
           .filter(
             (task) =>
               task.dueAt &&
-              ![TaskStatus.DONE, TaskStatus.CANCELLED].includes(task.status),
+              task.status !== TaskStatus.DONE && task.status !== TaskStatus.CANCELLED,
           )
           .sort((a, b) => new Date(a.dueAt!).getTime() - new Date(b.dueAt!).getTime());
         const gradedEntries = tasks.filter(

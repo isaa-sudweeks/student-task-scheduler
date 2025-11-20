@@ -353,7 +353,7 @@ function SettingsContent() {
               dayWindowStartHour: startHour,
               dayWindowEndHour: endHour,
               defaultDurationMinutes: defaultDuration,
-              googleSyncEnabled: syncEnabled,
+              calendarSyncProviders: ['GOOGLE'],  // TODO: Restore calendar provider UI
               llmProvider,
               openaiApiKey: trimmedApiKey || null,
               lmStudioUrl: normalizedLmStudioUrl,

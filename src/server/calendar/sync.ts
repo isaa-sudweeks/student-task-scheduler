@@ -26,7 +26,7 @@ export const parseExternalRefs = (value: Prisma.JsonValue | null | undefined): P
   return map;
 };
 
-export const serializeExternalRefs = (refs: ProviderExternalRefs): Prisma.JsonValue => ({ ...refs });
+export const serializeExternalRefs = (refs: ProviderExternalRefs): Prisma.InputJsonObject => ({ ...refs });
 
 const dedupeProviders = (providers: CalendarProvider[]): CalendarProvider[] =>
   Array.from(new Set(providers));
