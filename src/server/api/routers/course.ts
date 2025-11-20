@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus, MemberRole } from '@prisma/client';
 import { protectedProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 import { TRPCError } from '@trpc/server';
+import { assertCourseMember, assertCourseOwner } from '@/server/api/permissions';
 
 export const courseRouter = router({
   list: protectedProcedure
@@ -17,7 +18,9 @@ export const courseRouter = router({
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       const { page, limit, search, term } = input;
-      const where: any = { userId };
+      const where: any = {
+        members: { some: { userId } },
+      };
       if (search && search.trim()) {
         where.title = { contains: search, mode: 'insensitive' };
       }
@@ -37,6 +40,11 @@ export const courseRouter = router({
             },
             orderBy: { dueAt: 'asc' },
             take: 1,
+          },
+          members: {
+            include: {
+              user: { select: { id: true, name: true, email: true, image: true } },
+            },
           },
         },
       });
@@ -58,7 +66,10 @@ export const courseRouter = router({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session.user.id;
       const existing = await db.course.findFirst({
-        where: { userId, title: input.title },
+        where: {
+          title: input.title,
+          members: { some: { userId } },
+        },
       });
       if (existing) {
         throw new TRPCError({
@@ -76,7 +87,24 @@ export const courseRouter = router({
       if (typeof input.syllabusUrl !== 'undefined') {
         (data as any).syllabusUrl = input.syllabusUrl ?? null;
       }
-      return db.course.create({ data: data as any });
+      return db.course.create({
+        data: {
+          ...(data as any),
+          members: {
+            create: {
+              userId,
+              role: MemberRole.OWNER,
+            },
+          },
+        },
+        include: {
+          members: {
+            include: {
+              user: { select: { id: true, name: true, email: true, image: true } },
+            },
+          },
+        },
+      });
     }),
   update: protectedProcedure
     .input(
@@ -97,23 +125,125 @@ export const courseRouter = router({
         if (typeof value !== 'undefined') data[key] = value;
       }
       if (Object.keys(data).length === 0) {
-        return db.course.findUniqueOrThrow({ where: { id, userId } });
+        await assertCourseMember({ userId, courseId: id });
+        return db.course.findUniqueOrThrow({ where: { id } });
       }
-      return db.course.update({ where: { id, userId }, data });
+      await assertCourseMember({
+        userId,
+        courseId: id,
+        roles: [MemberRole.OWNER, MemberRole.EDITOR],
+      });
+      return db.course.update({ where: { id }, data });
     }),
   delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session.user.id;
-      return db.course.delete({ where: { id: input.id, userId } });
+      await assertCourseOwner({ userId, courseId: input.id });
+      return db.course.delete({ where: { id: input.id } });
     }),
   deleteMany: protectedProcedure
     .input(z.object({ ids: z.array(z.string().min(1)) }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session.user.id;
       return db.course.deleteMany({
-        where: { id: { in: input.ids }, userId },
+        where: {
+          id: { in: input.ids },
+          members: { some: { userId, role: MemberRole.OWNER } },
+        },
       });
+    }),
+  members: protectedProcedure
+    .input(z.object({ courseId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      await assertCourseMember({ userId, courseId: input.courseId });
+      return db.courseMember.findMany({
+        where: { courseId: input.courseId },
+        include: {
+          user: { select: { id: true, name: true, email: true, image: true } },
+        },
+        orderBy: { role: 'asc' },
+      });
+    }),
+  inviteMember: protectedProcedure
+    .input(
+      z.object({
+        courseId: z.string().min(1),
+        email: z.string().email(),
+        role: z.nativeEnum(MemberRole).default(MemberRole.EDITOR),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      await assertCourseOwner({ userId, courseId: input.courseId });
+      const target = await db.user.findUnique({
+        where: { email: input.email.toLowerCase() },
+      });
+      if (!target) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+      }
+      if (target.id === userId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'You are already a member.' });
+      }
+      await db.courseMember.upsert({
+        where: { courseId_userId: { courseId: input.courseId, userId: target.id } },
+        create: {
+          courseId: input.courseId,
+          userId: target.id,
+          role: input.role,
+        },
+        update: { role: input.role },
+      });
+      return db.courseMember.findFirst({
+        where: { courseId: input.courseId, userId: target.id },
+        include: {
+          user: { select: { id: true, name: true, email: true, image: true } },
+        },
+      });
+    }),
+  updateMemberRole: protectedProcedure
+    .input(
+      z.object({
+        courseId: z.string().min(1),
+        userId: z.string().min(1),
+        role: z.nativeEnum(MemberRole),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      await assertCourseOwner({ userId, courseId: input.courseId });
+      if (input.userId === userId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Transfer ownership before modifying your role.',
+        });
+      }
+      return db.courseMember.update({
+        where: { courseId_userId: { courseId: input.courseId, userId: input.userId } },
+        data: { role: input.role },
+      });
+    }),
+  removeMember: protectedProcedure
+    .input(
+      z.object({
+        courseId: z.string().min(1),
+        userId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      await assertCourseOwner({ userId, courseId: input.courseId });
+      if (input.userId === userId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Transfer ownership before removing yourself.',
+        });
+      }
+      await db.courseMember.delete({
+        where: { courseId_userId: { courseId: input.courseId, userId: input.userId } },
+      });
+      return { success: true };
     }),
 });
 

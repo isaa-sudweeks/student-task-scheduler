@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus, MemberRole } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { router, protectedProcedure } from '../../trpc';
 import { db } from '@/server/db';
@@ -13,7 +13,12 @@ export const taskScheduleRouter = router({
     .mutation(async ({ input, ctx }) => {
       const userId = requireUserId(ctx);
       const tasks = await db.task.findMany({
-        where: { id: { in: input.ids }, userId },
+        where: {
+          id: { in: input.ids },
+          members: {
+            some: { userId, role: { in: [MemberRole.OWNER, MemberRole.EDITOR] } },
+          },
+        },
         select: { id: true },
       });
       if (tasks.length !== input.ids.length) throw new TRPCError({ code: 'NOT_FOUND' });
@@ -45,7 +50,7 @@ export const taskScheduleRouter = router({
       if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 
       const taskWhere: Prisma.TaskWhereInput = {
-        userId,
+        members: { some: { userId } },
         status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
         events: { none: {} },
       };
@@ -84,7 +89,7 @@ export const taskScheduleRouter = router({
       }));
 
       const events = await db.event.findMany({
-        where: { task: { userId } },
+        where: { task: { members: { some: { userId } } } },
         select: { startAt: true, endAt: true },
       });
 

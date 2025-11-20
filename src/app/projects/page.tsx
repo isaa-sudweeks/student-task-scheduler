@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ProjectModal, { Project } from "@/components/project-modal";
 import { api } from "@/server/api/react";
+import { ProjectMembersDialog } from "@/components/project-members-dialog";
 
 export default function ProjectsPage() {
   const { data: session } = useSession();
@@ -17,6 +18,7 @@ export default function ProjectsPage() {
   const [editing, setEditing] = useState<Project | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"createdAt" | "title">("createdAt");
+  const [managing, setManaging] = useState<Project | null>(null);
 
   const displayed = [...projects]
     .filter((p) => p.title.toLowerCase().includes(search.toLowerCase()))
@@ -76,6 +78,7 @@ export default function ProjectsPage() {
                 setEditing(proj);
                 setModalOpen(true);
               }}
+              onManage={(proj) => setManaging(proj)}
             />
           ))}
         </div>
@@ -89,13 +92,28 @@ export default function ProjectsPage() {
           setEditing(null);
         }}
       />
+      {managing && (
+        <ProjectMembersDialog
+          projectId={managing.id}
+          projectTitle={managing.title}
+          open={!!managing}
+          onClose={() => setManaging(null)}
+        />
+      )}
     </main>
   );
 }
 
-type ProjectTileProps = { project: Project; onEdit: (p: Project) => void };
+type ProjectTileProps = {
+  project: Project;
+  onEdit: (p: Project) => void;
+  onManage: (p: Project) => void;
+};
 
-function ProjectTile({ project, onEdit }: ProjectTileProps) {
+function ProjectTile({ project, onEdit, onManage }: ProjectTileProps) {
+  const collaborators = (project.members ?? []).filter(
+    (member) => member.user?.name || member.user?.email,
+  );
   return (
     <div
       role="listitem"
@@ -107,15 +125,32 @@ function ProjectTile({ project, onEdit }: ProjectTileProps) {
           <p className="text-sm text-muted-foreground">{project.description}</p>
         )}
       </Link>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          aria-label="Edit project"
-          className="p-1 text-neutral-400 hover:text-neutral-700"
-          onClick={() => onEdit(project)}
-        >
-          <Pencil className="h-4 w-4" />
-        </button>
+      <div className="mt-3 space-y-3">
+        {collaborators.length > 0 && (
+          <div className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Collaborators:</span>{" "}
+            {collaborators
+              .map((member) => member.user?.name ?? member.user?.email ?? "Unknown")
+              .join(", ")}
+          </div>
+        )}
+        <div className="flex justify-between gap-2">
+          <button
+            type="button"
+            aria-label="Edit project"
+            className="p-1 text-neutral-400 hover:text-neutral-700"
+            onClick={() => onEdit(project)}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <Button
+            variant="tertiary"
+            className="text-xs"
+            onClick={() => onManage(project)}
+          >
+            Manage collaborators
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import { ReminderChannel } from '@prisma/client';
+import { ReminderChannel, MemberRole } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../../trpc';
 import { db } from '@/server/db';
 import { requireUserId } from './utils';
+import { assertTaskMember } from '@/server/api/permissions';
 
 const MAX_REMINDERS = 5;
 const MAX_OFFSET_MINUTES = 7 * 24 * 60; // one week
@@ -21,14 +22,12 @@ const reminderUpdateSchema = reminderInputSchema.extend({
   id: z.string().min(1).optional(),
 });
 
-async function assertTaskOwnership(taskId: string, userId: string) {
-  const task = await db.task.findFirst({
-    where: { id: taskId, userId },
-    select: { id: true },
+async function assertTaskEditPermission(taskId: string, userId: string) {
+  await assertTaskMember({
+    userId,
+    taskId,
+    roles: [MemberRole.OWNER, MemberRole.EDITOR],
   });
-  if (!task) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
-  }
 }
 
 export const taskReminderRouter = router({
@@ -36,7 +35,7 @@ export const taskReminderRouter = router({
     .input(z.object({ taskId: z.string().min(1) }))
     .query(async ({ input, ctx }) => {
       const userId = requireUserId(ctx);
-      await assertTaskOwnership(input.taskId, userId);
+      await assertTaskEditPermission(input.taskId, userId);
       return db.reminder.findMany({
         where: { taskId: input.taskId },
         orderBy: { offsetMin: 'asc' },
@@ -53,7 +52,7 @@ export const taskReminderRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const userId = requireUserId(ctx);
-      await assertTaskOwnership(input.taskId, userId);
+      await assertTaskEditPermission(input.taskId, userId);
 
       const sanitized = input.reminders.map((reminder) => reminderInputSchema.parse(reminder));
 

@@ -33,6 +33,7 @@ interface TaskListProps {
   priority: Priority | null;
   courseId: string | null;
   projectId: string | null;
+  collaboratorId: string | null;
   query: string;
   onCountChange?: (count: number) => void;
 }
@@ -44,6 +45,7 @@ export function TaskList({
   priority,
   courseId,
   projectId,
+  collaboratorId,
   query,
   onCountChange,
 }: TaskListProps) {
@@ -55,6 +57,7 @@ export function TaskList({
     priority,
     courseId,
     projectId,
+    collaboratorId,
   });
 
   const [items, setItems] = useState<string[]>([]);
@@ -185,9 +188,10 @@ export function TaskList({
             (!subject || t.subject === subject) &&
             (!priority || t.priority === priority) &&
             (!courseId || t.courseId === courseId) &&
-            (!projectId || t.projectId === projectId)
+            (!projectId || t.projectId === projectId) &&
+            (!collaboratorId || t.members?.some((member) => member.userId === collaboratorId))
         ),
-    [fuseResults, subject, priority, courseId, projectId]
+    [fuseResults, subject, priority, courseId, projectId, collaboratorId]
   );
 
   const { ordered: filteredOrderedTasks, depthById } = React.useMemo(() => {

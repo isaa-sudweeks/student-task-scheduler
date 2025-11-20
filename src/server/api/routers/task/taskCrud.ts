@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { TaskStatus, TaskPriority, Prisma, RecurrenceType } from '@prisma/client';
+import {
+  TaskStatus,
+  TaskPriority,
+  Prisma,
+  RecurrenceType,
+  MemberRole,
+} from '@prisma/client';
 import type { Task } from '@prisma/client';
 import { router, protectedProcedure } from '../../trpc';
 import * as taskModule from './index';
@@ -14,6 +20,7 @@ import {
   validateRecurrence,
 } from './utils';
 import { computeTodayBounds } from './timezone';
+import { assertTaskMember, assertTaskOwner } from '@/server/api/permissions';
 
 export const taskCrudRouter = router({
   subjectOptions: protectedProcedure.query(async ({ ctx }) => {
@@ -23,7 +30,7 @@ export const taskCrudRouter = router({
     if (cached) return cached;
 
     const subjects = await db.task.findMany({
-      where: { userId, subject: { not: null } },
+      where: { members: { some: { userId } }, subject: { not: null } },
       select: { subject: true },
       distinct: ['subject'],
       orderBy: { subject: 'asc' },
@@ -51,6 +58,7 @@ export const taskCrudRouter = router({
           priority: z.nativeEnum(TaskPriority).optional(),
           courseId: z.string().optional(),
           projectId: z.string().optional(),
+          collaboratorId: z.string().optional(),
           parentId: z.string().nullable().optional(),
           // Minutes to add to UTC to get client local time offset (Date.getTimezoneOffset style)
           tzOffsetMinutes: z.number().int().optional(),
@@ -72,6 +80,7 @@ export const taskCrudRouter = router({
       const priority = input?.priority;
       const courseId = input?.courseId;
       const projectId = input?.projectId;
+      const collaboratorId = input?.collaboratorId;
       const parentId = input?.parentId;
       const tzOffsetMinutes = input?.tzOffsetMinutes ?? null;
       const nowUtc = new Date();
@@ -84,47 +93,52 @@ export const taskCrudRouter = router({
         todayEnd: input?.todayEnd,
       });
 
-      // Show only DONE in archive; otherwise include all by default
-      const baseWhere: Prisma.TaskWhereInput =
-        filter === 'archive' ? { status: TaskStatus.DONE, userId } : { userId };
+      const whereConditions: Prisma.TaskWhereInput[] = [
+        { members: { some: { userId } } },
+      ];
 
-      let where: Prisma.TaskWhereInput =
-        filter === 'overdue'
-          ? { ...baseWhere, dueAt: { lt: nowUtc } }
-          : filter === 'today'
-          ? { ...baseWhere, dueAt: { gte: startUtc, lte: endUtc } }
-          : baseWhere;
+      if (filter === 'archive') {
+        whereConditions.push({ status: TaskStatus.DONE });
+      } else if (filter === 'overdue') {
+        whereConditions.push({ dueAt: { lt: nowUtc } });
+      } else if (filter === 'today') {
+        whereConditions.push({ dueAt: { gte: startUtc, lte: endUtc } });
+      }
 
       if (subject) {
-        where = { ...where, subject };
+        whereConditions.push({ subject });
       }
       if (status) {
-        where = { ...where, status };
+        whereConditions.push({ status });
       }
       if (priority) {
-        where = { ...where, priority };
+        whereConditions.push({ priority });
       }
       if (courseId) {
-        where = { ...where, courseId };
+        whereConditions.push({ courseId });
       }
       if (projectId) {
-        where = { ...where, projectId };
+        whereConditions.push({ projectId });
+      }
+      if (collaboratorId) {
+        whereConditions.push({ members: { some: { userId: collaboratorId } } });
       }
       if (parentId !== undefined) {
-        where = { ...where, parentId };
+        whereConditions.push({ parentId });
       }
 
       const start = input?.start;
       const end = input?.end;
       if (start || end) {
-        where = {
-          ...where,
+        whereConditions.push({
           createdAt: {
             ...(start ? { gte: start } : {}),
             ...(end ? { lte: end } : {}),
           },
-        };
+        });
       }
+
+      const where: Prisma.TaskWhereInput = { AND: whereConditions };
 
       const limit = input?.limit;
       const cursor = input?.cursor;
@@ -139,7 +153,16 @@ export const taskCrudRouter = router({
 
       const tasks = await db.task.findMany({
         where,
-        include: { course: true },
+        include: {
+          course: true,
+          members: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, image: true },
+              },
+            },
+          },
+        },
         orderBy: [
           // Respect manual ordering first
           { position: 'asc' },
@@ -207,6 +230,21 @@ export const taskCrudRouter = router({
           projectId: input.projectId ?? undefined,
           courseId: input.courseId ?? undefined,
           parentId: input.parentId ?? undefined,
+          members: {
+            create: {
+              userId,
+              role: MemberRole.OWNER,
+            },
+          },
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, image: true },
+              },
+            },
+          },
         },
       });
       await invalidateTaskListCache(userId);
@@ -244,7 +282,14 @@ export const taskCrudRouter = router({
       });
       const { id, ...rest } = input;
       const userId = requireUserId(ctx);
-      const existing = await db.task.findFirst({ where: { id, userId } });
+      const membership = await db.taskMember.findFirst({
+        where: { taskId: id, userId, role: { in: [MemberRole.OWNER, MemberRole.EDITOR] } },
+        select: { role: true },
+      });
+      if (!membership) throw new TRPCError({ code: 'FORBIDDEN' });
+      const existing = await db.task.findFirst({
+        where: { id },
+      });
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
       const data: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(rest)) {
@@ -272,9 +317,18 @@ export const taskCrudRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Due date cannot be in the past' });
       }
       const userId = requireUserId(ctx);
-      const existing = await db.task.findFirst({ where: { id: input.id, userId } });
-      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
-      const updated = await db.task.update({ where: { id: input.id }, data: { dueAt: input.dueAt ?? null } });
+      const membership = await db.taskMember.findFirst({
+        where: {
+          taskId: input.id,
+          userId,
+          role: { in: [MemberRole.OWNER, MemberRole.EDITOR] },
+        },
+      });
+      if (!membership) throw new TRPCError({ code: 'FORBIDDEN' });
+      const updated = await db.task.update({
+        where: { id: input.id },
+        data: { dueAt: input.dueAt ?? null },
+      });
       await invalidateTaskListCache(userId);
       return updated;
     }),
@@ -282,8 +336,14 @@ export const taskCrudRouter = router({
     .input(z.object({ id: z.string().min(1), title: z.string().min(1).max(200) }))
     .mutation(async ({ input, ctx }) => {
       const userId = requireUserId(ctx);
-      const existing = await db.task.findFirst({ where: { id: input.id, userId } });
-      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+      const membership = await db.taskMember.findFirst({
+        where: {
+          taskId: input.id,
+          userId,
+          role: { in: [MemberRole.OWNER, MemberRole.EDITOR] },
+        },
+      });
+      if (!membership) throw new TRPCError({ code: 'FORBIDDEN' });
       const updated = await db.task.update({ where: { id: input.id }, data: { title: input.title } });
       await invalidateTaskListCache(userId);
       return updated;
@@ -297,8 +357,14 @@ export const taskCrudRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const userId = requireUserId(ctx);
-      const existing = await db.task.findFirst({ where: { id: input.id, userId } });
-      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+      const membership = await db.taskMember.findFirst({
+        where: {
+          taskId: input.id,
+          userId,
+          role: { in: [MemberRole.OWNER, MemberRole.EDITOR] },
+        },
+      });
+      if (!membership) throw new TRPCError({ code: 'FORBIDDEN' });
       const updated = await db.task.update({ where: { id: input.id }, data: { status: input.status } });
       await invalidateTaskListCache(userId);
       return updated;
@@ -307,15 +373,148 @@ export const taskCrudRouter = router({
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       const userId = requireUserId(ctx);
-      const existing = await db.task.findFirst({ where: { id: input.id, userId } });
-      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+      const membership = await db.taskMember.findFirst({
+        where: { taskId: input.id, userId, role: MemberRole.OWNER },
+        select: { id: true },
+      });
+      if (!membership) throw new TRPCError({ code: 'FORBIDDEN' });
       // Be resilient even if DB referential actions aren't cascaded yet
       const [, , deleted] = await db.$transaction([
-        db.reminder.deleteMany({ where: { taskId: input.id, task: { userId } } }),
-        db.event.deleteMany({ where: { taskId: input.id, task: { userId } } }),
+        db.reminder.deleteMany({ where: { taskId: input.id, task: { members: { some: { userId } } } } }),
+        db.event.deleteMany({ where: { taskId: input.id, task: { members: { some: { userId } } } } }),
         db.task.delete({ where: { id: input.id } }),
       ]);
       await invalidateTaskListCache(userId);
       return deleted;
+    }),
+  catalog: protectedProcedure.query(async ({ ctx }) => {
+    const userId = requireUserId(ctx);
+    return db.task.findMany({
+      where: { members: { some: { userId } } },
+      select: { id: true, title: true },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+  }),
+  collaborators: protectedProcedure.query(async ({ ctx }) => {
+    const userId = requireUserId(ctx);
+    const collaborators = await db.taskMember.findMany({
+      where: { task: { members: { some: { userId } } } },
+      select: {
+        userId: true,
+        user: { select: { id: true, name: true, email: true, image: true } },
+      },
+    });
+    const seen = new Map<string, { id: string; name: string; email: string | null; image: string | null }>();
+    for (const membership of collaborators) {
+      if (membership.userId === userId) continue;
+      if (!membership.user) continue;
+      const name = membership.user.name ?? membership.user.email ?? 'Unknown user';
+      seen.set(membership.userId, {
+        id: membership.userId,
+        name,
+        email: membership.user.email ?? null,
+        image: membership.user.image ?? null,
+      });
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }),
+  members: protectedProcedure
+    .input(z.object({ taskId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const userId = requireUserId(ctx);
+      await assertTaskMember({ userId, taskId: input.taskId });
+      return db.taskMember.findMany({
+        where: { taskId: input.taskId },
+        include: {
+          user: { select: { id: true, name: true, email: true, image: true } },
+        },
+        orderBy: { role: 'asc' },
+      });
+    }),
+  inviteMember: protectedProcedure
+    .input(
+      z.object({
+        taskId: z.string().min(1),
+        email: z.string().email(),
+        role: z.nativeEnum(MemberRole).default(MemberRole.EDITOR),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = requireUserId(ctx);
+      await assertTaskOwner({ userId, taskId: input.taskId });
+      const target = await db.user.findUnique({
+        where: { email: input.email.toLowerCase() },
+      });
+      if (!target) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+      }
+      if (target.id === userId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'You are already the owner of this task.',
+        });
+      }
+      await db.taskMember.upsert({
+        where: { taskId_userId: { taskId: input.taskId, userId: target.id } },
+        create: {
+          taskId: input.taskId,
+          userId: target.id,
+          role: input.role,
+        },
+        update: { role: input.role },
+      });
+      await invalidateTaskListCache(userId);
+      await invalidateTaskListCache(target.id);
+      return db.taskMember.findFirst({
+        where: { taskId: input.taskId, userId: target.id },
+        include: {
+          user: { select: { id: true, name: true, email: true, image: true } },
+        },
+      });
+    }),
+  updateMemberRole: protectedProcedure
+    .input(
+      z.object({
+        taskId: z.string().min(1),
+        userId: z.string().min(1),
+        role: z.nativeEnum(MemberRole),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = requireUserId(ctx);
+      await assertTaskOwner({ userId, taskId: input.taskId });
+      if (input.userId === userId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Update another collaborator to change roles.',
+        });
+      }
+      return db.taskMember.update({
+        where: { taskId_userId: { taskId: input.taskId, userId: input.userId } },
+        data: { role: input.role },
+      });
+    }),
+  removeMember: protectedProcedure
+    .input(
+      z.object({
+        taskId: z.string().min(1),
+        userId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = requireUserId(ctx);
+      await assertTaskOwner({ userId, taskId: input.taskId });
+      if (input.userId === userId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Transfer ownership before removing yourself.',
+        });
+      }
+      await db.taskMember.delete({
+        where: { taskId_userId: { taskId: input.taskId, userId: input.userId } },
+      });
+      await invalidateTaskListCache(input.userId);
+      return { success: true };
     }),
 });
