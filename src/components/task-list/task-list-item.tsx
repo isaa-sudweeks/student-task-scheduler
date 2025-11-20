@@ -2,7 +2,7 @@ import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion } from "framer-motion";
-import { Calendar, Tag, Clock, GripVertical, MoreVertical, Info } from "lucide-react";
+import { Calendar, Tag, Clock, GripVertical, MoreVertical, Info, Paperclip } from "lucide-react";
 import type Fuse from "fuse.js";
 
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
@@ -93,11 +93,10 @@ export const TaskCard = React.forwardRef<
       transition={{ duration: 0.2, ease: "easeInOut" }}
       whileHover={{ scale: 1.02, transition: { duration: 0.15, ease: "easeInOut" } }}
       whileTap={{ scale: 0.98, transition: { duration: 0.15, ease: "easeInOut" } }}
-      className={`group flex items-center justify-between rounded-md border bg-white p-3 transition-colors hover:bg-neutral-50 ${
-        overdue
+      className={`group flex items-center justify-between rounded-md border bg-white p-3 transition-colors hover:bg-neutral-50 ${overdue
           ? "border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
           : ""
-      } ${isDragging ? "shadow-sm ring-1 ring-neutral-200 translate-y-[-1px]" : ""}`}
+        } ${isDragging ? "shadow-sm ring-1 ring-neutral-200 translate-y-[-1px]" : ""}`}
       onClick={onClick}
     >
       <div className="flex items-start gap-3 flex-1">
@@ -167,6 +166,29 @@ export const TaskCard = React.forwardRef<
               {notesSnippet.highlighted}
               {notesSnippet.suffix}
             </span>
+          )}
+          {t.attachments && t.attachments.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-600 dark:text-neutral-300" data-testid="task-attachments">
+              {t.attachments.map((attachment) => (
+                <a
+                  key={attachment.id}
+                  href={attachment.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={attachment.originalName ?? undefined}
+                  onClick={(event) => event.stopPropagation()}
+                  className="inline-flex max-w-[160px] items-center gap-1 rounded border border-neutral-200 bg-white px-2 py-1 hover:border-neutral-300 hover:text-neutral-800 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-600 dark:hover:text-neutral-100"
+                >
+                  <Paperclip className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
+                  <span
+                    className="truncate"
+                    title={attachment.originalName ?? attachment.fileName}
+                  >
+                    {attachment.originalName ?? attachment.fileName}
+                  </span>
+                </a>
+              ))}
+            </div>
           )}
         </div>
       </div>
