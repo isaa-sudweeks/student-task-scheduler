@@ -34,6 +34,7 @@ model User {
   courses  Course[]
   accounts Account[]
   sessions Session[]
+  studyGoals StudyGoal[]
 }
 
 model Account {
@@ -86,6 +87,7 @@ model Course {
   officeHours String[] @default([])
 
   tasks Task[]
+  studyGoals StudyGoal[]
 }
 
 model Project {
@@ -193,4 +195,25 @@ enum LlmProvider {
   NONE
   OPENAI
   LM_STUDIO
+}
+
+enum GoalType {
+  SUBJECT
+  COURSE
+}
+
+model StudyGoal {
+  id            String    @id @default(cuid())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  type          GoalType
+  subject       String?
+  course        Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId      String?
+  targetMinutes Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, type, subject])
+  @@unique([userId, courseId])
 }
