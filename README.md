@@ -108,6 +108,9 @@ Create a `.env` file and configure:
 - `GITHUB_ID`, `GITHUB_SECRET` – GitHub OAuth credentials for sign-in.
 - `REDIS_URL` – Redis connection string for caching (defaults to `redis://localhost:6379`).
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` – OAuth credentials for Google Calendar sync.
+- `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL` – Credentials for outbound reminder emails.
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` – Credentials and sending number for SMS reminders.
+- `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY` – VAPID key pair for browser push notifications.
 
 Never commit secrets. Re-run `npx prisma generate` whenever the Prisma schema changes.
 

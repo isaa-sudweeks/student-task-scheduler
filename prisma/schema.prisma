@@ -25,6 +25,8 @@ model User {
   image     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  smsNumber String?
+  pushSubscription Json?
 
   // User preferences
   dayWindowStartHour   Int     @default(8)
@@ -218,12 +220,23 @@ enum ReminderChannel {
   SMS
 }
 
+enum ReminderDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 model Reminder {
   id        String          @id @default(cuid())
   task      Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
   taskId    String
   channel   ReminderChannel
   offsetMin Int             @default(30)
+  attemptCount Int          @default(0)
+  lastAttemptAt DateTime?
+  lastSentAt DateTime?
+  lastStatus ReminderDeliveryStatus @default(PENDING)
+  lastError String?
 }
 
 model TaskTimeLog {

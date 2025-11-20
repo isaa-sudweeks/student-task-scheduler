@@ -18,6 +18,16 @@ type ReminderChannel = Reminder["channel"];
 const reminderChannels: ReminderChannel[] = ["EMAIL", "PUSH", "SMS"];
 const MAX_REMINDERS = 5;
 
+function formatTimestamp(value: string | Date | null | undefined) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 interface TaskModalProps {
   open: boolean;
   mode: "create" | "edit";
@@ -77,6 +87,16 @@ export function TaskModal({
     { taskId: task?.id ?? "" },
     { enabled: isEdit && !!task && open },
   );
+
+  const reminderStatusLookup = useMemo(() => {
+    const map = new Map<string, Reminder>();
+    if (remindersQuery.data) {
+      for (const reminder of remindersQuery.data) {
+        map.set(reminder.id, reminder);
+      }
+    }
+    return map;
+  }, [remindersQuery.data]);
 
   useEffect(() => {
     if (!open) return;
@@ -402,13 +422,46 @@ export function TaskModal({
           </div>
           {reminders.length === 0 && <p className="text-sm text-muted-foreground">No reminders configured.</p>}
           <div className="flex flex-col gap-2">
-            {reminders.map((reminder, index) => (
-              <div key={reminder.id ?? index} className="flex flex-wrap items-center gap-2">
-                <label className="sr-only" htmlFor={`reminder-channel-${index}`}>
-                  Reminder channel {index + 1}
-                </label>
-                <select
-                  id={`reminder-channel-${index}`}
+            {reminders.map((reminder, index) => {
+              const status = reminder.id
+                ? reminderStatusLookup.get(reminder.id)
+                : undefined;
+              let statusMessage: string | null = null;
+              let statusTone = "text-muted-foreground";
+              if (status) {
+                const attemptAt = formatTimestamp(status.lastAttemptAt);
+                if (status.lastStatus === "SENT") {
+                  statusTone = "text-emerald-600";
+                  statusMessage = attemptAt
+                    ? `Delivered ${attemptAt}.`
+                    : "Delivered.";
+                } else if (status.lastStatus === "FAILED") {
+                  statusTone = "text-destructive";
+                  statusMessage = attemptAt
+                    ? `Last attempt failed ${attemptAt}${
+                        status.lastError ? `: ${status.lastError}` : "."
+                      }`
+                    : `Delivery failed${
+                        status.lastError ? `: ${status.lastError}` : "."
+                      }`;
+                } else if (status.attemptCount > 0) {
+                  statusMessage = attemptAt
+                    ? `Last attempt ${attemptAt}.`
+                    : `Last attempt recorded.`;
+                }
+                if (!statusMessage) {
+                  statusMessage = "Pending delivery.";
+                }
+              }
+
+              return (
+                <div key={reminder.id ?? index} className="flex flex-col gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="sr-only" htmlFor={`reminder-channel-${index}`}>
+                      Reminder channel {index + 1}
+                    </label>
+                    <select
+                      id={`reminder-channel-${index}`}
                   className="rounded border border-input bg-background px-2 py-1 text-sm"
                   value={reminder.channel}
                   onChange={(event) => {
@@ -452,18 +505,23 @@ export function TaskModal({
                   }}
                 />
                 <span className="text-sm text-muted-foreground">minutes before</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setReminders((prev) => prev.filter((_, idx) => idx !== index));
-                    setReminderError(null);
-                  }}
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setReminders((prev) => prev.filter((_, idx) => idx !== index));
+                        setReminderError(null);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  {statusMessage && (
+                    <p className={`text-xs ${statusTone}`}>{statusMessage}</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
           {(reminderError ?? reminderValidationError) && (
             <p className="text-sm text-destructive">
