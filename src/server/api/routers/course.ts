@@ -1,8 +1,47 @@
 import { z } from 'zod';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus, Weekday } from '@prisma/client';
 import { protectedProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 import { TRPCError } from '@trpc/server';
+
+const timeString = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/)
+  .refine((value) => {
+    const [h, m] = value.split(':').map(Number);
+    return Number.isInteger(h) && Number.isInteger(m) && h >= 0 && h < 24 && m >= 0 && m < 60;
+  }, 'Invalid time format');
+
+const meetingInputSchema = z.object({
+  dayOfWeek: z.nativeEnum(Weekday),
+  startTime: timeString,
+  endTime: timeString,
+  location: z.string().max(200).optional(),
+});
+
+const toMinutes = (value: string) => {
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const transformMeetings = (meetings: z.infer<typeof meetingInputSchema>[]) => {
+  return meetings.map((meeting, index) => {
+    const startMinutes = toMinutes(meeting.startTime);
+    const endMinutes = toMinutes(meeting.endTime);
+    if (endMinutes <= startMinutes) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Meeting ${index + 1} end time must be after start time`,
+      });
+    }
+    return {
+      dayOfWeek: meeting.dayOfWeek,
+      startMinutes,
+      endMinutes,
+      location: meeting.location ?? null,
+    };
+  });
+};
 
 export const courseRouter = router({
   list: protectedProcedure
@@ -38,10 +77,12 @@ export const courseRouter = router({
             orderBy: { dueAt: 'asc' },
             take: 1,
           },
+          meetings: true,
         },
       });
-      return courses.map(({ tasks, ...c }) => ({
+      return courses.map(({ tasks, meetings, ...c }) => ({
         ...c,
+        meetings,
         nextDueAt: tasks[0]?.dueAt ?? null,
       }));
     }),
@@ -53,6 +94,7 @@ export const courseRouter = router({
         color: z.string().max(50).optional(),
         description: z.string().max(1000).optional(),
         syllabusUrl: z.string().url().optional(),
+        meetings: z.array(meetingInputSchema).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -76,7 +118,15 @@ export const courseRouter = router({
       if (typeof input.syllabusUrl !== 'undefined') {
         (data as any).syllabusUrl = input.syllabusUrl ?? null;
       }
-      return db.course.create({ data: data as any });
+      if (input.meetings?.length) {
+        (data as any).meetings = {
+          create: transformMeetings(input.meetings),
+        };
+      }
+      return db.course.create({
+        data: data as any,
+        include: { meetings: true },
+      });
     }),
   update: protectedProcedure
     .input(
@@ -87,6 +137,7 @@ export const courseRouter = router({
         color: z.string().max(50).nullable().optional(),
         description: z.string().max(1000).nullable().optional(),
         syllabusUrl: z.string().url().nullable().optional(),
+        meetings: z.array(meetingInputSchema).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -94,12 +145,20 @@ export const courseRouter = router({
       const { id, ...rest } = input;
       const data: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(rest)) {
+        if (key === 'meetings') continue;
         if (typeof value !== 'undefined') data[key] = value;
       }
-      if (Object.keys(data).length === 0) {
-        return db.course.findUniqueOrThrow({ where: { id, userId } });
+      if (typeof rest.meetings !== 'undefined') {
+        const meetings = transformMeetings(rest.meetings);
+        (data as any).meetings = {
+          deleteMany: {},
+          create: meetings,
+        };
       }
-      return db.course.update({ where: { id, userId }, data });
+      if (Object.keys(data).length === 0) {
+        return db.course.findUniqueOrThrow({ where: { id, userId }, include: { meetings: true } });
+      }
+      return db.course.update({ where: { id, userId }, data, include: { meetings: true } });
     }),
   delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))

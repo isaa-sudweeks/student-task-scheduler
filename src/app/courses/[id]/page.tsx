@@ -87,12 +87,46 @@ export default function CoursePage({ params }: { params: { id: string } }) {
   const syllabusUrl = (course as unknown as { syllabusUrl?: string | null })
     .syllabusUrl ?? null;
 
+  const meetings = Array.isArray(course.meetings) ? course.meetings : [];
+  const formatTime = (minutes: number) => {
+    const hrs = Math.floor(minutes / 60)
+      .toString()
+      .padStart(2, "0");
+    const mins = (minutes % 60).toString().padStart(2, "0");
+    return `${hrs}:${mins}`;
+  };
+  const formatDay = (day: string) => {
+    const lower = day.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  };
+
   return (
     <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">{course.title}</h1>
         {course.term && (
           <p className="text-sm text-muted-foreground">{course.term}</p>
+        )}
+      </div>
+      <div className="rounded-xl border bg-white dark:bg-zinc-900 shadow-sm p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Schedule</h2>
+        {meetings.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No meetings recorded.</p>
+        ) : (
+          <ul className="space-y-2">
+            {meetings.map((meeting) => (
+              <li key={meeting.id} className="text-sm">
+                <span className="font-medium">{formatDay(meeting.dayOfWeek)}</span>
+                {": "}
+                <span>
+                  {formatTime(meeting.startMinutes)} – {formatTime(meeting.endMinutes)}
+                </span>
+                {meeting.location && (
+                  <span className="text-muted-foreground"> @ {meeting.location}</span>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
       <div className="rounded-xl border bg-white dark:bg-zinc-900 shadow-sm p-4 space-y-4">

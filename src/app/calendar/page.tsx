@@ -19,6 +19,38 @@ type Task = RouterOutputs['task']['list'][number];
 type Event = RouterOutputs['event']['listRange'][number];
 type ScheduleSuggestion = RouterOutputs['task']['scheduleSuggestions']['suggestions'][number];
 
+const WEEKDAY_INDEX: Record<string, number> = {
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+};
+
+const CLASS_CONFLICT_MESSAGE = 'This time conflicts with a class meeting for this course.';
+
+function isDuringCourseMeeting(task: Task | undefined, startAt: Date, durationMinutes: number): boolean {
+  if (!task?.course || !Array.isArray(task.course.meetings) || task.course.meetings.length === 0) {
+    return false;
+  }
+  const startLocal = new Date(startAt);
+  const endLocal = new Date(startAt.getTime() + durationMinutes * 60000);
+  const dayIndex = startLocal.getDay();
+  const dayStart = new Date(startLocal);
+  dayStart.setHours(0, 0, 0, 0);
+  return task.course.meetings.some((meeting) => {
+    const meetingDayIndex = WEEKDAY_INDEX[meeting.dayOfWeek as keyof typeof WEEKDAY_INDEX];
+    if (typeof meetingDayIndex !== 'number' || meetingDayIndex !== dayIndex) return false;
+    const meetingStart = new Date(dayStart);
+    meetingStart.setMinutes(meeting.startMinutes);
+    const meetingEnd = new Date(dayStart);
+    meetingEnd.setMinutes(meeting.endMinutes);
+    return meetingStart < endLocal && startLocal < meetingEnd;
+  });
+}
+
 export default function CalendarPage() {
   const [view, setView] = useState<ViewMode>('week');
   const [baseDate, setBaseDate] = useState<Date>(new Date());
@@ -138,6 +170,13 @@ export default function CalendarPage() {
   const suggestionMutation = api.task.scheduleSuggestions.useMutation();
 
   const tasksData = useMemo(() => tasksQ.data ?? [], [tasksQ.data]);
+  const taskById = useMemo(() => {
+    const map = new Map<string, Task>();
+    for (const task of tasksData) {
+      map.set(task.id, task);
+    }
+    return map;
+  }, [tasksData]);
   const eventsData = useMemo(() => eventsQ.data ?? [], [eventsQ.data]);
   const [eventsLocal, setEventsLocal] = useState<Event[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<ScheduleSuggestion[]>([]);
@@ -260,6 +299,18 @@ export default function CalendarPage() {
     [scheduleMutate, dayStart, dayEnd]
   );
 
+  const scheduleTask = React.useCallback(
+    (args: { taskId: string; startAt: Date; durationMinutes: number }) => {
+      const task = taskById.get(args.taskId);
+      if (isDuringCourseMeeting(task, args.startAt, args.durationMinutes)) {
+        toast.error(CLASS_CONFLICT_MESSAGE);
+        return;
+      }
+      scheduleWithPrefs(args);
+    },
+    [scheduleWithPrefs, taskById],
+  );
+
   const requestSuggestions = React.useCallback(async () => {
     if (selectedBacklogIds.size === 0) {
       setAiError('Select at least one backlog task before generating suggestions.');
@@ -296,13 +347,13 @@ export default function CalendarPage() {
         Math.round((suggestion.endAt.getTime() - suggestion.startAt.getTime()) / 60000),
       );
       setAiSuggestions((prev) => prev.filter((s) => s.taskId !== suggestion.taskId));
-      scheduleWithPrefs({
+      scheduleTask({
         taskId: suggestion.taskId,
         startAt: new Date(suggestion.startAt),
         durationMinutes,
       });
     },
-    [scheduleWithPrefs],
+    [scheduleTask],
   );
   const moveMutateFn = move.mutate;
   const moveWithPrefs = React.useCallback(
@@ -523,7 +574,7 @@ export default function CalendarPage() {
             const taskId = aid.slice('task-'.length);
             const iso = oid.slice('cell-'.length);
             const startAt = new Date(iso);
-            scheduleWithPrefs({ taskId, startAt, durationMinutes: defaultDuration });
+            scheduleTask({ taskId, startAt, durationMinutes: defaultDuration });
             return;
           }
           if (aid.startsWith('event-') && oid.startsWith('cell-')) {
@@ -534,6 +585,11 @@ export default function CalendarPage() {
             if (!ev) return;
             const durationMin = calculateDurationMinutes(ev.startAt, ev.endAt);
             const endAt = new Date(startAt.getTime() + durationMin * 60000);
+            const task = taskById.get(ev.taskId);
+            if (isDuringCourseMeeting(task, startAt, durationMin)) {
+              toast.error(CLASS_CONFLICT_MESSAGE);
+              return;
+            }
             // optimistic update
             setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt, endAt } : x));
             moveWithPrefs({ eventId, startAt, endAt });
@@ -549,6 +605,12 @@ export default function CalendarPage() {
             const endAt = new Date(ev.endAt);
             if (at >= endAt) at = new Date(endAt.getTime() - 15 * 60000);
             startAt = at;
+            const durationMin = Math.max(1, calculateDurationMinutes(startAt, endAt));
+            const task = taskById.get(ev.taskId);
+            if (isDuringCourseMeeting(task, startAt, durationMin)) {
+              toast.error(CLASS_CONFLICT_MESSAGE);
+              return;
+            }
             // optimistic update
             setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt } : x));
             moveWithPrefs({ eventId, startAt, endAt });
@@ -564,6 +626,12 @@ export default function CalendarPage() {
             let endAt = new Date(ev.endAt);
             if (at <= startAt) at = new Date(startAt.getTime() + 15 * 60000);
             endAt = at;
+            const durationMin = Math.max(1, calculateDurationMinutes(startAt, endAt));
+            const task = taskById.get(ev.taskId);
+            if (isDuringCourseMeeting(task, startAt, durationMin)) {
+              toast.error(CLASS_CONFLICT_MESSAGE);
+              return;
+            }
             // optimistic update
             setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, endAt } : x));
             moveWithPrefs({ eventId, startAt, endAt });
@@ -675,7 +743,7 @@ export default function CalendarPage() {
             className="hidden"
             onClick={() => {
               const now = new Date();
-              scheduleWithPrefs({ taskId: backlog[0].id, startAt: now, durationMinutes: defaultDuration });
+              scheduleTask({ taskId: backlog[0].id, startAt: now, durationMinutes: defaultDuration });
             }}
           >Simulate</button>
         )}
@@ -689,6 +757,11 @@ export default function CalendarPage() {
               const newStart = new Date(new Date(ev.startAt).getTime() + 60 * 60000);
               const durationMin = calculateDurationMinutes(ev.startAt, ev.endAt);
               const newEnd = new Date(newStart.getTime() + durationMin * 60000);
+              const task = taskById.get(ev.taskId);
+              if (isDuringCourseMeeting(task, newStart, durationMin)) {
+                toast.error(CLASS_CONFLICT_MESSAGE);
+                return;
+              }
               moveWithPrefs({ eventId: ev.id, startAt: newStart, endAt: newEnd });
             }}
           >Simulate Move</button>
@@ -702,13 +775,18 @@ export default function CalendarPage() {
             workStartHour={dayStart}
             workEndHour={dayEnd}
             onDropTask={(taskId, startAt) => {
-              scheduleWithPrefs({ taskId, startAt, durationMinutes: defaultDuration });
+              scheduleTask({ taskId, startAt, durationMinutes: defaultDuration });
             }}
             onMoveEvent={(eventId, startAt) => {
               const ev = eventsData.find((e) => e.id === eventId);
               if (!ev) return;
               const durationMin = calculateDurationMinutes(ev.startAt, ev.endAt);
               const endAt = new Date(startAt.getTime() + durationMin * 60000);
+              const task = taskById.get(ev.taskId);
+              if (isDuringCourseMeeting(task, startAt, durationMin)) {
+                toast.error(CLASS_CONFLICT_MESSAGE);
+                return;
+              }
               moveWithPrefs({ eventId, startAt, endAt });
             }}
             onResizeEvent={(eventId, edge, at) => {
@@ -722,6 +800,12 @@ export default function CalendarPage() {
               } else {
                 if (at <= startAt) at = new Date(startAt.getTime() + 15 * 60000);
                 endAt = at;
+              }
+              const durationMin = Math.max(1, calculateDurationMinutes(startAt, endAt));
+              const task = taskById.get(ev.taskId);
+              if (isDuringCourseMeeting(task, startAt, durationMin)) {
+                toast.error(CLASS_CONFLICT_MESSAGE);
+                return;
               }
               // optimistic update
               setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt, endAt } : x));
@@ -748,8 +832,14 @@ export default function CalendarPage() {
             const ev = eventsLocal[0];
             const startAt = new Date(ev.startAt);
             const newEnd = new Date(startAt.getTime() + 120 * 60000); // extend to 2h total
+            const durationMin = Math.max(1, calculateDurationMinutes(startAt, newEnd));
+            const task = taskById.get(ev.taskId);
+            if (isDuringCourseMeeting(task, startAt, durationMin)) {
+              toast.error(CLASS_CONFLICT_MESSAGE);
+              return;
+            }
             setEventsLocal((prev) => prev.map((x) => x.id === ev.id ? { ...x, endAt: newEnd } : x));
-              moveWithPrefs({ eventId: ev.id, startAt, endAt: newEnd });
+            moveWithPrefs({ eventId: ev.id, startAt, endAt: newEnd });
           }}
         >Simulate Resize</button>
       )}
@@ -781,7 +871,7 @@ export default function CalendarPage() {
                   {
                     onSuccess: async (task) => {
                       if (newTaskStart) {
-                        scheduleWithPrefs({
+                        scheduleTask({
                           taskId: task.id,
                           startAt: newTaskStart,
                           durationMinutes: defaultDuration,

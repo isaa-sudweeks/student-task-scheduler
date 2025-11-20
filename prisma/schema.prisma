@@ -83,6 +83,19 @@ model Course {
   syllabusUrl String?
 
   tasks Task[]
+  meetings CourseMeeting[]
+}
+
+model CourseMeeting {
+  id         String  @id @default(cuid())
+  course     Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId   String
+  dayOfWeek  Weekday
+  startMinutes Int
+  endMinutes   Int
+  location   String?
+
+  @@index([courseId, dayOfWeek])
 }
 
 model Project {
@@ -107,6 +120,16 @@ enum TaskPriority {
   LOW
   MEDIUM
   HIGH
+}
+
+enum Weekday {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
 }
 
 enum RecurrenceType {
