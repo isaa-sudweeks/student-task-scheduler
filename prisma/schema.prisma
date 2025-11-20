@@ -145,6 +145,7 @@ model Task {
   events    Event[]
   reminders Reminder[]
   timeLogs  TaskTimeLog[]
+  attachments Attachment[]
 
   @@index([dueAt, status])
   @@unique([userId, title, dueAt, recurrenceType, recurrenceInterval])
@@ -190,4 +191,16 @@ enum LlmProvider {
   NONE
   OPENAI
   LM_STUDIO
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId       String
+  originalName String
+  fileName     String
+  mimeType     String
+  size         Int
+  url          String
+  createdAt    DateTime @default(now())
 }

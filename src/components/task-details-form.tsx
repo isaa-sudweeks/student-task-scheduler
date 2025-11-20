@@ -1,6 +1,15 @@
 "use client";
 import React from "react";
+import { Paperclip } from "lucide-react";
+
 import { defaultEndOfToday, parseLocalDateTime } from "@/lib/datetime";
+
+interface AttachmentSummary {
+  id: string;
+  name: string;
+  url: string;
+  size?: number | null;
+}
 
 interface TaskDetailsFormProps {
   title: string;
@@ -26,7 +35,28 @@ interface TaskDetailsFormProps {
   onEffortMinutesChange: (value: string) => void;
   recurrenceControls?: React.ReactNode;
   onDraftDueChange?: (due: Date | null) => void;
+  existingAttachments: AttachmentSummary[];
+  pendingAttachments: File[];
+  onAttachmentSelect: (files: FileList | null) => void;
+  onRemovePendingAttachment: (index: number) => void;
+  attachmentError: string | null;
+  attachmentInputKey: number;
+  isUploadingAttachments: boolean;
 }
+
+const formatFileSize = (bytes: number | null | undefined) => {
+  if (!bytes || bytes <= 0) return null;
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB"];
+  let value = bytes / 1024;
+  let idx = 0;
+  while (value >= 1024 && idx < units.length - 1) {
+    value /= 1024;
+    idx += 1;
+  }
+  const display = value >= 10 || idx === 0 ? value.toFixed(0) : value.toFixed(1);
+  return `${display} ${units[idx]}`;
+};
 
 export function TaskDetailsForm({
   title,
@@ -52,6 +82,13 @@ export function TaskDetailsForm({
   onEffortMinutesChange,
   recurrenceControls,
   onDraftDueChange,
+  existingAttachments,
+  pendingAttachments,
+  onAttachmentSelect,
+  onRemovePendingAttachment,
+  attachmentError,
+  attachmentInputKey,
+  isUploadingAttachments,
 }: TaskDetailsFormProps) {
   return (
     <>
@@ -209,6 +246,94 @@ export function TaskDetailsForm({
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
         />
+      </div>
+
+      <div className="flex items-start gap-4">
+        <label htmlFor="attachments" className="w-28 text-sm font-medium">
+          Attachments
+        </label>
+        <div className="flex-1 space-y-2">
+          <input
+            key={attachmentInputKey}
+            id="attachments"
+            type="file"
+            multiple
+            className="block w-full text-sm text-neutral-600 file:mr-4 file:rounded file:border file:border-black/10 file:bg-white file:px-3 file:py-1 file:text-sm file:font-medium hover:file:bg-neutral-100 dark:file:border-white/10 dark:file:bg-neutral-900 dark:file:text-neutral-100"
+            onChange={(event) => onAttachmentSelect(event.target.files)}
+          />
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            PDF and image files up to 10&nbsp;MB upload after you save the task.
+          </p>
+          {pendingAttachments.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                Pending upload
+              </p>
+              <ul className="mt-1 space-y-1 text-sm text-neutral-600 dark:text-neutral-300">
+                {pendingAttachments.map((file, index) => (
+                  <li
+                    key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
+                    className="flex items-center gap-2"
+                  >
+                    <Paperclip className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
+                    <span className="flex-1 truncate" title={file.name}>
+                      {file.name}
+                      {formatFileSize(file.size) ? (
+                        <span className="ml-2 text-xs text-neutral-400 dark:text-neutral-500">
+                          ({formatFileSize(file.size)})
+                        </span>
+                      ) : null}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-xs text-red-600 hover:underline dark:text-red-400"
+                      onClick={() => onRemovePendingAttachment(index)}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {existingAttachments.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                Attached files
+              </p>
+              <ul className="mt-1 space-y-1 text-sm">
+                {existingAttachments.map((attachment) => (
+                  <li key={attachment.id}>
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex max-w-full items-center gap-2 text-indigo-600 hover:text-indigo-500 hover:underline dark:text-indigo-300 dark:hover:text-indigo-200"
+                    >
+                      <Paperclip className="h-3 w-3" />
+                      <span className="truncate" title={attachment.name}>
+                        {attachment.name}
+                        {formatFileSize(attachment.size ?? null) ? (
+                          <span className="ml-2 text-xs text-neutral-400 dark:text-neutral-500">
+                            ({formatFileSize(attachment.size ?? null)})
+                          </span>
+                        ) : null}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {attachmentError && (
+            <p className="text-sm text-red-600 dark:text-red-400">{attachmentError}</p>
+          )}
+          {isUploadingAttachments && (
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Uploading attachments…
+            </p>
+          )}
+        </div>
       </div>
     </>
   );

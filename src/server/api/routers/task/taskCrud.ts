@@ -132,14 +132,19 @@ export const taskCrudRouter = router({
         dueAt: { sort: 'asc', nulls: 'last' },
       };
 
-      type TaskWithCourse = Prisma.TaskGetPayload<{ include: { course: true } }>;
+      type TaskWithRelations = Prisma.TaskGetPayload<{
+        include: { course: true; attachments: { orderBy: { createdAt: 'asc' } } };
+      }>;
       const cacheKey = buildListCacheKey(input, ctx.session?.user?.id ?? null);
-      const cached = await cache.get<TaskWithCourse[]>(cacheKey);
+      const cached = await cache.get<TaskWithRelations[]>(cacheKey);
       if (cached) return cached;
 
       const tasks = await db.task.findMany({
         where,
-        include: { course: true },
+        include: {
+          course: true,
+          attachments: { orderBy: { createdAt: 'asc' } },
+        },
         orderBy: [
           // Respect manual ordering first
           { position: 'asc' },

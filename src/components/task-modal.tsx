@@ -14,6 +14,21 @@ import type { RouterOutputs } from "@/server/api/root";
 type Task = RouterOutputs["task"]["list"][number];
 type Reminder = RouterOutputs["task"]["listReminders"][number];
 type ReminderChannel = Reminder["channel"];
+type TaskAttachment = NonNullable<Task["attachments"]>[number];
+
+interface AttachmentViewModel {
+  id: string;
+  name: string;
+  url: string;
+  size: number | null;
+}
+
+const toAttachmentViewModel = (attachment: TaskAttachment): AttachmentViewModel => ({
+  id: attachment.id,
+  name: attachment.originalName ?? attachment.fileName,
+  url: attachment.url,
+  size: attachment.size ?? null,
+});
 
 const reminderChannels: ReminderChannel[] = ["EMAIL", "PUSH", "SMS"];
 const MAX_REMINDERS = 5;
@@ -67,6 +82,11 @@ export function TaskModal({
     { channel: "EMAIL", offset: "60" },
   ]);
   const [reminderError, setReminderError] = useState<string | null>(null);
+  const [existingAttachments, setExistingAttachments] = useState<AttachmentViewModel[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<File[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
+  const [attachmentInputKey, setAttachmentInputKey] = useState(0);
 
   const { data: subtasks = [] } = api.task.list.useQuery(
     { filter: 'all', parentId: task?.id },
@@ -97,6 +117,7 @@ export function TaskModal({
       const hasDue = task.dueAt != null;
       setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
       setDueEnabled(hasDue);
+      setExistingAttachments((task.attachments ?? []).map(toAttachmentViewModel));
       if (remindersQuery.data) {
         setReminders(remindersQuery.data.map((reminder) => ({
           id: reminder.id,
@@ -126,9 +147,14 @@ export function TaskModal({
         setDueEnabled(false);
       }
       setReminders([{ channel: "EMAIL", offset: "60" }]);
+      setExistingAttachments([]);
     }
     setTitleError(null);
     setReminderError(null);
+    setPendingAttachments([]);
+    setAttachmentError(null);
+    setIsUploadingAttachments(false);
+    setAttachmentInputKey((key) => key + 1);
   }, [
     open,
     isEdit,
@@ -139,6 +165,16 @@ export function TaskModal({
     initialCourseId,
     remindersQuery.data,
   ]);
+
+  useEffect(() => {
+    if (!open) {
+      setPendingAttachments([]);
+      setAttachmentError(null);
+      setIsUploadingAttachments(false);
+      setAttachmentInputKey((key) => key + 1);
+      setExistingAttachments([]);
+    }
+  }, [open]);
 
   const create = api.task.create.useMutation();
 
@@ -198,6 +234,75 @@ export function TaskModal({
     return null;
   }, [parsedReminders, reminders]);
 
+  const fileKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
+
+  const handleAttachmentSelect = (fileList: FileList | null) => {
+    if (!fileList) return;
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
+    setPendingAttachments((prev) => {
+      const next = [...prev];
+      const seen = new Set(next.map(fileKey));
+      for (const file of files) {
+        const key = fileKey(file);
+        if (!seen.has(key)) {
+          seen.add(key);
+          next.push(file);
+        }
+      }
+      return next;
+    });
+    setAttachmentError(null);
+    setAttachmentInputKey((key) => key + 1);
+  };
+
+  const handleRemovePendingAttachment = (index: number) => {
+    setPendingAttachments((prev) => prev.filter((_, idx) => idx !== index));
+    setAttachmentError(null);
+    setAttachmentInputKey((key) => key + 1);
+  };
+
+  const uploadPendingAttachments = async (taskId: string) => {
+    const uploaded: AttachmentViewModel[] = [];
+    for (const file of pendingAttachments) {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch(`/api/tasks/${taskId}/attachments`, {
+        method: "POST",
+        body: formData,
+      });
+      let payload: unknown = null;
+      try {
+        payload = await response.json();
+      } catch (error) {
+        payload = null;
+      }
+      if (!response.ok) {
+        const message =
+          payload && typeof payload === "object" && "error" in payload
+            ? (payload as { error?: string }).error ?? "Failed to upload attachment"
+            : "Failed to upload attachment";
+        throw new Error(message);
+      }
+      if (
+        !payload ||
+        typeof payload !== "object" ||
+        !("attachment" in payload) ||
+        typeof (payload as any).attachment !== "object"
+      ) {
+        throw new Error("Invalid attachment response");
+      }
+      const record = (payload as { attachment: { id: string; originalName: string; url: string; size: number | null } }).attachment;
+      uploaded.push({
+        id: record.id,
+        name: record.originalName,
+        url: record.url,
+        size: record.size ?? null,
+      });
+    }
+    return uploaded;
+  };
+
   const handleSave = async () => {
     if (recurrenceConflict) return;
     if (reminderValidationError) {
@@ -245,6 +350,8 @@ export function TaskModal({
       return;
     }
 
+    setAttachmentError(null);
+
     let saved: Task;
     if (isEdit && task) {
       saved = await update.mutateAsync({
@@ -283,6 +390,28 @@ export function TaskModal({
       reminders: reminderPayload,
     });
 
+    if (pendingAttachments.length > 0) {
+      setIsUploadingAttachments(true);
+      try {
+        const uploaded = await uploadPendingAttachments(saved.id);
+        if (uploaded.length > 0) {
+          setExistingAttachments((prev) => [...prev, ...uploaded]);
+        }
+        setPendingAttachments([]);
+        setAttachmentInputKey((key) => key + 1);
+        setAttachmentError(null);
+      } catch (error) {
+        setAttachmentError(
+          error instanceof Error ? error.message : "Failed to upload attachments",
+        );
+        setIsUploadingAttachments(false);
+        await utils.task.list.invalidate();
+        await utils.task.listReminders.invalidate({ taskId: saved.id });
+        return;
+      }
+      setIsUploadingAttachments(false);
+    }
+
     await utils.task.list.invalidate();
     await utils.task.listReminders.invalidate({ taskId: saved.id });
     onClose();
@@ -307,7 +436,8 @@ export function TaskModal({
           create.isPending ||
           update.isPending ||
           replaceReminders.isPending ||
-          recurrenceConflict
+          recurrenceConflict ||
+          isUploadingAttachments
         }
         onClick={() => void handleSave()}
       >
@@ -369,6 +499,13 @@ export function TaskModal({
               onRecurrenceUntilChange={setRecurrenceUntil}
             />
           }
+          existingAttachments={existingAttachments}
+          pendingAttachments={pendingAttachments}
+          onAttachmentSelect={handleAttachmentSelect}
+          onRemovePendingAttachment={handleRemovePendingAttachment}
+          attachmentError={attachmentError}
+          attachmentInputKey={attachmentInputKey}
+          isUploadingAttachments={isUploadingAttachments}
         />
         {isEdit && task && (
           <SubtaskList
