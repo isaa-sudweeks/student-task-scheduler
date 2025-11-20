@@ -47,8 +47,8 @@ export function createAcceptSuggestionHandler({
         return next;
       });
       toast.success("Scheduled task");
-      if (result.googleSyncWarning) {
-        toast.info("Event saved locally, but Google Calendar sync failed.");
+      if (result.syncWarnings?.length) {
+        toast.info(result.syncWarnings[0] ?? "Event saved locally, but calendar sync reported warnings.");
       }
     } catch (error) {
       console.error(error);

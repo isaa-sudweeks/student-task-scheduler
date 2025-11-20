@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { db } from '@/server/db';
 import { TRPCError } from '@trpc/server';
-import { GoalType, LlmProvider } from '@prisma/client';
+import { GoalType, CalendarProvider, LlmProvider } from '@prisma/client';
 
 export const userRouter = router({
   get: protectedProcedure.query(({ ctx }) => {
@@ -93,18 +93,18 @@ export const userRouter = router({
         where:
           input.type === GoalType.SUBJECT
             ? {
-                userId_type_subject: {
-                  userId,
-                  type: GoalType.SUBJECT,
-                  subject: subject!,
-                },
-              }
-            : {
-                userId_courseId: {
-                  userId,
-                  courseId: courseId!,
-                },
+              userId_type_subject: {
+                userId,
+                type: GoalType.SUBJECT,
+                subject: subject!,
               },
+            }
+            : {
+              userId_courseId: {
+                userId,
+                courseId: courseId!,
+              },
+            },
         update: { targetMinutes: input.targetMinutes, subject, courseId },
         create: {
           userId,
@@ -146,6 +146,7 @@ export const userRouter = router({
         dayWindowEndHour: true,
         defaultDurationMinutes: true,
         googleSyncEnabled: true,
+        calendarSyncProviders: true,
         llmProvider: true,
         openaiApiKey: true,
         lmStudioUrl: true,
@@ -160,7 +161,7 @@ export const userRouter = router({
       dayWindowStartHour: z.number().int().min(0).max(23),
       dayWindowEndHour: z.number().int().min(0).max(23),
       defaultDurationMinutes: z.number().int().min(1).max(24 * 60),
-      googleSyncEnabled: z.boolean(),
+      calendarSyncProviders: z.array(z.nativeEnum(CalendarProvider)).min(1).max(3),
       llmProvider: z.nativeEnum(LlmProvider),
       openaiApiKey: z.string().max(512).optional().nullable(),
       lmStudioUrl: z.string().url(),
@@ -187,7 +188,8 @@ export const userRouter = router({
           dayWindowStartHour: input.dayWindowStartHour,
           dayWindowEndHour: input.dayWindowEndHour,
           defaultDurationMinutes: input.defaultDurationMinutes,
-          googleSyncEnabled: input.googleSyncEnabled,
+          googleSyncEnabled: input.calendarSyncProviders.includes(CalendarProvider.GOOGLE),
+          calendarSyncProviders: input.calendarSyncProviders,
           llmProvider: input.llmProvider,
           openaiApiKey: trimmedApiKey,
           lmStudioUrl: input.lmStudioUrl,

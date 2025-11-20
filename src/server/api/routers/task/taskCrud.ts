@@ -14,6 +14,11 @@ import {
   validateRecurrence,
 } from './utils';
 import { computeTodayBounds } from './timezone';
+import {
+  parseExternalRefs,
+  resolveProvidersForUser,
+  syncEventDelete,
+} from '@/server/calendar/sync';
 
 export const taskCrudRouter = router({
   subjectOptions: protectedProcedure.query(async ({ ctx }) => {
@@ -309,6 +314,31 @@ export const taskCrudRouter = router({
       const userId = requireUserId(ctx);
       const existing = await db.task.findFirst({ where: { id: input.id, userId } });
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+      const userSettings = await db.user.findUnique({
+        where: { id: userId },
+        select: { calendarSyncProviders: true, googleSyncEnabled: true },
+      });
+      const providers = resolveProvidersForUser(
+        userSettings?.calendarSyncProviders ?? [],
+        userSettings?.googleSyncEnabled ?? false,
+      );
+      if (providers.length > 0) {
+        const events = await db.event.findMany({
+          where: { taskId: input.id, task: { userId } },
+        });
+        for (const event of events) {
+          const outcome = await syncEventDelete({
+            userId,
+            taskId: event.taskId,
+            eventId: event.id,
+            providers,
+            refs: parseExternalRefs(event.externalSyncRefs),
+          });
+          for (const warning of outcome.warnings) {
+            console.warn('Calendar sync warning during task delete', warning);
+          }
+        }
+      }
       // Be resilient even if DB referential actions aren't cascaded yet
       const [, , deleted] = await db.$transaction([
         db.reminder.deleteMany({ where: { taskId: input.id, task: { userId } } }),

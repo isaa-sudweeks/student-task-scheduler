@@ -1,50 +1,23 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { google } from 'googleapis';
 import type { calendar_v3 } from 'googleapis';
 import type { Event as EventModel, Prisma } from '@prisma/client';
+import { CalendarProvider } from '@prisma/client';
 
 import { findNonOverlappingSlot, Interval } from '@/lib/scheduling';
 import { createTimezoneConverter } from '@/server/ai/timezone';
+import {
+  parseExternalRefs,
+  resolveProvidersForUser,
+  serializeExternalRefs,
+  syncEventCreate,
+  syncEventDelete,
+  syncEventUpdate,
+} from '@/server/calendar/sync';
+import { withGoogleClient } from '@/server/calendar/providers/google';
 import { db } from '@/server/db';
-import { env } from '@/env';
 import { protectedProcedure, router } from '../trpc';
 
-type GoogleAccountCredentials = {
-  access_token: string | null;
-  refresh_token: string | null;
-  expires_at: number | null;
-};
-
-const createGoogleAuthClient = (account: GoogleAccountCredentials) => {
-  const auth = new google.auth.OAuth2(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET);
-  let credentialsState: {
-    access_token?: string;
-    refresh_token?: string;
-    expiry_date?: number;
-  } = {
-    access_token: account.access_token ?? undefined,
-    refresh_token: account.refresh_token ?? undefined,
-    expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
-  };
-  auth.setCredentials(credentialsState);
-
-  const refreshIfExpired = async () => {
-    if (!credentialsState.expiry_date || credentialsState.expiry_date > Date.now()) return;
-    if (!credentialsState.refresh_token) {
-      throw new Error('Google access token expired and refresh token is missing');
-    }
-    const { credentials } = await auth.refreshAccessToken();
-    credentialsState = {
-      access_token: credentials.access_token ?? credentialsState.access_token,
-      refresh_token: credentials.refresh_token ?? credentialsState.refresh_token,
-      expiry_date: credentials.expiry_date ?? credentialsState.expiry_date,
-    };
-    auth.setCredentials(credentialsState);
-  };
-
-  return { auth, refreshIfExpired };
-};
 
 export const eventRouter = router({
   listRange: protectedProcedure
@@ -83,7 +56,7 @@ export const eventRouter = router({
         }),
         db.user.findUnique({
           where: { id: userId },
-          select: { timezone: true, googleSyncEnabled: true },
+          select: { timezone: true, googleSyncEnabled: true, calendarSyncProviders: true },
         }),
       ]);
       if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
@@ -125,58 +98,41 @@ export const eventRouter = router({
 
       const slot = timezoneConverter.intervalToUtc(slotLocal);
 
-      let googleEventId: string | undefined;
-      let googleSyncWarning = false;
-      if (user.googleSyncEnabled) {
-        const account = await db.account.findFirst({
-          where: { userId, provider: 'google' },
-          select: { access_token: true, refresh_token: true, expires_at: true },
-        });
-        if (account?.access_token) {
-          const { auth, refreshIfExpired } = createGoogleAuthClient({
-            access_token: account.access_token,
-            refresh_token: account.refresh_token ?? null,
-            expires_at: account.expires_at ?? null,
-          });
-          let canSync = true;
-          try {
-            await refreshIfExpired();
-          } catch (error) {
-            console.error('Failed to refresh Google access token', error);
-            googleSyncWarning = true;
-            canSync = false;
-          }
-
-          if (canSync) {
-            const calendar = google.calendar({ version: 'v3', auth });
-            try {
-              const res = await calendar.events.insert({
-                calendarId: 'primary',
-                requestBody: {
-                  summary: task.title,
-                  start: { dateTime: slot.startAt.toISOString() },
-                  end: { dateTime: slot.endAt.toISOString() },
-                },
-              });
-              googleEventId = res.data.id || undefined;
-            } catch (error) {
-              console.error('Failed to sync with Google Calendar', error);
-              googleSyncWarning = true;
-            }
-          }
-        }
-      }
-
-      const event = await db.event.create({
+      const providers = resolveProvidersForUser(user.calendarSyncProviders, user.googleSyncEnabled);
+      const baseEvent = await db.event.create({
         data: {
           taskId: input.taskId,
           startAt: slot.startAt,
           endAt: slot.endAt,
-          ...(googleEventId ? { googleEventId } : {}),
+          googleEventId: null,
+          externalSyncRefs: serializeExternalRefs({}),
         },
       });
 
-      return { event, googleSyncWarning };
+      const syncPayload = {
+        summary: task.title,
+        startAt: slot.startAt,
+        endAt: slot.endAt,
+        timezone: user.timezone,
+      };
+      const syncOutcome = await syncEventCreate({
+        userId,
+        taskId: input.taskId,
+        eventId: baseEvent.id,
+        providers,
+        payload: syncPayload,
+        existingRefs: {},
+      });
+
+      const updatedEvent = await db.event.update({
+        where: { id: baseEvent.id },
+        data: {
+          googleEventId: syncOutcome.refs[CalendarProvider.GOOGLE] ?? null,
+          externalSyncRefs: serializeExternalRefs(syncOutcome.refs),
+        },
+      });
+
+      return { event: updatedEvent, syncWarnings: syncOutcome.warnings };
     }),
   move: protectedProcedure
     .input(
@@ -196,8 +152,14 @@ export const eventRouter = router({
       const userId = ctx.session?.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
       const [existingEvent, user] = await Promise.all([
-        db.event.findFirst({ where: { id: input.eventId, task: { userId } } }),
-        db.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
+        db.event.findFirst({
+          where: { id: input.eventId, task: { userId } },
+          include: { task: { select: { title: true } } },
+        }),
+        db.user.findUnique({
+          where: { id: userId },
+          select: { timezone: true, googleSyncEnabled: true, calendarSyncProviders: true },
+        }),
       ]);
       if (!existingEvent) throw new TRPCError({ code: 'NOT_FOUND' });
       if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
@@ -219,6 +181,8 @@ export const eventRouter = router({
         },
       });
 
+      let nextStart = input.startAt;
+      let nextEnd = input.endAt;
       const overlaps = existing.some((e) => input.startAt < e.endAt && e.startAt < input.endAt);
       if (overlaps) {
         // Try to reslot forward on same day using the requested duration
@@ -238,10 +202,37 @@ export const eventRouter = router({
           throw new TRPCError({ code: 'CONFLICT', message: 'Cannot move without overlapping any event' });
         }
         const slot = timezoneConverter.intervalToUtc(slotLocal);
-        return db.event.update({ where: { id: input.eventId }, data: { startAt: slot.startAt, endAt: slot.endAt } });
+        nextStart = slot.startAt;
+        nextEnd = slot.endAt;
       }
 
-      return db.event.update({ where: { id: input.eventId }, data: { startAt: input.startAt, endAt: input.endAt } });
+      const providers = resolveProvidersForUser(user.calendarSyncProviders, user.googleSyncEnabled);
+      const existingRefs = parseExternalRefs(existingEvent.externalSyncRefs);
+      const syncOutcome = await syncEventUpdate({
+        userId,
+        taskId: existingEvent.taskId,
+        eventId: existingEvent.id,
+        providers,
+        payload: {
+          summary: existingEvent.task?.title ?? 'Scheduled task',
+          startAt: nextStart,
+          endAt: nextEnd,
+          timezone: user.timezone,
+        },
+        existingRefs,
+      });
+
+      const finalEvent = await db.event.update({
+        where: { id: input.eventId },
+        data: {
+          startAt: nextStart,
+          endAt: nextEnd,
+          googleEventId: syncOutcome.refs[CalendarProvider.GOOGLE] ?? null,
+          externalSyncRefs: serializeExternalRefs(syncOutcome.refs),
+        },
+      });
+
+      return { event: finalEvent, syncWarnings: syncOutcome.warnings };
     }),
   ical: protectedProcedure
     .input(z.object({ start: z.date().optional(), end: z.date().optional() }).optional())
@@ -286,106 +277,106 @@ export const eventRouter = router({
 
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { googleSyncEnabled: true },
+      select: { googleSyncEnabled: true, calendarSyncProviders: true },
     });
-    if (!user?.googleSyncEnabled) return [];
+    if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
+    const providers = resolveProvidersForUser(user.calendarSyncProviders, user.googleSyncEnabled);
+    if (!providers.includes(CalendarProvider.GOOGLE)) return [];
 
-    const account = await db.account.findFirst({
-      where: { userId, provider: 'google' },
-      select: { access_token: true, refresh_token: true, expires_at: true },
-    });
-    if (!account?.access_token) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Missing Google auth' });
-    }
+    const sync = await withGoogleClient(userId, async (calendar) => {
+      const items: calendar_v3.Schema$Event[] = [];
+      let pageToken: string | undefined;
+      do {
+        const res = await calendar.events.list({ calendarId: 'primary', maxResults: 2500, pageToken });
+        items.push(...(res.data.items ?? []));
+        pageToken = res.data.nextPageToken || undefined;
+      } while (pageToken);
 
-    const { auth, refreshIfExpired } = createGoogleAuthClient({
-      access_token: account.access_token,
-      refresh_token: account.refresh_token ?? null,
-      expires_at: account.expires_at ?? null,
-    });
+      const googleIds = new Set<string>();
+      for (const item of items) {
+        const summary = item.summary;
+        const start = item.start?.dateTime;
+        const end = item.end?.dateTime;
+        const id = item.id;
+        if (id) googleIds.add(id);
+        if (!summary || !start || !end || !id) continue;
 
-    try {
-      await refreshIfExpired();
-    } catch (error) {
-      console.error('Failed to refresh Google access token', error);
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Unable to refresh Google access token. Please reconnect Google sync.',
-      });
-    }
+        const existing = await db.event.findFirst({
+          where: { googleEventId: id, task: { userId } },
+          include: { task: true },
+        });
+        if (existing) {
+          const refs = parseExternalRefs(existing.externalSyncRefs);
+          refs[CalendarProvider.GOOGLE] = id;
+          await db.event.update({
+            where: { id: existing.id },
+            data: {
+              startAt: new Date(start),
+              endAt: new Date(end),
+              googleEventId: id,
+              externalSyncRefs: serializeExternalRefs(refs),
+            },
+          });
+          if (existing.task.title !== summary) {
+            await db.task.update({ where: { id: existing.taskId }, data: { title: summary } });
+          }
+        } else {
+          const task = await db.task.create({ data: { title: summary, userId } });
+          const refs = serializeExternalRefs({ [CalendarProvider.GOOGLE]: id });
+          await db.event.create({
+            data: {
+              taskId: task.id,
+              startAt: new Date(start),
+              endAt: new Date(end),
+              googleEventId: id,
+              externalSyncRefs: refs,
+            },
+          });
+        }
+      }
 
-    const calendar = google.calendar({ version: 'v3', auth });
-
-    const items: calendar_v3.Schema$Event[] = [];
-    let pageToken: string | undefined;
-    do {
-      const res = await calendar.events.list({ calendarId: 'primary', maxResults: 2500, pageToken });
-      items.push(...(res.data.items ?? []));
-      pageToken = res.data.nextPageToken || undefined;
-    } while (pageToken);
-
-    const googleIds = new Set<string>();
-    for (const item of items) {
-      const summary = item.summary;
-      const start = item.start?.dateTime;
-      const end = item.end?.dateTime;
-      const id = item.id;
-      if (id) googleIds.add(id);
-      if (!summary || !start || !end || !id) continue;
-
-      const existing = await db.event.findFirst({
-        where: { googleEventId: id, task: { userId } },
+      const locals = await db.event.findMany({
+        where: { task: { userId }, googleEventId: null },
         include: { task: true },
       });
-      if (existing) {
-        await db.event.update({
-          where: { id: existing.id },
-          data: { startAt: new Date(start), endAt: new Date(end) },
-        });
-        if (existing.task.title !== summary) {
-          await db.task.update({ where: { id: existing.taskId }, data: { title: summary } });
-        }
-      } else {
-        const task = await db.task.create({ data: { title: summary, userId } });
-        await db.event.create({
-          data: {
-            taskId: task.id,
-            startAt: new Date(start),
-            endAt: new Date(end),
-            googleEventId: id,
+      for (const e of locals) {
+        const inserted = await calendar.events.insert({
+          calendarId: 'primary',
+          requestBody: {
+            summary: e.task?.title ?? '',
+            start: { dateTime: e.startAt.toISOString() },
+            end: { dateTime: e.endAt.toISOString() },
           },
         });
+        const insertedId = inserted.data.id || undefined;
+        if (insertedId) {
+          googleIds.add(insertedId);
+          const refs = parseExternalRefs(e.externalSyncRefs);
+          refs[CalendarProvider.GOOGLE] = insertedId;
+          await db.event.update({
+            where: { id: e.id },
+            data: {
+              googleEventId: insertedId,
+              externalSyncRefs: serializeExternalRefs(refs),
+            },
+          });
+        }
       }
-    }
 
-    const locals = await db.event.findMany({
-      where: { task: { userId }, googleEventId: null },
-      include: { task: true },
-    });
-    for (const e of locals) {
-      const inserted = await calendar.events.insert({
-        calendarId: 'primary',
-        requestBody: {
-          summary: e.task?.title ?? '',
-          start: { dateTime: e.startAt.toISOString() },
-          end: { dateTime: e.endAt.toISOString() },
+      await db.event.deleteMany({
+        where: {
+          task: { userId },
+          googleEventId: { notIn: Array.from(googleIds), not: null },
         },
       });
-      const insertedId = inserted.data.id || undefined;
-      if (insertedId) googleIds.add(insertedId);
-      await db.event.update({
-        where: { id: e.id },
-        data: { googleEventId: insertedId },
-      });
-    }
 
-    await db.event.deleteMany({
-      where: {
-        task: { userId },
-        googleEventId: { notIn: Array.from(googleIds), not: null },
-      },
+      return Array.from(googleIds);
     });
 
-    return Array.from(googleIds);
+    if (sync.error) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: sync.error });
+    }
+
+    return sync.result ?? [];
   }),
 });
