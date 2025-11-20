@@ -81,6 +81,7 @@ model Course {
   color  String?
   description String?
   syllabusUrl String?
+  creditHours Float?
 
   tasks Task[]
 }
@@ -141,6 +142,9 @@ model Task {
   recurrenceUntil DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+  gradeScore    Float?
+  gradeTotal    Float?
+  gradeWeight   Float?
 
   events    Event[]
   reminders Reminder[]

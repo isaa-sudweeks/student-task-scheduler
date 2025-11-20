@@ -28,6 +28,8 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
   const [titleError, setTitleError] = useState("");
   const [termError, setTermError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
+  const [creditHours, setCreditHours] = useState("");
+  const [creditHoursError, setCreditHoursError] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -36,15 +38,22 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
       setTerm(course.term ?? "");
       setColor(course.color ?? "#000000");
       setDescription(course.description ?? "");
+      setCreditHours(
+        typeof (course as any).creditHours === "number"
+          ? String((course as any).creditHours)
+          : ""
+      );
     } else {
       setTitle("");
       setTerm("");
       setColor("#000000");
       setDescription("");
+      setCreditHours("");
     }
     setTitleError("");
     setTermError("");
     setDescriptionError("");
+    setCreditHoursError("");
   }, [open, isEdit, course]);
 
   const create = api.course.create.useMutation({
@@ -78,6 +87,7 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
     const t = title.trim();
     const tm = term.trim();
     const d = description.trim();
+    const ch = creditHours.trim();
     let hasError = false;
     if (t.length < 1 || t.length > 200) {
       setTitleError("Title must be between 1 and 200 characters.");
@@ -91,6 +101,18 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
       setDescriptionError("Description must be at most 1000 characters.");
       hasError = true;
     }
+    let parsedCreditHours: number | null | undefined = undefined;
+    if (ch) {
+      const parsed = Number(ch);
+      if (Number.isNaN(parsed) || parsed < 0 || parsed > 50) {
+        setCreditHoursError("Credit hours must be between 0 and 50.");
+        hasError = true;
+      } else {
+        parsedCreditHours = parsed;
+      }
+    } else {
+      parsedCreditHours = isEdit ? null : undefined;
+    }
     if (hasError) return;
     if (isEdit && course) {
       update.mutate({
@@ -99,6 +121,7 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         term: tm || null,
         color: color || null,
         description: d || null,
+        creditHours: parsedCreditHours ?? null,
       });
     } else {
       create.mutate({
@@ -106,6 +129,9 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         term: tm || undefined,
         color: color || undefined,
         description: d || undefined,
+        ...(typeof parsedCreditHours === "number"
+          ? { creditHours: parsedCreditHours }
+          : {}),
       });
     }
   };
@@ -203,6 +229,28 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         />
         {descriptionError && (
           <p className="text-sm text-red-500">{descriptionError}</p>
+        )}
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="course-credit-hours" className="text-sm font-medium">
+          Credit hours (optional)
+        </label>
+        <Input
+          id="course-credit-hours"
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step={0.5}
+          placeholder="e.g., 3"
+          value={creditHours}
+          onChange={(e) => {
+            setCreditHours(e.target.value);
+            if (creditHoursError) setCreditHoursError("");
+          }}
+          error={creditHoursError}
+        />
+        {creditHoursError && (
+          <p className="text-sm text-red-500">{creditHoursError}</p>
         )}
       </div>
     </Modal>

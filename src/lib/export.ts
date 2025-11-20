@@ -13,6 +13,17 @@ export interface StatsExportData {
     actualMinutes: number;
     deltaMinutes: number;
   }[];
+  courseGrades?: {
+    courseId: string;
+    title: string;
+    gradeAverage: number | null;
+    letter: string | null;
+    creditHours: number | null;
+    gradePoints: number | null;
+    qualityPoints: number | null;
+    gradedTaskCount: number;
+  }[];
+  gpa?: number;
 }
 
 function escapeValue(value: string | number): string {
@@ -50,6 +61,43 @@ export function statsToCSV(data: StatsExportData): string {
         .join(',')
     ),
   ];
+  if (data.courseGrades) {
+    lines.push('');
+    lines.push(
+      'courseId,title,gradeAverage,letter,creditHours,gradePoints,qualityPoints,gradedTaskCount'
+    );
+    for (const course of data.courseGrades) {
+      lines.push(
+        [
+          course.courseId,
+          course.title,
+          course.gradeAverage ?? '',
+          course.letter ?? '',
+          course.creditHours ?? '',
+          course.gradePoints ?? '',
+          course.qualityPoints ?? '',
+          course.gradedTaskCount,
+        ]
+          .map(escapeValue)
+          .join(',')
+      );
+    }
+    if (typeof data.gpa === 'number') {
+      lines.push(
+        ['OVERALL', 'GPA', '', '', '', data.gpa.toFixed(2), '', '']
+          .map(escapeValue)
+          .join(',')
+      );
+    }
+  } else if (typeof data.gpa === 'number') {
+    lines.push('');
+    lines.push('metric,value');
+    lines.push(
+      ['overallGPA', data.gpa.toFixed(2)]
+        .map(escapeValue)
+        .join(',')
+    );
+  }
   return lines.join('\n');
 }
 

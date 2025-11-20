@@ -18,6 +18,19 @@ describe('stats export helpers', () => {
     timeByTask: [
       { id: 't1', title: 'Essay', plannedMinutes: 90, actualMinutes: 80, deltaMinutes: -10 },
     ],
+    courseGrades: [
+      {
+        courseId: 'c1',
+        title: 'Biology',
+        gradeAverage: 92.5,
+        letter: 'A-',
+        creditHours: 3,
+        gradePoints: 3.7,
+        qualityPoints: 11.1,
+        gradedTaskCount: 4,
+      },
+    ],
+    gpa: 3.7,
   };
 
   it('serialises stats into a CSV string with section separators', () => {
@@ -27,6 +40,11 @@ describe('stats export helpers', () => {
     expect(csv).toContain('status,count');
     expect(csv).toContain('subject,count');
     expect(csv).toContain('id,title,plannedMinutes,actualMinutes,deltaMinutes');
+    expect(csv).toContain(
+      'courseId,title,gradeAverage,letter,creditHours,gradePoints,qualityPoints,gradedTaskCount'
+    );
+    expect(csv).toContain('c1,Biology,92.5,A-,3,3.7,11.1,4');
+    expect(csv).toContain('OVERALL,GPA,,,,3.70,,');
   });
 
   it('initiates a download when running in the browser', () => {

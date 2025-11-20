@@ -24,6 +24,15 @@ interface TaskDetailsFormProps {
   onNotesChange: (value: string) => void;
   effortMinutes: string;
   onEffortMinutesChange: (value: string) => void;
+  gradeScore: string;
+  onGradeScoreChange: (value: string) => void;
+  gradeScoreError: string | null;
+  gradeTotal: string;
+  onGradeTotalChange: (value: string) => void;
+  gradeTotalError: string | null;
+  gradeWeight: string;
+  onGradeWeightChange: (value: string) => void;
+  gradeWeightError: string | null;
   recurrenceControls?: React.ReactNode;
   onDraftDueChange?: (due: Date | null) => void;
 }
@@ -50,6 +59,15 @@ export function TaskDetailsForm({
   onNotesChange,
   effortMinutes,
   onEffortMinutesChange,
+  gradeScore,
+  onGradeScoreChange,
+  gradeScoreError,
+  gradeTotal,
+  onGradeTotalChange,
+  gradeTotalError,
+  gradeWeight,
+  onGradeWeightChange,
+  gradeWeightError,
   recurrenceControls,
   onDraftDueChange,
 }: TaskDetailsFormProps) {
@@ -196,6 +214,69 @@ export function TaskDetailsForm({
       </div>
 
       {recurrenceControls}
+
+      <div className="space-y-3 rounded-md border border-black/10 p-3 dark:border-white/10">
+        <p className="text-sm font-medium">Grading</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="grade-score" className="text-sm">
+              Score
+            </label>
+            <input
+              id="grade-score"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              placeholder="e.g., 45"
+              value={gradeScore}
+              onChange={(e) => onGradeScoreChange(e.target.value)}
+            />
+            {gradeScoreError && (
+              <p className="text-sm text-red-500">{gradeScoreError}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="grade-total" className="text-sm">
+              Total points
+            </label>
+            <input
+              id="grade-total"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              placeholder="e.g., 50"
+              value={gradeTotal}
+              onChange={(e) => onGradeTotalChange(e.target.value)}
+            />
+            {gradeTotalError && (
+              <p className="text-sm text-red-500">{gradeTotalError}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="grade-weight" className="text-sm">
+              Weight
+            </label>
+            <input
+              id="grade-weight"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              className="rounded border border-black/10 bg-transparent px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-white/10"
+              placeholder="Defaults to total"
+              value={gradeWeight}
+              onChange={(e) => onGradeWeightChange(e.target.value)}
+            />
+            {gradeWeightError && (
+              <p className="text-sm text-red-500">{gradeWeightError}</p>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+          Leave weight blank to use total points automatically.
+        </p>
+      </div>
 
       <div className="flex items-start gap-4">
         <label htmlFor="notes" className="w-28 text-sm font-medium">

@@ -159,21 +159,36 @@ export const taskCrudRouter = router({
     }),
   create: protectedProcedure
     .input(
-      z.object({
-        title: z.string().min(1).max(200),
-        dueAt: z.date().nullable().optional(),
-        subject: z.string().max(100).optional(),
-        notes: z.string().max(2000).optional(),
-        effortMinutes: z.number().int().min(1).optional(),
-        priority: z.nativeEnum(TaskPriority).optional(),
-        recurrenceType: z.nativeEnum(RecurrenceType).optional(),
-        recurrenceInterval: z.number().int().min(1).optional(),
-        recurrenceCount: z.number().int().min(1).optional(),
-        recurrenceUntil: z.date().optional(),
-        projectId: z.string().min(1).optional(),
-        courseId: z.string().min(1).optional(),
-        parentId: z.string().min(1).optional(),
-      }),
+      z
+        .object({
+          title: z.string().min(1).max(200),
+          dueAt: z.date().nullable().optional(),
+          subject: z.string().max(100).optional(),
+          notes: z.string().max(2000).optional(),
+          effortMinutes: z.number().int().min(1).optional(),
+          priority: z.nativeEnum(TaskPriority).optional(),
+          recurrenceType: z.nativeEnum(RecurrenceType).optional(),
+          recurrenceInterval: z.number().int().min(1).optional(),
+          recurrenceCount: z.number().int().min(1).optional(),
+          recurrenceUntil: z.date().optional(),
+          projectId: z.string().min(1).optional(),
+          courseId: z.string().min(1).optional(),
+          parentId: z.string().min(1).optional(),
+          gradeScore: z.number().min(0).optional(),
+          gradeTotal: z.number().positive().optional(),
+          gradeWeight: z.number().positive().optional(),
+        })
+        .superRefine((data, ctx) => {
+          const hasScore = typeof data.gradeScore !== 'undefined';
+          const hasTotal = typeof data.gradeTotal !== 'undefined';
+          if (hasScore !== hasTotal) {
+            ctx.addIssue({
+              code: 'custom',
+              path: hasScore ? ['gradeTotal'] : ['gradeScore'],
+              message: 'gradeScore and gradeTotal must be provided together.',
+            });
+          }
+        }),
     )
     .mutation(async ({ input, ctx }) => {
       if (input.dueAt && input.dueAt < new Date()) {
@@ -207,6 +222,9 @@ export const taskCrudRouter = router({
           projectId: input.projectId ?? undefined,
           courseId: input.courseId ?? undefined,
           parentId: input.parentId ?? undefined,
+          gradeScore: input.gradeScore ?? undefined,
+          gradeTotal: input.gradeTotal ?? undefined,
+          gradeWeight: input.gradeWeight ?? undefined,
         },
       });
       await invalidateTaskListCache(userId);
@@ -214,23 +232,38 @@ export const taskCrudRouter = router({
     }),
   update: protectedProcedure
     .input(
-      z.object({
-        id: z.string().min(1),
-        title: z.string().min(1).max(200).optional(),
-        subject: z.string().max(100).nullable().optional(),
-        notes: z.string().max(2000).nullable().optional(),
-        dueAt: z.date().nullable().optional(),
-        effortMinutes: z.number().int().min(1).nullable().optional(),
-        priority: z.nativeEnum(TaskPriority).optional(),
-        recurrenceType: z.nativeEnum(RecurrenceType).optional(),
-        recurrenceInterval: z.number().int().min(1).optional(),
-        recurrenceCount: z.number().int().min(1).nullable().optional(),
-        recurrenceUntil: z.date().nullable().optional(),
-        // Disallow empty strings; allow explicit null to clear
-        projectId: z.string().min(1).nullable().optional(),
-        courseId: z.string().min(1).nullable().optional(),
-        parentId: z.string().min(1).nullable().optional(),
-      }),
+      z
+        .object({
+          id: z.string().min(1),
+          title: z.string().min(1).max(200).optional(),
+          subject: z.string().max(100).nullable().optional(),
+          notes: z.string().max(2000).nullable().optional(),
+          dueAt: z.date().nullable().optional(),
+          effortMinutes: z.number().int().min(1).nullable().optional(),
+          priority: z.nativeEnum(TaskPriority).optional(),
+          recurrenceType: z.nativeEnum(RecurrenceType).optional(),
+          recurrenceInterval: z.number().int().min(1).optional(),
+          recurrenceCount: z.number().int().min(1).nullable().optional(),
+          recurrenceUntil: z.date().nullable().optional(),
+          // Disallow empty strings; allow explicit null to clear
+          projectId: z.string().min(1).nullable().optional(),
+          courseId: z.string().min(1).nullable().optional(),
+          parentId: z.string().min(1).nullable().optional(),
+          gradeScore: z.number().min(0).nullable().optional(),
+          gradeTotal: z.number().positive().nullable().optional(),
+          gradeWeight: z.number().positive().nullable().optional(),
+        })
+        .superRefine((data, ctx) => {
+          const hasScore = typeof data.gradeScore !== 'undefined';
+          const hasTotal = typeof data.gradeTotal !== 'undefined';
+          if (hasScore !== hasTotal) {
+            ctx.addIssue({
+              code: 'custom',
+              path: hasScore ? ['gradeTotal'] : ['gradeScore'],
+              message: 'gradeScore and gradeTotal must be provided together.',
+            });
+          }
+        }),
     )
     .mutation(async ({ input, ctx }) => {
       if (input.dueAt && input.dueAt < new Date()) {

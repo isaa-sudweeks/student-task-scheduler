@@ -2,7 +2,7 @@ import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion } from "framer-motion";
-import { Calendar, Tag, Clock, GripVertical, MoreVertical } from "lucide-react";
+import { Calendar, Tag, Clock, GripVertical, MoreVertical, Award } from "lucide-react";
 import type Fuse from "fuse.js";
 
 import { StatusDropdown, type TaskStatus } from "@/components/status-dropdown";
@@ -56,6 +56,13 @@ export const TaskCard = React.forwardRef<
   const overdue = t.dueAt ? new Date(t.dueAt) < new Date() : false;
   const done = t.status === "DONE";
   const dueDate = t.dueAt ? new Date(t.dueAt) : null;
+  const gradeScore = (t as any).gradeScore as number | null | undefined;
+  const gradeTotal = (t as any).gradeTotal as number | null | undefined;
+  const gradeWeight = (t as any).gradeWeight as number | null | undefined;
+  const hasGrade = typeof gradeScore === "number" && typeof gradeTotal === "number" && gradeTotal > 0;
+  const gradePercentage = hasGrade
+    ? Math.round(((gradeScore as number) / (gradeTotal as number)) * 1000) / 10
+    : null;
   let dueClass = "text-neutral-500";
   if (dueDate) {
     const now = new Date();
@@ -133,6 +140,20 @@ export const TaskCard = React.forwardRef<
               <span className="flex items-center gap-1">
                 <Clock className="h-4 w-4 text-neutral-400" />
                 {t.effortMinutes}m
+              </span>
+            )}
+            {hasGrade && (
+              <span className="flex items-center gap-1">
+                <Award className="h-4 w-4 text-neutral-400" />
+                {gradeScore}/{gradeTotal}
+                {gradePercentage != null && (
+                  <span>({gradePercentage.toFixed(1)}%)</span>
+                )}
+                {typeof gradeWeight === "number" && (
+                  <span className="text-neutral-400">
+                    • wt {gradeWeight}
+                  </span>
+                )}
               </span>
             )}
           </div>

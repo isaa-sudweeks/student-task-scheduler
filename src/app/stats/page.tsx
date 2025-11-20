@@ -25,9 +25,11 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Input } from "@/components/ui/input";
 import { TaskFilterTabs, type TaskFilter } from "@/components/task-filter-tabs";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, List } from "lucide-react";
+import { CheckCircle, List, GraduationCap, Award, TrendingUp } from "lucide-react";
+import { percentageToGpa, percentageToLetterGrade } from "@/lib/grades";
 
 type Task = RouterOutputs["task"]["list"][number];
+type CourseSummary = RouterOutputs["course"]["list"][number];
 
 export default function StatsPage() {
   const { data: session } = useSession();
@@ -55,6 +57,10 @@ export default function StatsPage() {
     enabled: !!session,
   });
   const tasks: RouterOutputs["task"]["list"] = data ?? [];
+  const { data: coursesData = [] } = api.course.list.useQuery(
+    { page: 1, limit: 100 },
+    { enabled: !!session }
+  );
   const { data: focusData } = api.focus.aggregate.useQuery(range);
   const focusMap = React.useMemo(() => {
     const map: Record<string, number> = {};
@@ -176,8 +182,76 @@ export default function StatsPage() {
       count: Number(count),
     }));
 
+  const courseGradeSummaries = (coursesData as CourseSummary[]).map((course) => {
+    const gradeAverage = (course as unknown as { gradeAverage?: number | null })
+      .gradeAverage ?? null;
+    const gradeMeta = percentageToLetterGrade(gradeAverage);
+    const gradePoints = percentageToGpa(gradeAverage);
+    const creditHours = (course as unknown as { creditHours?: number | null }).creditHours ?? null;
+    const gradedTaskCount = (course as unknown as { gradedTaskCount?: number })
+      .gradedTaskCount ?? 0;
+    const qualityPoints =
+      gradePoints != null && typeof creditHours === "number"
+        ? gradePoints * creditHours
+        : null;
+    return {
+      id: course.id,
+      title: course.title,
+      gradeAverage,
+      letter: gradeMeta?.letter ?? null,
+      gradePoints,
+      creditHours,
+      qualityPoints,
+      gradedTaskCount,
+    };
+  });
+
+  const gradedCourses = courseGradeSummaries.filter(
+    (course) => typeof course.gradeAverage === "number"
+  );
+  const weightForCourse = (course: (typeof courseGradeSummaries)[number]) => {
+    const hours = course.creditHours;
+    return typeof hours === "number" && hours > 0 ? hours : 1;
+  };
+  const totalGradeWeight = gradedCourses.reduce(
+    (sum, course) => sum + weightForCourse(course),
+    0
+  );
+  const weightedGradePercentSum = gradedCourses.reduce(
+    (sum, course) =>
+      sum + (course.gradeAverage ?? 0) * weightForCourse(course),
+    0
+  );
+  const weightedGradePointSum = gradedCourses.reduce(
+    (sum, course) =>
+      sum + (course.gradePoints ?? 0) * weightForCourse(course),
+    0
+  );
+  const averageCourseGrade =
+    totalGradeWeight > 0 ? weightedGradePercentSum / totalGradeWeight : null;
+  const overallGpa =
+    totalGradeWeight > 0 ? weightedGradePointSum / totalGradeWeight : null;
+  const coursesWithGrades = gradedCourses.length;
+
   const handleExport = () => {
-    exportStatsToCSV({ tasks, statusData, subjectData, timeByTask });
+    const exportCourseGrades = courseGradeSummaries.map((course) => ({
+      courseId: course.id,
+      title: course.title,
+      gradeAverage: course.gradeAverage ?? null,
+      letter: course.letter ?? null,
+      creditHours: course.creditHours ?? null,
+      gradePoints: course.gradePoints ?? null,
+      qualityPoints: course.qualityPoints ?? null,
+      gradedTaskCount: course.gradedTaskCount,
+    }));
+    exportStatsToCSV({
+      tasks,
+      statusData,
+      subjectData,
+      timeByTask,
+      courseGrades: exportCourseGrades,
+      gpa: overallGpa ?? undefined,
+    });
   };
 
   const pageContent = (
@@ -214,27 +288,122 @@ export default function StatsPage() {
           </label>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard
-            icon={<List className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
-            label="Total Tasks"
-            value={total}
-          />
-          <StatCard
-            icon={
-              <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-            }
-            label="Completion Rate"
-            value={`${completionRate}%`}
-          />
-          <StatCard
-            icon={<List className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
-            label="Avg Focus (m)"
-            value={averageFocusMinutes}
-          />
-        </section>
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          icon={<List className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
+          label="Total Tasks"
+          value={total}
+        />
+        <StatCard
+          icon={
+            <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+          }
+          label="Completion Rate"
+          value={`${completionRate}%`}
+        />
+        <StatCard
+          icon={<List className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
+          label="Avg Focus (m)"
+          value={averageFocusMinutes}
+        />
+      </section>
 
-        <div className="grid gap-6 md:grid-cols-2">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          icon={<GraduationCap className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
+          label="Overall GPA"
+          value={overallGpa != null ? overallGpa.toFixed(2) : "—"}
+        />
+        <StatCard
+          icon={<Award className="h-6 w-6 text-amber-600 dark:text-amber-400" />}
+          label="Courses with grades"
+          value={coursesWithGrades}
+        />
+        <StatCard
+          icon={<TrendingUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />}
+          label="Avg course grade"
+          value={
+            averageCourseGrade != null
+              ? `${averageCourseGrade.toFixed(1)}%`
+              : "—"
+          }
+        />
+      </section>
+
+      <section className="space-y-3 rounded-lg border bg-white p-4 shadow-sm dark:bg-neutral-900">
+        <div className="space-y-1">
+          <h2 className="text-xl font-medium">Course Grades</h2>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            Monitor graded assessments and how they contribute to your GPA.
+          </p>
+        </div>
+        {courseGradeSummaries.length === 0 ? (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            No graded assessments yet.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-700">
+              <thead className="bg-neutral-50 dark:bg-neutral-800">
+                <tr>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Course
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Grade
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Letter
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Credit hours
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Grade pts
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Quality pts
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Graded tasks
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                {courseGradeSummaries.map((course) => (
+                  <tr key={course.id} className="bg-white dark:bg-neutral-900">
+                    <td className="px-3 py-2 font-medium">{course.title}</td>
+                    <td className="px-3 py-2">
+                      {course.gradeAverage != null
+                        ? `${course.gradeAverage.toFixed(1)}%`
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2">{course.letter ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      {typeof course.creditHours === "number"
+                        ? course.creditHours
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {course.gradePoints != null
+                        ? course.gradePoints.toFixed(2)
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {course.qualityPoints != null
+                        ? course.qualityPoints.toFixed(2)
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2">{course.gradedTaskCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <div className="grid gap-6 md:grid-cols-2">
           <section>
             <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
               <h2 className="text-xl font-medium">By Status</h2>
