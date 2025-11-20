@@ -103,6 +103,19 @@ function CourseTile({ course, onEdit }: CourseTileProps) {
         {course.term && (
           <p className="text-sm text-muted-foreground">{course.term}</p>
         )}
+        {(course.instructorName || course.instructorEmail) && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Instructor:{" "}
+            <span className="text-foreground">
+              {course.instructorName || course.instructorEmail}
+            </span>
+          </p>
+        )}
+        {course.officeHours?.length ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Next office hours: {course.officeHours[0]}
+          </p>
+        ) : null}
       </Link>
       <div className="flex justify-end">
         <button
