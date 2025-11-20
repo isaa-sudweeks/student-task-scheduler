@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
 import { SyllabusTaskReview, type ReviewAssignment } from "@/components/syllabus-task-review";
+import { StatCard } from "@/components/ui/stat-card";
+import { percentageToLetterGrade, percentageToGpa } from "@/lib/grades";
+import { ClipboardList, GraduationCap, Scale } from "lucide-react";
 
 export default function CoursePage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -173,9 +176,21 @@ export default function CoursePage({ params }: { params: { id: string } }) {
     instructorName?: string | null;
     instructorEmail?: string | null;
     officeHours?: string[];
+    gradeAverage?: number | null;
+    creditHours?: number | null;
+    gradedTaskCount?: number;
   };
   const syllabusUrl = courseWithMeta.syllabusUrl ?? null;
   const officeHours = courseWithMeta.officeHours ?? [];
+  const gradeAverage = courseWithMeta.gradeAverage ?? null;
+  const gradeMeta = percentageToLetterGrade(gradeAverage);
+  const courseCreditHours = courseWithMeta.creditHours ?? null;
+  const gradedTaskCount = courseWithMeta.gradedTaskCount ?? 0;
+  const gradePoints = percentageToGpa(gradeAverage);
+  const qualityPoints =
+    gradePoints != null && typeof courseCreditHours === "number"
+      ? gradePoints * courseCreditHours
+      : null;
 
   const meetings = Array.isArray(course.meetings) ? course.meetings : [];
   const formatTime = (minutes: number) => {
@@ -198,6 +213,33 @@ export default function CoursePage({ params }: { params: { id: string } }) {
           <p className="text-sm text-muted-foreground">{course.term}</p>
         )}
       </div>
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          icon={<GraduationCap className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
+          label="Current grade"
+          value={
+            gradeAverage != null
+              ? `${gradeAverage.toFixed(1)}%${gradeMeta ? ` (${gradeMeta.letter})` : ""}`
+              : "—"
+          }
+        />
+        <StatCard
+          icon={<Scale className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />}
+          label="Credit hours"
+          value={typeof courseCreditHours === "number" ? courseCreditHours : "—"}
+        />
+        <StatCard
+          icon={<ClipboardList className="h-6 w-6 text-amber-600 dark:text-amber-400" />}
+          label="Graded tasks"
+          value={gradedTaskCount}
+        />
+      </section>
+      {qualityPoints != null && (
+        <p className="text-sm text-muted-foreground">
+          Quality points earned: {qualityPoints.toFixed(2)}
+        </p>
+      )}
+
       {(courseWithMeta.instructorName || courseWithMeta.instructorEmail || officeHours.length > 0) && (
         <div className="rounded-xl border bg-white dark:bg-zinc-900 shadow-sm p-4 space-y-3">
           <h2 className="text-lg font-medium">Instructor information</h2>

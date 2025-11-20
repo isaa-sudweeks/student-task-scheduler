@@ -95,6 +95,7 @@ model Course {
   instructorName String?
   instructorEmail String?
   officeHours String[] @default([])
+  creditHours Float?
 
   tasks Task[]
   studyGoals StudyGoal[]
@@ -181,6 +182,9 @@ model Task {
   recurrenceUntil DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+  gradeScore    Float?
+  gradeTotal    Float?
+  gradeWeight   Float?
 
   events    Event[]
   reminders Reminder[]

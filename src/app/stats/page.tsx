@@ -29,7 +29,8 @@ import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { TaskFilterTabs, type TaskFilter } from "@/components/task-filter-tabs";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle, List, Target } from "lucide-react";
+import { AlertTriangle, CheckCircle, List, Target, GraduationCap, Award, TrendingUp } from "lucide-react";
+import { percentageToGpa, percentageToLetterGrade } from "@/lib/grades";
 
 type Task = RouterOutputs["task"]["list"][number];
 type StudyGoal = RouterOutputs["user"]["listGoals"][number];
@@ -438,8 +439,76 @@ export default function StatsPage() {
       count: Number(count),
     }));
 
+  const courseGradeSummaries = (coursesData as CourseSummary[]).map((course) => {
+    const gradeAverage = (course as unknown as { gradeAverage?: number | null })
+      .gradeAverage ?? null;
+    const gradeMeta = percentageToLetterGrade(gradeAverage);
+    const gradePoints = percentageToGpa(gradeAverage);
+    const creditHours = (course as unknown as { creditHours?: number | null }).creditHours ?? null;
+    const gradedTaskCount = (course as unknown as { gradedTaskCount?: number })
+      .gradedTaskCount ?? 0;
+    const qualityPoints =
+      gradePoints != null && typeof creditHours === "number"
+        ? gradePoints * creditHours
+        : null;
+    return {
+      id: course.id,
+      title: course.title,
+      gradeAverage,
+      letter: gradeMeta?.letter ?? null,
+      gradePoints,
+      creditHours,
+      qualityPoints,
+      gradedTaskCount,
+    };
+  });
+
+  const gradedCourses = courseGradeSummaries.filter(
+    (course) => typeof course.gradeAverage === "number"
+  );
+  const weightForCourse = (course: (typeof courseGradeSummaries)[number]) => {
+    const hours = course.creditHours;
+    return typeof hours === "number" && hours > 0 ? hours : 1;
+  };
+  const totalGradeWeight = gradedCourses.reduce(
+    (sum, course) => sum + weightForCourse(course),
+    0
+  );
+  const weightedGradePercentSum = gradedCourses.reduce(
+    (sum, course) =>
+      sum + (course.gradeAverage ?? 0) * weightForCourse(course),
+    0
+  );
+  const weightedGradePointSum = gradedCourses.reduce(
+    (sum, course) =>
+      sum + (course.gradePoints ?? 0) * weightForCourse(course),
+    0
+  );
+  const averageCourseGrade =
+    totalGradeWeight > 0 ? weightedGradePercentSum / totalGradeWeight : null;
+  const overallGpa =
+    totalGradeWeight > 0 ? weightedGradePointSum / totalGradeWeight : null;
+  const coursesWithGrades = gradedCourses.length;
+
   const handleExport = () => {
-    exportStatsToCSV({ tasks, statusData, subjectData, timeByTask });
+    const exportCourseGrades = courseGradeSummaries.map((course) => ({
+      courseId: course.id,
+      title: course.title,
+      gradeAverage: course.gradeAverage ?? null,
+      letter: course.letter ?? null,
+      creditHours: course.creditHours ?? null,
+      gradePoints: course.gradePoints ?? null,
+      qualityPoints: course.qualityPoints ?? null,
+      gradedTaskCount: course.gradedTaskCount,
+    }));
+    exportStatsToCSV({
+      tasks,
+      statusData,
+      subjectData,
+      timeByTask,
+      courseGrades: exportCourseGrades,
+      gpa: overallGpa ?? undefined,
+    });
   };
 
   const pageContent = (
@@ -482,13 +551,13 @@ export default function StatsPage() {
           label="Total Tasks"
           value={total}
         />
-          <StatCard
-            icon={
-              <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-            }
-            label="Completion Rate"
-            value={`${completionRate}%`}
-          />
+        <StatCard
+          icon={
+            <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+          }
+          label="Completion Rate"
+          value={`${completionRate}%`}
+        />
         <StatCard
           icon={<List className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
           label="Avg Focus (m)"
@@ -785,210 +854,306 @@ export default function StatsPage() {
             </ResponsiveContainer>
           </div>
         )}
+
       </section>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <section>
-            <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
-              <h2 className="text-xl font-medium">By Status</h2>
-              <ul>
-                {statusData.map((s) => (
-                  <li key={s.status}>
-                    {s.status}: {s.count}
-                  </li>
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          icon={<GraduationCap className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />}
+          label="Overall GPA"
+          value={overallGpa != null ? overallGpa.toFixed(2) : "—"}
+        />
+        <StatCard
+          icon={<Award className="h-6 w-6 text-amber-600 dark:text-amber-400" />}
+          label="Courses with grades"
+          value={coursesWithGrades}
+        />
+        <StatCard
+          icon={<TrendingUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />}
+          label="Avg course grade"
+          value={
+            averageCourseGrade != null
+              ? `${averageCourseGrade.toFixed(1)}%`
+              : "—"
+          }
+        />
+      </section>
+
+      <section className="space-y-3 rounded-lg border bg-white p-4 shadow-sm dark:bg-neutral-900">
+        <div className="space-y-1">
+          <h2 className="text-xl font-medium">Course Grades</h2>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            Monitor graded assessments and how they contribute to your GPA.
+          </p>
+        </div>
+        {courseGradeSummaries.length === 0 ? (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            No graded assessments yet.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-700">
+              <thead className="bg-neutral-50 dark:bg-neutral-800">
+                <tr>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Course
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Grade
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Letter
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Credit hours
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Grade pts
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Quality pts
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Graded tasks
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                {courseGradeSummaries.map((course) => (
+                  <tr key={course.id} className="bg-white dark:bg-neutral-900">
+                    <td className="px-3 py-2 font-medium">{course.title}</td>
+                    <td className="px-3 py-2">
+                      {course.gradeAverage != null
+                        ? `${course.gradeAverage.toFixed(1)}%`
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2">{course.letter ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      {typeof course.creditHours === "number"
+                        ? course.creditHours
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {course.gradePoints != null
+                        ? course.gradePoints.toFixed(2)
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {course.qualityPoints != null
+                        ? course.qualityPoints.toFixed(2)
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2">{course.gradedTaskCount}</td>
+                  </tr>
                 ))}
-              </ul>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={statusData}>
-                  <XAxis
-                    dataKey="status"
-                    stroke={chartColors.axis}
-                    tick={{ fill: chartColors.text }}
-                  >
-                    <Label value="Status" position="insideBottom" fill={chartColors.text} />
-                  </XAxis>
-                  <YAxis
-                    allowDecimals={false}
-                    stroke={chartColors.axis}
-                    tick={{ fill: chartColors.text }}
-                  >
-                    <Label
-                      value="Count"
-                      angle={-90}
-                      position="insideLeft"
-                      fill={chartColors.text}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <section>
+          <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
+            <h2 className="text-xl font-medium">By Status</h2>
+            <ul>
+              {statusData.map((s) => (
+                <li key={s.status}>
+                  {s.status}: {s.count}
+                </li>
+              ))}
+            </ul>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={statusData}>
+                <XAxis
+                  dataKey="status"
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.text }}
+                >
+                  <Label value="Status" position="insideBottom" fill={chartColors.text} />
+                </XAxis>
+                <YAxis
+                  allowDecimals={false}
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.text }}
+                >
+                  <Label
+                    value="Count"
+                    angle={-90}
+                    position="insideLeft"
+                    fill={chartColors.text}
+                  />
+                </YAxis>
+                <Tooltip />
+                <Legend wrapperStyle={{ color: chartColors.text }} />
+                <Bar
+                  dataKey="count"
+                  onClick={(data: any) =>
+                    router.push(`/?status=${encodeURIComponent(data.status as string)}`)
+                  }
+                  className="cursor-pointer"
+                >
+                  {statusData.map((s) => (
+                    <Cell
+                      key={s.status}
+                      fill={chartColors.bar[s.status as keyof typeof chartColors.bar]}
                     />
-                  </YAxis>
-                  <Tooltip />
-                  <Legend wrapperStyle={{ color: chartColors.text }} />
-                  <Bar
-                    dataKey="count"
-                    onClick={(data: any) =>
-                      router.push(`/?status=${encodeURIComponent(data.status as string)}`)
-                    }
-                    className="cursor-pointer"
-                  >
-                    {statusData.map((s) => (
-                      <Cell
-                        key={s.status}
-                        fill={chartColors.bar[s.status as keyof typeof chartColors.bar]}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
 
-          <section>
-            <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
-              <h2 className="text-xl font-medium">Focus Time by Subject</h2>
-              <ul>
-                {focusBySubject.map((s) => (
-                  <li key={s.subject}>
-                    {s.subject}: {s.minutes}m
-                  </li>
-                ))}
-              </ul>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={focusBySubject}>
-                  <XAxis
-                    dataKey="subject"
-                    stroke={chartColors.axis}
-                    tick={{ fill: chartColors.text }}
-                  >
-                    <Label value="Subject" position="insideBottom" fill={chartColors.text} />
-                  </XAxis>
-                  <YAxis
-                    allowDecimals={false}
-                    stroke={chartColors.axis}
-                    tick={{ fill: chartColors.text }}
-                  >
-                    <Label
-                      value="Minutes"
-                      angle={-90}
-                      position="insideLeft"
-                      fill={chartColors.text}
+        <section>
+          <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
+            <h2 className="text-xl font-medium">Focus Time by Subject</h2>
+            <ul>
+              {focusBySubject.map((s) => (
+                <li key={s.subject}>
+                  {s.subject}: {s.minutes}m
+                </li>
+              ))}
+            </ul>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={focusBySubject}>
+                <XAxis
+                  dataKey="subject"
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.text }}
+                >
+                  <Label value="Subject" position="insideBottom" fill={chartColors.text} />
+                </XAxis>
+                <YAxis
+                  allowDecimals={false}
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.text }}
+                >
+                  <Label
+                    value="Minutes"
+                    angle={-90}
+                    position="insideLeft"
+                    fill={chartColors.text}
+                  />
+                </YAxis>
+                <Tooltip />
+                <Legend wrapperStyle={{ color: chartColors.text }} />
+                <Bar dataKey="minutes" fill={chartColors.actualBar} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section>
+          <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
+            <h2 className="text-xl font-medium">By Subject</h2>
+            <ul>
+              {subjectData.map((s) => (
+                <li key={s.subject}>
+                  {s.subject}: {s.count}
+                </li>
+              ))}
+            </ul>
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie
+                  data={subjectData}
+                  dataKey="count"
+                  nameKey="subject"
+                  outerRadius={80}
+                  onClick={(data: any) =>
+                    router.push(
+                      `/?subject=${encodeURIComponent(data.subject as string)}`
+                    )
+                  }
+                  className="cursor-pointer"
+                >
+                  {subjectData.map((_, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={chartColors.pie[index % chartColors.pie.length]}
                     />
-                  </YAxis>
-                  <Tooltip />
-                  <Legend wrapperStyle={{ color: chartColors.text }} />
-                  <Bar dataKey="minutes" fill={chartColors.actualBar} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend wrapperStyle={{ color: chartColors.text }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
 
-          <section>
-            <div className="space-y-2 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
-              <h2 className="text-xl font-medium">By Subject</h2>
-              <ul>
-                {subjectData.map((s) => (
-                  <li key={s.subject}>
-                    {s.subject}: {s.count}
-                  </li>
-                ))}
-              </ul>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={subjectData}
-                    dataKey="count"
-                    nameKey="subject"
-                    outerRadius={80}
-                    onClick={(data: any) =>
-                      router.push(
-                        `/?subject=${encodeURIComponent(data.subject as string)}`
-                      )
-                    }
-                    className="cursor-pointer"
-                  >
-                    {subjectData.map((_, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={chartColors.pie[index % chartColors.pie.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend wrapperStyle={{ color: chartColors.text }} />
-                </PieChart>
-              </ResponsiveContainer>
+        <section>
+          <div className="space-y-3 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
+            <div className="space-y-1">
+              <h2 className="text-xl font-medium">Planned vs Actual by Task</h2>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Compare estimated effort to recorded focus time to spot over- or under-spent work.
+              </p>
             </div>
-          </section>
-
-          <section>
-            <div className="space-y-3 rounded-lg border p-4 shadow-sm bg-white dark:bg-neutral-900">
-              <div className="space-y-1">
-                <h2 className="text-xl font-medium">Planned vs Actual by Task</h2>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                  Compare estimated effort to recorded focus time to spot over- or under-spent work.
+            <div className="grid gap-2 text-sm sm:grid-cols-3">
+              <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800">
+                <p className="text-neutral-500 dark:text-neutral-400">Total planned</p>
+                <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                  {totalPlannedMinutes}m
                 </p>
               </div>
-              <div className="grid gap-2 text-sm sm:grid-cols-3">
-                <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800">
-                  <p className="text-neutral-500 dark:text-neutral-400">Total planned</p>
-                  <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                    {totalPlannedMinutes}m
-                  </p>
-                </div>
-                <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800">
-                  <p className="text-neutral-500 dark:text-neutral-400">Total actual</p>
-                  <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                    {totalActualMinutes}m
-                  </p>
-                </div>
-                <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800">
-                  <p className="text-neutral-500 dark:text-neutral-400">Net delta</p>
-                  <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                    {netDeltaMinutes > 0 ? "+" : ""}
-                    {netDeltaMinutes}m
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                    Over plan: {overSpentCount} • Under plan: {underSpentCount}
-                  </p>
-                </div>
+              <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800">
+                <p className="text-neutral-500 dark:text-neutral-400">Total actual</p>
+                <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                  {totalActualMinutes}m
+                </p>
               </div>
-              <ul className="space-y-1 text-sm">
-                {timeByTask.map((task) => (
-                  <li key={task.id}>
-                    {task.title}: planned {task.plannedMinutes}m • actual {task.actualMinutes}m • {" "}
-                    {task.deltaMinutes > 0 ? "+" : ""}
-                    {task.deltaMinutes}m
-                  </li>
-                ))}
-              </ul>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={timeByTask}>
-                  <XAxis
-                    dataKey="title"
-                    stroke={chartColors.axis}
-                    tick={{ fill: chartColors.text }}
-                  >
-                    <Label value="Task" position="insideBottom" fill={chartColors.text} />
-                  </XAxis>
-                  <YAxis
-                    allowDecimals={false}
-                    stroke={chartColors.axis}
-                    tick={{ fill: chartColors.text }}
-                  >
-                    <Label
-                      value="Minutes"
-                      angle={-90}
-                      position="insideLeft"
-                      fill={chartColors.text}
-                    />
-                  </YAxis>
-                  <Tooltip />
-                  <Legend wrapperStyle={{ color: chartColors.text }} />
-                  <Bar dataKey="plannedMinutes" name="Planned" fill={chartColors.plannedBar} />
-                  <Bar dataKey="actualMinutes" name="Actual" fill={chartColors.actualBar} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800">
+                <p className="text-neutral-500 dark:text-neutral-400">Net delta</p>
+                <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                  {netDeltaMinutes > 0 ? "+" : ""}
+                  {netDeltaMinutes}m
+                </p>
+                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  Over plan: {overSpentCount} • Under plan: {underSpentCount}
+                </p>
+              </div>
             </div>
-          </section>
-        </div>
-      </main>
+            <ul className="space-y-1 text-sm">
+              {timeByTask.map((task) => (
+                <li key={task.id}>
+                  {task.title}: planned {task.plannedMinutes}m • actual {task.actualMinutes}m • {" "}
+                  {task.deltaMinutes > 0 ? "+" : ""}
+                  {task.deltaMinutes}m
+                </li>
+              ))}
+            </ul>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={timeByTask}>
+                <XAxis
+                  dataKey="title"
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.text }}
+                >
+                  <Label value="Task" position="insideBottom" fill={chartColors.text} />
+                </XAxis>
+                <YAxis
+                  allowDecimals={false}
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.text }}
+                >
+                  <Label
+                    value="Minutes"
+                    angle={-90}
+                    position="insideLeft"
+                    fill={chartColors.text}
+                  />
+                </YAxis>
+                <Tooltip />
+                <Legend wrapperStyle={{ color: chartColors.text }} />
+                <Bar dataKey="plannedMinutes" name="Planned" fill={chartColors.plannedBar} />
+                <Bar dataKey="actualMinutes" name="Actual" fill={chartColors.actualBar} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 
   return (

@@ -76,6 +76,8 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
   const [officeHoursError, setOfficeHoursError] = useState("");
   const [meetings, setMeetings] = useState<MeetingFormState[]>([]);
   const [meetingError, setMeetingError] = useState("");
+  const [creditHours, setCreditHours] = useState("");
+  const [creditHoursError, setCreditHoursError] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -96,6 +98,11 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         }))
         : [];
       setMeetings(parsedMeetings.length ? parsedMeetings : [createEmptyMeeting()]);
+      setCreditHours(
+        typeof (course as any).creditHours === "number"
+          ? String((course as any).creditHours)
+          : ""
+      );
     } else {
       setTitle("");
       setTerm("");
@@ -105,6 +112,7 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
       setInstructorEmail("");
       setOfficeHours("");
       setMeetings([createEmptyMeeting()]);
+      setCreditHours("");
     }
     setTitleError("");
     setTermError("");
@@ -112,6 +120,7 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
     setInstructorEmailError("");
     setOfficeHoursError("");
     setMeetingError("");
+    setCreditHoursError("");
   }, [open, isEdit, course]);
 
   const create = api.course.create.useMutation({
@@ -151,6 +160,8 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
       .split(/\r?\n/)
       .map((entry) => entry.trim())
       .filter((entry) => entry.length > 0);
+    const ch = creditHours.trim();
+
     let hasError = false;
     if (t.length < 1 || t.length > 200) {
       setTitleError("Title must be between 1 and 200 characters.");
@@ -214,6 +225,20 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
       endTime: meeting.endTime,
       location: meeting.location || undefined,
     }));
+
+    let parsedCreditHours: number | null | undefined = undefined;
+    if (ch) {
+      const parsed = Number(ch);
+      if (Number.isNaN(parsed) || parsed < 0 || parsed > 50) {
+        setCreditHoursError("Credit hours must be between 0 and 50.");
+        hasError = true;
+      } else {
+        parsedCreditHours = parsed;
+      }
+    } else {
+      parsedCreditHours = isEdit ? null : undefined;
+    }
+
     if (hasError) return;
     if (isEdit && course) {
       update.mutate({
@@ -226,6 +251,7 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         instructorEmail: email || null,
         officeHours: officeHourEntries,
         meetings: meetingPayload,
+        creditHours: parsedCreditHours ?? null,
       });
     } else {
       create.mutate({
@@ -237,6 +263,9 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
         instructorEmail: email || undefined,
         officeHours: officeHourEntries,
         meetings: meetingPayload.length ? meetingPayload : undefined,
+        ...(typeof parsedCreditHours === "number"
+          ? { creditHours: parsedCreditHours }
+          : {}),
       });
     }
   };
@@ -495,6 +524,28 @@ export function CourseModal({ open, mode, onClose, course }: CourseModalProps) {
           </div>
         ))}
         {meetingError && <p className="text-sm text-red-500">{meetingError}</p>}
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="course-credit-hours" className="text-sm font-medium">
+          Credit hours (optional)
+        </label>
+        <Input
+          id="course-credit-hours"
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step={0.5}
+          placeholder="e.g., 3"
+          value={creditHours}
+          onChange={(e) => {
+            setCreditHours(e.target.value);
+            if (creditHoursError) setCreditHoursError("");
+          }}
+          error={creditHoursError}
+        />
+        {creditHoursError && (
+          <p className="text-sm text-red-500">{creditHoursError}</p>
+        )}
       </div>
     </Modal>
   );

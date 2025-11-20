@@ -4,6 +4,7 @@ import { protectedProcedure, router } from '../trpc';
 import { db } from '@/server/db';
 import { TRPCError } from '@trpc/server';
 import { assertCourseMember, assertCourseOwner } from '@/server/api/permissions';
+import { calculateWeightedPercentage } from '@/lib/grades';
 
 const timeString = z
   .string()
@@ -72,13 +73,14 @@ export const courseRouter = router({
         take: limit,
         include: {
           tasks: {
-            select: { dueAt: true },
-            where: {
-              status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
-              dueAt: { not: null },
+            select: {
+              id: true,
+              dueAt: true,
+              status: true,
+              gradeScore: true,
+              gradeTotal: true,
+              gradeWeight: true,
             },
-            orderBy: { dueAt: 'asc' },
-            take: 1,
           },
           meetings: true,
           members: {
@@ -88,11 +90,43 @@ export const courseRouter = router({
           },
         },
       });
-      return courses.map(({ tasks, meetings, ...c }) => ({
-        ...c,
-        meetings,
-        nextDueAt: tasks[0]?.dueAt ?? null,
-      }));
+      return courses.map(({ tasks, meetings, ...c }) => {
+        const upcoming = tasks
+          .filter(
+            (task) =>
+              task.dueAt &&
+              ![TaskStatus.DONE, TaskStatus.CANCELLED].includes(task.status),
+          )
+          .sort((a, b) => new Date(a.dueAt!).getTime() - new Date(b.dueAt!).getTime());
+        const gradedEntries = tasks.filter(
+          (task) =>
+            typeof task.gradeScore === 'number' &&
+            typeof task.gradeTotal === 'number' &&
+            task.gradeTotal > 0,
+        );
+        const { percentage: gradeAverage, weightSum } = calculateWeightedPercentage(
+          gradedEntries.map((task) => ({
+            score: task.gradeScore as number,
+            total: task.gradeTotal as number,
+            weight: task.gradeWeight ?? undefined,
+          })),
+        );
+
+        return {
+          ...c,
+          meetings,
+          nextDueAt: upcoming[0]?.dueAt ?? null,
+          gradeAverage,
+          gradeWeightSum: weightSum,
+          gradedTaskCount: gradedEntries.length,
+        } as typeof c & {
+          meetings: typeof meetings;
+          nextDueAt: Date | null;
+          gradeAverage: number | null;
+          gradeWeightSum: number;
+          gradedTaskCount: number;
+        };
+      });
     }),
   create: protectedProcedure
     .input(
@@ -106,6 +140,7 @@ export const courseRouter = router({
         instructorEmail: z.string().email().optional(),
         officeHours: z.array(z.string().min(1).max(200)).optional(),
         meetings: z.array(meetingInputSchema).optional(),
+        creditHours: z.number().min(0).max(50).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -140,6 +175,9 @@ export const courseRouter = router({
           create: transformMeetings(input.meetings),
         };
       }
+      if (typeof input.creditHours !== 'undefined') {
+        (data as any).creditHours = input.creditHours ?? null;
+      }
       return db.course.create({
         data: {
           ...(data as any),
@@ -173,6 +211,7 @@ export const courseRouter = router({
         instructorEmail: z.string().email().nullable().optional(),
         officeHours: z.array(z.string().min(1).max(200)).optional(),
         meetings: z.array(meetingInputSchema).optional(),
+        creditHours: z.number().min(0).max(50).nullable().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {

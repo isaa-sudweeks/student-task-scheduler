@@ -87,6 +87,12 @@ export function TaskModal({
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
   const [attachmentInputKey, setAttachmentInputKey] = useState(0);
+  const [gradeScore, setGradeScore] = useState("");
+  const [gradeTotal, setGradeTotal] = useState("");
+  const [gradeWeight, setGradeWeight] = useState("");
+  const [gradeScoreError, setGradeScoreError] = useState<string | null>(null);
+  const [gradeTotalError, setGradeTotalError] = useState<string | null>(null);
+  const [gradeWeightError, setGradeWeightError] = useState<string | null>(null);
 
   const { data: subtasks = [] } = api.task.list.useQuery(
     { filter: 'all', parentId: task?.id },
@@ -114,6 +120,9 @@ export function TaskModal({
       setProjectId((task as any).projectId ?? null);
       setCourseId((task as any).courseId ?? null);
       setEffortMinutes(task.effortMinutes != null ? String(task.effortMinutes) : '');
+      setGradeScore(task.gradeScore != null ? String(task.gradeScore) : '');
+      setGradeTotal(task.gradeTotal != null ? String(task.gradeTotal) : '');
+      setGradeWeight(task.gradeWeight != null ? String(task.gradeWeight) : '');
       const hasDue = task.dueAt != null;
       setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
       setDueEnabled(hasDue);
@@ -139,6 +148,9 @@ export function TaskModal({
       setProjectId(initialProjectId ?? null);
       setCourseId(initialCourseId ?? null);
       setEffortMinutes('');
+      setGradeScore('');
+      setGradeTotal('');
+      setGradeWeight('');
       if (initialDueAt) {
         setDueEnabled(true);
         setDue(formatLocalDateTime(new Date(initialDueAt)));
@@ -155,6 +167,9 @@ export function TaskModal({
     setAttachmentError(null);
     setIsUploadingAttachments(false);
     setAttachmentInputKey((key) => key + 1);
+    setGradeScoreError(null);
+    setGradeTotalError(null);
+    setGradeWeightError(null);
   }, [
     open,
     isEdit,
@@ -305,10 +320,63 @@ export function TaskModal({
 
   const handleSave = async () => {
     if (recurrenceConflict) return;
+    setGradeScoreError(null);
+    setGradeTotalError(null);
+    setGradeWeightError(null);
     if (reminderValidationError) {
       setReminderError(reminderValidationError);
       return;
     }
+    const trimmedGradeScore = gradeScore.trim();
+    const trimmedGradeTotal = gradeTotal.trim();
+    const trimmedGradeWeight = gradeWeight.trim();
+    let gradeScoreValue: number | null = null;
+    let gradeTotalValue: number | null = null;
+    let gradeWeightValue: number | null = null;
+    let gradeHasError = false;
+    if (trimmedGradeScore) {
+      const parsed = Number(trimmedGradeScore);
+      if (Number.isNaN(parsed) || parsed < 0) {
+        setGradeScoreError('Score must be zero or greater.');
+        gradeHasError = true;
+      } else {
+        gradeScoreValue = parsed;
+      }
+    }
+    if (trimmedGradeTotal) {
+      const parsed = Number(trimmedGradeTotal);
+      if (Number.isNaN(parsed) || parsed <= 0) {
+        setGradeTotalError('Total points must be greater than zero.');
+        gradeHasError = true;
+      } else {
+        gradeTotalValue = parsed;
+      }
+    }
+    if (trimmedGradeWeight) {
+      const parsed = Number(trimmedGradeWeight);
+      if (Number.isNaN(parsed) || parsed <= 0) {
+        setGradeWeightError('Weight must be greater than zero.');
+        gradeHasError = true;
+      } else {
+        gradeWeightValue = parsed;
+      }
+    }
+    if (trimmedGradeScore && !trimmedGradeTotal) {
+      setGradeTotalError('Provide total points when recording a score.');
+      gradeHasError = true;
+    }
+    if (!trimmedGradeScore && trimmedGradeTotal) {
+      setGradeScoreError('Provide a score when setting total points.');
+      gradeHasError = true;
+    }
+    if (gradeHasError) return;
+
+    const gradeScoreForUpdate =
+      trimmedGradeScore === '' ? null : gradeScoreValue ?? null;
+    const gradeTotalForUpdate =
+      trimmedGradeTotal === '' ? null : gradeTotalValue ?? null;
+    const gradeWeightForUpdate =
+      trimmedGradeWeight === '' ? null : gradeWeightValue ?? null;
 
     const parsedDue = parseLocalDateTime(due);
     const dueAt = dueEnabled && parsedDue ? parsedDue : null;
@@ -364,6 +432,9 @@ export function TaskModal({
         projectId,
         courseId,
         effortMinutes: updateEffort,
+        gradeScore: gradeScoreForUpdate,
+        gradeTotal: gradeTotalForUpdate,
+        gradeWeight: gradeWeightForUpdate,
       });
     } else {
       saved = await create.mutateAsync({
@@ -376,6 +447,15 @@ export function TaskModal({
         projectId: projectId || undefined,
         courseId: courseId || undefined,
         ...(typeof createEffort !== "undefined" ? { effortMinutes: createEffort } : {}),
+        ...(trimmedGradeScore
+          ? { gradeScore: gradeScoreValue as number }
+          : {}),
+        ...(trimmedGradeTotal
+          ? { gradeTotal: gradeTotalValue as number }
+          : {}),
+        ...(trimmedGradeWeight
+          ? { gradeWeight: gradeWeightValue as number }
+          : {}),
       }) as Task;
     }
 
@@ -485,6 +565,24 @@ export function TaskModal({
           onNotesChange={setNotes}
           effortMinutes={effortMinutes}
           onEffortMinutesChange={setEffortMinutes}
+          gradeScore={gradeScore}
+          onGradeScoreChange={(value) => {
+            setGradeScore(value);
+            if (gradeScoreError) setGradeScoreError(null);
+          }}
+          gradeScoreError={gradeScoreError}
+          gradeTotal={gradeTotal}
+          onGradeTotalChange={(value) => {
+            setGradeTotal(value);
+            if (gradeTotalError) setGradeTotalError(null);
+          }}
+          gradeTotalError={gradeTotalError}
+          gradeWeight={gradeWeight}
+          onGradeWeightChange={(value) => {
+            setGradeWeight(value);
+            if (gradeWeightError) setGradeWeightError(null);
+          }}
+          gradeWeightError={gradeWeightError}
           onDraftDueChange={onDraftDueChange}
           recurrenceControls={
             <RecurrenceControls

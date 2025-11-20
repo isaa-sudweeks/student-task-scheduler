@@ -6,9 +6,10 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import CourseModal, { Course } from "@/components/course-modal";
+import { CourseModal, type Course } from "@/components/course-modal";
 import { api } from "@/server/api/react";
 import { CourseMembersDialog } from "@/components/course-members-dialog";
+import { percentageToLetterGrade } from "@/lib/grades";
 
 export default function CoursesPage() {
   const { data: session } = useSession();
@@ -111,6 +112,14 @@ function CourseTile({ course, onEdit, onManage }: CourseTileProps) {
   const collaborators = (course.members ?? []).filter(
     (member) => member.user?.name || member.user?.email,
   );
+  const gradeAverage = (course as unknown as { gradeAverage?: number | null }).gradeAverage ?? null;
+  const letter = gradeAverage != null ? percentageToLetterGrade(gradeAverage)?.letter ?? null : null;
+  const creditHours = (course as unknown as { creditHours?: number | null }).creditHours ?? null;
+  const gradedTaskCount = (course as unknown as { gradedTaskCount?: number }).gradedTaskCount ?? 0;
+  const gradeLabel =
+    gradeAverage != null
+      ? `${gradeAverage.toFixed(1)}%${letter ? ` (${letter})` : ""}`
+      : null;
   return (
     <div
       role="listitem"
@@ -134,6 +143,13 @@ function CourseTile({ course, onEdit, onManage }: CourseTileProps) {
             Next office hours: {course.officeHours[0]}
           </p>
         ) : null}
+        <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+          {gradeLabel && <p>Current grade: {gradeLabel}</p>}
+          {typeof creditHours === "number" && (
+            <p>Credit hours: {creditHours}</p>
+          )}
+          {gradedTaskCount > 0 && <p>Graded tasks: {gradedTaskCount}</p>}
+        </div>
       </Link>
       <div className="mt-3 space-y-3">
         {collaborators.length > 0 && (
