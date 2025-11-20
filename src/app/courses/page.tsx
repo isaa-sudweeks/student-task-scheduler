@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CourseModal, { Course } from "@/components/course-modal";
 import { api } from "@/server/api/react";
+import { CourseMembersDialog } from "@/components/course-members-dialog";
 
 export default function CoursesPage() {
   const { data: session } = useSession();
@@ -19,6 +20,7 @@ export default function CoursesPage() {
   const [editing, setEditing] = useState<Course | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"createdAt" | "title">("createdAt");
+  const [managing, setManaging] = useState<Course | null>(null);
 
   const displayed = [...courses]
     .filter((c) => c.title.toLowerCase().includes(search.toLowerCase()))
@@ -73,6 +75,7 @@ export default function CoursesPage() {
                 setEditing(course);
                 setModalOpen(true);
               }}
+              onManage={(course) => setManaging(course)}
             />
           ))}
         </div>
@@ -86,13 +89,28 @@ export default function CoursesPage() {
           setEditing(null);
         }}
       />
+      {managing && (
+        <CourseMembersDialog
+          courseId={managing.id}
+          courseTitle={managing.title}
+          open={!!managing}
+          onClose={() => setManaging(null)}
+        />
+      )}
     </main>
   );
 }
 
-type CourseTileProps = { course: Course; onEdit: (c: Course) => void };
+type CourseTileProps = {
+  course: Course;
+  onEdit: (c: Course) => void;
+  onManage: (c: Course) => void;
+};
 
-function CourseTile({ course, onEdit }: CourseTileProps) {
+function CourseTile({ course, onEdit, onManage }: CourseTileProps) {
+  const collaborators = (course.members ?? []).filter(
+    (member) => member.user?.name || member.user?.email,
+  );
   return (
     <div
       role="listitem"
@@ -117,15 +135,32 @@ function CourseTile({ course, onEdit }: CourseTileProps) {
           </p>
         ) : null}
       </Link>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          aria-label="Edit course"
-          className="p-1 text-neutral-400 hover:text-neutral-700"
-          onClick={() => onEdit(course)}
-        >
-          <Pencil className="h-4 w-4" />
-        </button>
+      <div className="mt-3 space-y-3">
+        {collaborators.length > 0 && (
+          <div className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Collaborators:</span>{" "}
+            {collaborators
+              .map((member) => member.user?.name ?? member.user?.email ?? "Unknown")
+              .join(", ")}
+          </div>
+        )}
+        <div className="flex justify-between gap-2">
+          <button
+            type="button"
+            aria-label="Edit course"
+            className="p-1 text-neutral-400 hover:text-neutral-700"
+            onClick={() => onEdit(course)}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <Button
+            variant="tertiary"
+            className="text-xs"
+            onClick={() => onManage(course)}
+          >
+            Manage collaborators
+          </Button>
+        </div>
       </div>
     </div>
   );

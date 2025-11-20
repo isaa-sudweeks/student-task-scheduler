@@ -17,6 +17,7 @@ interface Options {
   priority: Priority | null;
   courseId: string | null;
   projectId: string | null;
+  collaboratorId: string | null;
 }
 
 export function useTaskListQuery({
@@ -26,6 +27,7 @@ export function useTaskListQuery({
   priority,
   courseId,
   projectId,
+  collaboratorId,
 }: Options) {
   const user = api.user.get.useQuery();
   const { data: session } = useSession();
@@ -38,6 +40,7 @@ export function useTaskListQuery({
       priority: priority ?? undefined,
       courseId: courseId ?? undefined,
       projectId: projectId ?? undefined,
+      collaboratorId: collaboratorId ?? undefined,
     };
     if (!user.data?.timezone) {
       const tzOffsetMinutes = new Date().getTimezoneOffset();
@@ -51,7 +54,16 @@ export function useTaskListQuery({
       base.todayEnd = endLocal;
     }
     return base;
-  }, [filter, subject, status, priority, courseId, projectId, user.data?.timezone]);
+  }, [
+    filter,
+    subject,
+    status,
+    priority,
+    courseId,
+    projectId,
+    collaboratorId,
+    user.data?.timezone,
+  ]);
 
   const PAGE_SIZE = 20;
   const tasks = api.task.list.useInfiniteQuery(

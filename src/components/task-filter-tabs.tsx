@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSession } from 'next-auth/react';
-import { Tag, ChevronDown, Flag, BookOpen, Folder } from 'lucide-react';
+import { Tag, ChevronDown, Flag, BookOpen, Folder, Users } from 'lucide-react';
 import type { TaskPriority } from '@prisma/client';
 import { api } from '@/server/api/react';
 
@@ -17,6 +17,8 @@ interface TaskFilterTabsProps {
   onCourseChange?: (value: string | null) => void;
   projectId?: string | null;
   onProjectChange?: (value: string | null) => void;
+  collaboratorId?: string | null;
+  onCollaboratorChange?: (value: string | null) => void;
 }
 
 export function TaskFilterTabs({
@@ -30,6 +32,8 @@ export function TaskFilterTabs({
   onCourseChange,
   projectId,
   onProjectChange,
+  collaboratorId,
+  onCollaboratorChange,
 }: TaskFilterTabsProps) {
   const options: { value: TaskFilter; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -44,6 +48,9 @@ export function TaskFilterTabs({
   });
   const { data: courses = [] } = api.course.list.useQuery({ page: 1, limit: 100 });
   const { data: projects = [] } = api.project.list.useQuery();
+  const { data: collaborators = [] } = api.task.collaborators.useQuery(undefined, {
+    enabled: !!session,
+  });
 
   return (
     <div
@@ -139,6 +146,26 @@ export function TaskFilterTabs({
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.title}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        </div>
+      )}
+      {onCollaboratorChange && (
+        <div className="relative w-full sm:ml-2 sm:w-auto">
+          <Users className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <select
+            aria-label="Collaborator filter"
+            title="Filter by collaborator"
+            className="w-full appearance-none rounded-full border border-slate-200 bg-slate-100 py-1.5 pl-8 pr-8 text-sm text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800 sm:w-auto"
+            value={collaboratorId ?? ''}
+            onChange={(e) => onCollaboratorChange(e.target.value || null)}
+          >
+            <option value="">All collaborators</option>
+            {collaborators.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
               </option>
             ))}
           </select>

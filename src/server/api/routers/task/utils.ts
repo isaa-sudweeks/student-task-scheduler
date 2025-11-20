@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
-import { RecurrenceType } from '@prisma/client';
+import { RecurrenceType, MemberRole } from '@prisma/client';
 import { cache } from '@/server/cache';
-import { db } from '@/server/db';
+import { assertCourseMember, assertProjectMember, assertTaskMember } from '@/server/api/permissions';
 
 export const TASK_LIST_CACHE_PREFIX = 'task:list:';
 export const TASK_SUBJECT_OPTIONS_CACHE_PREFIX = 'task:subjects:';
@@ -74,15 +74,12 @@ export async function validateTaskRelationships(
 ) {
   const { projectId, courseId, parentId } = ids;
   if (typeof projectId === 'string') {
-    const project = await db.project.findFirst({ where: { id: projectId, userId } });
-    if (!project) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid projectId' });
+    await assertProjectMember({ userId, projectId, roles: [MemberRole.OWNER, MemberRole.EDITOR] });
   }
   if (typeof courseId === 'string') {
-    const course = await db.course.findFirst({ where: { id: courseId, userId } });
-    if (!course) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid courseId' });
+    await assertCourseMember({ userId, courseId, roles: [MemberRole.OWNER, MemberRole.EDITOR] });
   }
   if (typeof parentId === 'string') {
-    const parent = await db.task.findFirst({ where: { id: parentId, userId } });
-    if (!parent) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid parentId' });
+    await assertTaskMember({ userId, taskId: parentId });
   }
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { TaskFilterTabs } from "@/components/task-filter-tabs";
 import type { TaskStatus } from "@/components/status-dropdown";
 import type { TaskPriority } from "@prisma/client";
+import { TaskCollaboratorsDialog } from "./tasks/task-collaborators-dialog";
 // Controls moved to global nav bar: AccountMenu, ThemeToggle, ShortcutsPopover
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
@@ -45,8 +46,10 @@ function HomePageContent() {
   const [priority, setPriority] = useState<Priority | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [collaboratorId, setCollaboratorId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [showCollaborators, setShowCollaborators] = useState(false);
   const [taskCount, setTaskCount] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -116,6 +119,8 @@ function HomePageContent() {
                   onCourseChange={setCourseId}
                   projectId={projectId}
                   onProjectChange={setProjectId}
+                  collaboratorId={collaboratorId}
+                  onCollaboratorChange={setCollaboratorId}
                 />
               </div>
               <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-center md:w-auto md:justify-end">
@@ -127,6 +132,13 @@ function HomePageContent() {
                   className="h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground sm:w-64 md:w-80"
                   ref={searchRef}
                 />
+                <Button
+                  variant="secondary"
+                  className="h-9 w-full sm:w-auto"
+                  onClick={() => setShowCollaborators(true)}
+                >
+                  Manage collaborators
+                </Button>
                 <Button
                   className="h-9 w-full sm:w-auto"
                   onClick={() => setShowModal(true)}
@@ -147,6 +159,7 @@ function HomePageContent() {
             priority={priority}
             courseId={courseId}
             projectId={projectId}
+            collaboratorId={collaboratorId}
             query={query}
             onCountChange={setTaskCount}
           />
@@ -156,6 +169,10 @@ function HomePageContent() {
         open={showModal}
         mode="create"
         onClose={() => setShowModal(false)}
+      />
+      <TaskCollaboratorsDialog
+        open={showCollaborators}
+        onClose={() => setShowCollaborators(false)}
       />
     </>
   );
