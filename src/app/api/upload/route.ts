@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { logger } from '@/server/logger';
+import { extractAssignmentsFromPdf } from '@/server/syllabus/parser';
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MiB
 const ALLOWED_MIME_TYPES = new Set([
@@ -82,5 +83,18 @@ export async function POST(req: Request) {
   }
 
   await writeFile(destination, buffer);
-  return NextResponse.json({ url: `/uploads/${fileName}` });
+
+  let assignments: Array<{ title: string; dueAt: string | null; notes?: string | null }> = [];
+  try {
+    const parsed = await extractAssignmentsFromPdf(buffer, { now: new Date() });
+    assignments = parsed.map((assignment) => ({
+      title: assignment.title,
+      dueAt: assignment.dueAt ? assignment.dueAt.toISOString() : null,
+      notes: assignment.notes ?? undefined,
+    }));
+  } catch (error) {
+    logger.error('Failed to extract assignments from syllabus', error instanceof Error ? error : { error });
+  }
+
+  return NextResponse.json({ url: `/uploads/${fileName}`, assignments });
 }
