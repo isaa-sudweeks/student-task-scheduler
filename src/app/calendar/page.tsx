@@ -19,38 +19,6 @@ type Task = RouterOutputs['task']['list'][number];
 type Event = RouterOutputs['event']['listRange'][number];
 type ScheduleSuggestion = RouterOutputs['task']['scheduleSuggestions']['suggestions'][number];
 
-const WEEKDAY_INDEX: Record<string, number> = {
-  SUNDAY: 0,
-  MONDAY: 1,
-  TUESDAY: 2,
-  WEDNESDAY: 3,
-  THURSDAY: 4,
-  FRIDAY: 5,
-  SATURDAY: 6,
-};
-
-const CLASS_CONFLICT_MESSAGE = 'This time conflicts with a class meeting for this course.';
-
-function isDuringCourseMeeting(task: Task | undefined, startAt: Date, durationMinutes: number): boolean {
-  if (!task?.course || !Array.isArray(task.course.meetings) || task.course.meetings.length === 0) {
-    return false;
-  }
-  const startLocal = new Date(startAt);
-  const endLocal = new Date(startAt.getTime() + durationMinutes * 60000);
-  const dayIndex = startLocal.getDay();
-  const dayStart = new Date(startLocal);
-  dayStart.setHours(0, 0, 0, 0);
-  return task.course.meetings.some((meeting) => {
-    const meetingDayIndex = WEEKDAY_INDEX[meeting.dayOfWeek as keyof typeof WEEKDAY_INDEX];
-    if (typeof meetingDayIndex !== 'number' || meetingDayIndex !== dayIndex) return false;
-    const meetingStart = new Date(dayStart);
-    meetingStart.setMinutes(meeting.startMinutes);
-    const meetingEnd = new Date(dayStart);
-    meetingEnd.setMinutes(meeting.endMinutes);
-    return meetingStart < endLocal && startLocal < meetingEnd;
-  });
-}
-
 export default function CalendarPage() {
   const [view, setView] = useState<ViewMode>('week');
   const [baseDate, setBaseDate] = useState<Date>(new Date());
@@ -61,6 +29,9 @@ export default function CalendarPage() {
   const [dayStart, setDayStart] = useState(8);
   const [dayEnd, setDayEnd] = useState(18);
   const [defaultDuration, setDefaultDuration] = useState(30);
+  const [focusWorkMinutes, setFocusWorkMinutes] = useState(25);
+  const [focusBreakMinutes, setFocusBreakMinutes] = useState(5);
+  const [focusCycleCount, setFocusCycleCount] = useState(4);
   const [showSettings, setShowSettings] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -83,6 +54,9 @@ export default function CalendarPage() {
     dayWindowStartHour: number;
     dayWindowEndHour: number;
     defaultDurationMinutes: number;
+    focusWorkMinutes: number;
+    focusBreakMinutes: number;
+    focusCycleCount: number;
   } | null>(null);
   const hasLoadedServerSettingsRef = useRef(false);
   useEffect(() => {
@@ -90,9 +64,15 @@ export default function CalendarPage() {
     const s = parseStoredNumber(window.localStorage.getItem('dayWindowStartHour'));
     const e = parseStoredNumber(window.localStorage.getItem('dayWindowEndHour'));
     const d = parseStoredNumber(window.localStorage.getItem('defaultDurationMinutes'));
+    const fw = parseStoredNumber(window.localStorage.getItem('focusWorkMinutes'));
+    const fb = parseStoredNumber(window.localStorage.getItem('focusBreakMinutes'));
+    const fc = parseStoredNumber(window.localStorage.getItem('focusCycleCount'));
     if (s != null) setDayStart(s);
     if (e != null) setDayEnd(e);
     if (d != null) setDefaultDuration(d);
+    if (fw != null) setFocusWorkMinutes(fw);
+    if (fb != null) setFocusBreakMinutes(fb);
+    if (fc != null) setFocusCycleCount(fc);
   }, [parseStoredNumber]);
   useEffect(() => {
     if (!userSettings) return;
@@ -100,6 +80,9 @@ export default function CalendarPage() {
     setDayStart(userSettings.dayWindowStartHour);
     setDayEnd(userSettings.dayWindowEndHour);
     setDefaultDuration(userSettings.defaultDurationMinutes);
+    setFocusWorkMinutes(userSettings.focusWorkMinutes);
+    setFocusBreakMinutes(userSettings.focusBreakMinutes);
+    setFocusCycleCount(userSettings.focusCycleCount);
   }, [userSettings]);
 
   useEffect(() => {
@@ -107,7 +90,10 @@ export default function CalendarPage() {
     window.localStorage.setItem('dayWindowStartHour', String(dayStart));
     window.localStorage.setItem('dayWindowEndHour', String(dayEnd));
     window.localStorage.setItem('defaultDurationMinutes', String(defaultDuration));
-  }, [dayStart, dayEnd, defaultDuration]);
+    window.localStorage.setItem('focusWorkMinutes', String(focusWorkMinutes));
+    window.localStorage.setItem('focusBreakMinutes', String(focusBreakMinutes));
+    window.localStorage.setItem('focusCycleCount', String(focusCycleCount));
+  }, [dayStart, dayEnd, defaultDuration, focusWorkMinutes, focusBreakMinutes, focusCycleCount]);
 
   useEffect(() => {
     if (!isAuthenticated || !userSettings) return;
@@ -116,12 +102,18 @@ export default function CalendarPage() {
       dayWindowStartHour: dayStart,
       dayWindowEndHour: dayEnd,
       defaultDurationMinutes: defaultDuration,
+      focusWorkMinutes,
+      focusBreakMinutes,
+      focusCycleCount,
     };
 
     const matchesServer =
       current.dayWindowStartHour === userSettings.dayWindowStartHour &&
       current.dayWindowEndHour === userSettings.dayWindowEndHour &&
-      current.defaultDurationMinutes === userSettings.defaultDurationMinutes;
+      current.defaultDurationMinutes === userSettings.defaultDurationMinutes &&
+      current.focusWorkMinutes === userSettings.focusWorkMinutes &&
+      current.focusBreakMinutes === userSettings.focusBreakMinutes &&
+      current.focusCycleCount === userSettings.focusCycleCount;
 
     if (!hasLoadedServerSettingsRef.current) {
       if (matchesServer) {
@@ -136,7 +128,10 @@ export default function CalendarPage() {
       last &&
       last.dayWindowStartHour === current.dayWindowStartHour &&
       last.dayWindowEndHour === current.dayWindowEndHour &&
-      last.defaultDurationMinutes === current.defaultDurationMinutes
+      last.defaultDurationMinutes === current.defaultDurationMinutes &&
+      last.focusWorkMinutes === current.focusWorkMinutes &&
+      last.focusBreakMinutes === current.focusBreakMinutes &&
+      last.focusCycleCount === current.focusCycleCount
     ) {
       return;
     }
@@ -147,15 +142,25 @@ export default function CalendarPage() {
       dayWindowStartHour: current.dayWindowStartHour,
       dayWindowEndHour: current.dayWindowEndHour,
       defaultDurationMinutes: current.defaultDurationMinutes,
-      calendarSyncProviders:
-        userSettings.calendarSyncProviders?.length
-          ? userSettings.calendarSyncProviders
-          : ['GOOGLE'],
+      focusWorkMinutes: current.focusWorkMinutes,
+      focusBreakMinutes: current.focusBreakMinutes,
+      focusCycleCount: current.focusCycleCount,
+      googleSyncEnabled: userSettings.googleSyncEnabled,
       llmProvider: userSettings.llmProvider ?? 'NONE',
       openaiApiKey: userSettings.openaiApiKey ?? null,
       lmStudioUrl: userSettings.lmStudioUrl ?? 'http://localhost:1234',
     });
-  }, [isAuthenticated, userSettings, dayStart, dayEnd, defaultDuration, setSettingsMutate]);
+  }, [
+    isAuthenticated,
+    userSettings,
+    dayStart,
+    dayEnd,
+    defaultDuration,
+    focusWorkMinutes,
+    focusBreakMinutes,
+    focusCycleCount,
+    setSettingsMutate,
+  ]);
 
   // Make dragging/resizing more reliable across mouse/touch
   const sensors = useSensors(
@@ -173,13 +178,6 @@ export default function CalendarPage() {
   const suggestionMutation = api.task.scheduleSuggestions.useMutation();
 
   const tasksData = useMemo(() => tasksQ.data ?? [], [tasksQ.data]);
-  const taskById = useMemo(() => {
-    const map = new Map<string, Task>();
-    for (const task of tasksData) {
-      map.set(task.id, task);
-    }
-    return map;
-  }, [tasksData]);
   const eventsData = useMemo(() => eventsQ.data ?? [], [eventsQ.data]);
   const [eventsLocal, setEventsLocal] = useState<Event[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<ScheduleSuggestion[]>([]);
@@ -237,6 +235,16 @@ export default function CalendarPage() {
   );
 
   const ITEM_SIZE = 48;
+  const timeFormatter = React.useMemo(
+    () => new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }),
+    [],
+  );
+  const formatDuration = React.useCallback((ms: number) => {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }, []);
 
   useEffect(() => {
     if (eventsData?.[0]?.startAt) {
@@ -277,8 +285,8 @@ export default function CalendarPage() {
   const focusStopMutate = React.useMemo(() => focusStop.mutate, [focusStop]);
   const schedule = api.event.schedule.useMutation({
     onSuccess: async (result) => {
-      if (result?.syncWarnings?.length) {
-        toast.info(result.syncWarnings[0] ?? 'Event saved locally, but calendar sync reported warnings.');
+      if (result?.googleSyncWarning) {
+        toast.info('Event saved locally, but Google Calendar sync failed.');
       }
       try {
         await utils.event.listRange.invalidate();
@@ -287,10 +295,7 @@ export default function CalendarPage() {
     },
   });
   const move = api.event.move.useMutation({
-    onSuccess: async (result) => {
-      if (result?.syncWarnings?.length) {
-        toast.info(result.syncWarnings[0] ?? 'Event moved locally, but calendar sync reported warnings.');
-      }
+    onSuccess: async () => {
       try {
         await utils.event.listRange.invalidate();
       } catch {}
@@ -303,18 +308,6 @@ export default function CalendarPage() {
       scheduleMutate({ ...args, dayWindowStartHour: dayStart, dayWindowEndHour: dayEnd });
     },
     [scheduleMutate, dayStart, dayEnd]
-  );
-
-  const scheduleTask = React.useCallback(
-    (args: { taskId: string; startAt: Date; durationMinutes: number }) => {
-      const task = taskById.get(args.taskId);
-      if (isDuringCourseMeeting(task, args.startAt, args.durationMinutes)) {
-        toast.error(CLASS_CONFLICT_MESSAGE);
-        return;
-      }
-      scheduleWithPrefs(args);
-    },
-    [scheduleWithPrefs, taskById],
   );
 
   const requestSuggestions = React.useCallback(async () => {
@@ -353,13 +346,13 @@ export default function CalendarPage() {
         Math.round((suggestion.endAt.getTime() - suggestion.startAt.getTime()) / 60000),
       );
       setAiSuggestions((prev) => prev.filter((s) => s.taskId !== suggestion.taskId));
-      scheduleTask({
+      scheduleWithPrefs({
         taskId: suggestion.taskId,
         startAt: new Date(suggestion.startAt),
         durationMinutes,
       });
     },
-    [scheduleTask],
+    [scheduleWithPrefs],
   );
   const moveMutateFn = move.mutate;
   const moveWithPrefs = React.useCallback(
@@ -372,27 +365,108 @@ export default function CalendarPage() {
   const createTask = api.task.create.useMutation();
 
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
-  const [focusedSince, setFocusedSince] = useState<number | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [elapsed, setElapsed] = useState<number>(0);
-  const elapsedByTaskRef = useRef<Record<string, number>>({});
+  const [focusPhase, setFocusPhase] = useState<'idle' | 'work' | 'break'>('idle');
+  const [focusCycle, setFocusCycle] = useState(0);
+  const [phaseStartedAt, setPhaseStartedAt] = useState<number | null>(null);
+  const [phaseEndsAt, setPhaseEndsAt] = useState<number | null>(null);
+  const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const phaseTimeoutRef = useRef<number | null>(null);
+  const focusCompleteInterval = api.focus.completeInterval.useMutation();
+  const focusCompleteMutate = React.useMemo(() => focusCompleteInterval.mutateAsync, [focusCompleteInterval]);
 
   useEffect(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (focusedSince == null) return;
-    intervalRef.current = setInterval(() => {
-      setElapsed(Date.now() - (focusedSince as number));
-    }, 1000);
+    if (!focusedTaskId) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+      window.clearInterval(id);
+    };
+  }, [focusedTaskId]);
+
+  const resetFocusState = React.useCallback(() => {
+    if (phaseTimeoutRef.current) {
+      window.clearTimeout(phaseTimeoutRef.current);
+      phaseTimeoutRef.current = null;
+    }
+    setFocusPhase('idle');
+    setFocusCycle(0);
+    setPhaseStartedAt(null);
+    setPhaseEndsAt(null);
+    setSessionStartedAt(null);
+    setFocusedTaskId(null);
+    setNowMs(Date.now());
+  }, []);
+
+  const handlePhaseComplete = React.useCallback(() => {
+    if (!focusedTaskId || phaseStartedAt == null || phaseEndsAt == null) return;
+    const startedAt = new Date(phaseStartedAt);
+    const endedAt = new Date(phaseEndsAt);
+    void focusCompleteMutate({
+      taskId: focusedTaskId,
+      type: focusPhase === 'break' ? 'BREAK' : 'WORK',
+      startedAt,
+      endedAt,
+    }).catch((err) => {
+      console.error('Failed to record focus interval', err);
+    });
+    if (focusPhase === 'work') {
+      focusStopMutate({ taskId: focusedTaskId });
+      const completedCycles = focusCycle + 1;
+      setFocusCycle(completedCycles);
+      if (completedCycles >= focusCycleCount) {
+        resetFocusState();
+        return;
+      }
+      const nextStart = Date.now();
+      setFocusPhase('break');
+      setPhaseStartedAt(nextStart);
+      setPhaseEndsAt(nextStart + focusBreakMinutes * 60000);
+      setNowMs(nextStart);
+    } else if (focusPhase === 'break') {
+      const nextStart = Date.now();
+      setFocusPhase('work');
+      setPhaseStartedAt(nextStart);
+      setPhaseEndsAt(nextStart + focusWorkMinutes * 60000);
+      setNowMs(nextStart);
+      focusStartMutate({ taskId: focusedTaskId });
+    }
+  }, [
+    focusBreakMinutes,
+    focusCompleteMutate,
+    focusCycle,
+    focusCycleCount,
+    focusPhase,
+    focusStartMutate,
+    focusStopMutate,
+    focusWorkMinutes,
+    focusedTaskId,
+    phaseEndsAt,
+    phaseStartedAt,
+    resetFocusState,
+  ]);
+
+  useEffect(() => {
+    if (!focusedTaskId || phaseEndsAt == null || phaseStartedAt == null) return;
+    const timeout = window.setTimeout(() => {
+      handlePhaseComplete();
+    }, Math.max(0, phaseEndsAt - Date.now()));
+    phaseTimeoutRef.current = timeout;
+    return () => {
+      window.clearTimeout(timeout);
+      if (phaseTimeoutRef.current === timeout) {
+        phaseTimeoutRef.current = null;
       }
     };
-  }, [focusedSince]);
+  }, [focusedTaskId, phaseEndsAt, phaseStartedAt, handlePhaseComplete]);
+
+  useEffect(() => {
+    return () => {
+      if (phaseTimeoutRef.current) {
+        window.clearTimeout(phaseTimeoutRef.current);
+        phaseTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // On unmount, ensure focus is stopped (pauses session)
   useEffect(() => {
@@ -405,19 +479,35 @@ export default function CalendarPage() {
 
   const toggleFocus = React.useCallback((taskId: string) => {
     if (focusedTaskId === taskId) {
-      // store elapsed so resuming continues
-      elapsedByTaskRef.current[taskId] = elapsed;
-      setFocusedTaskId(null);
-      setFocusedSince(null);
-      focusStopMutate({ taskId });
-    } else {
-      setFocusedTaskId(taskId);
-      const prev = elapsedByTaskRef.current[taskId] ?? 0;
-      setFocusedSince(Date.now() - prev);
-      setElapsed(prev);
-      focusStartMutate({ taskId });
+      if (focusPhase === 'work') {
+        focusStopMutate({ taskId });
+      }
+      resetFocusState();
+      return;
     }
-  }, [focusedTaskId, elapsed, focusStartMutate, focusStopMutate]);
+    if (focusedTaskId && focusedTaskId !== taskId) {
+      if (focusPhase === 'work') {
+        focusStopMutate({ taskId: focusedTaskId });
+      }
+      resetFocusState();
+    }
+    const now = Date.now();
+    setFocusedTaskId(taskId);
+    setFocusPhase('work');
+    setFocusCycle(0);
+    setPhaseStartedAt(now);
+    setPhaseEndsAt(now + focusWorkMinutes * 60000);
+    setSessionStartedAt(now);
+    setNowMs(now);
+    focusStartMutate({ taskId });
+  }, [
+    focusPhase,
+    focusStartMutate,
+    focusStopMutate,
+    focusWorkMinutes,
+    focusedTaskId,
+    resetFocusState,
+  ]);
 
   // Global key handler to support Space toggling focus on a focused backlog task button
   useEffect(() => {
@@ -486,6 +576,47 @@ export default function CalendarPage() {
 
   if (focusedTaskId) {
     const task = tasksData.find((t) => t.id === focusedTaskId);
+    const timeRemainingMs = phaseEndsAt ? Math.max(0, phaseEndsAt - nowMs) : 0;
+    const sessionElapsedMs = sessionStartedAt ? Math.max(0, nowMs - sessionStartedAt) : 0;
+    const currentIntervalLabel =
+      focusPhase === 'work'
+        ? `Work interval ${Math.min(focusCycle + 1, focusCycleCount)} of ${focusCycleCount}`
+        : focusPhase === 'break'
+        ? `Break before interval ${Math.min(focusCycle + 1, focusCycleCount)}`
+        : 'Session paused';
+    let nextBreakAt: Date | null = null;
+    if (phaseEndsAt != null) {
+      if (focusPhase === 'work' && focusCycle + 1 < focusCycleCount) {
+        nextBreakAt = new Date(phaseEndsAt);
+      } else if (focusPhase === 'break' && focusCycle < focusCycleCount - 1) {
+        nextBreakAt = new Date(phaseEndsAt + focusWorkMinutes * 60000);
+      }
+    }
+    let sessionCompletionAt: Date | null = null;
+    if (phaseEndsAt != null && focusPhase !== 'idle') {
+      let remaining = Math.max(0, phaseEndsAt - nowMs);
+      if (focusPhase === 'work') {
+        if (focusCycle + 1 < focusCycleCount) {
+          remaining += focusBreakMinutes * 60000;
+        }
+        const remainingWorkIntervals = Math.max(0, focusCycleCount - (focusCycle + 1));
+        if (remainingWorkIntervals > 0) {
+          remaining += remainingWorkIntervals * focusWorkMinutes * 60000;
+          const futureBreaks = Math.max(0, remainingWorkIntervals - 1);
+          remaining += futureBreaks * focusBreakMinutes * 60000;
+        }
+      } else if (focusPhase === 'break') {
+        const remainingWorkIntervals = Math.max(0, focusCycleCount - focusCycle);
+        if (remainingWorkIntervals > 0) {
+          remaining += remainingWorkIntervals * focusWorkMinutes * 60000;
+          const futureBreaks = Math.max(0, remainingWorkIntervals - 1);
+          remaining += futureBreaks * focusBreakMinutes * 60000;
+        }
+      }
+      if (remaining > 0) {
+        sessionCompletionAt = new Date(nowMs + remaining);
+      }
+    }
     return (
       <main className="space-y-4">
         <header className="flex items-center justify-end gap-2">
@@ -501,14 +632,23 @@ export default function CalendarPage() {
         {ViewTabs}
         <section className="p-4 rounded border">
           <h2 className="text-xl font-semibold">Focusing: {task?.title}</h2>
+          <p className="text-sm text-muted-foreground">{currentIntervalLabel}</p>
           <p
             role="timer"
             aria-live="polite"
-            aria-label="Elapsed focus time"
+            aria-label="Time remaining for current focus interval"
+            className="mt-2 text-lg font-medium"
           >
-            {Math.floor(elapsed / 1000)}s
+            Time remaining: {formatDuration(timeRemainingMs)}
           </p>
-          <button className="mt-2 px-3 py-1 border rounded" onClick={() => toggleFocus(focusedTaskId!)}>Unfocus</button>
+          <p className="text-sm text-muted-foreground">Session elapsed: {formatDuration(sessionElapsedMs)}</p>
+          {nextBreakAt && (
+            <p className="text-sm">Next break at {timeFormatter.format(nextBreakAt)}</p>
+          )}
+          {sessionCompletionAt && (
+            <p className="text-sm">Session completes at {timeFormatter.format(sessionCompletionAt)}</p>
+          )}
+          <button className="mt-4 px-3 py-1 border rounded" onClick={() => toggleFocus(focusedTaskId!)}>End session</button>
         </section>
       </main>
     );
@@ -580,7 +720,7 @@ export default function CalendarPage() {
             const taskId = aid.slice('task-'.length);
             const iso = oid.slice('cell-'.length);
             const startAt = new Date(iso);
-            scheduleTask({ taskId, startAt, durationMinutes: defaultDuration });
+            scheduleWithPrefs({ taskId, startAt, durationMinutes: defaultDuration });
             return;
           }
           if (aid.startsWith('event-') && oid.startsWith('cell-')) {
@@ -591,11 +731,6 @@ export default function CalendarPage() {
             if (!ev) return;
             const durationMin = calculateDurationMinutes(ev.startAt, ev.endAt);
             const endAt = new Date(startAt.getTime() + durationMin * 60000);
-            const task = taskById.get(ev.taskId);
-            if (isDuringCourseMeeting(task, startAt, durationMin)) {
-              toast.error(CLASS_CONFLICT_MESSAGE);
-              return;
-            }
             // optimistic update
             setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt, endAt } : x));
             moveWithPrefs({ eventId, startAt, endAt });
@@ -611,12 +746,6 @@ export default function CalendarPage() {
             const endAt = new Date(ev.endAt);
             if (at >= endAt) at = new Date(endAt.getTime() - 15 * 60000);
             startAt = at;
-            const durationMin = Math.max(1, calculateDurationMinutes(startAt, endAt));
-            const task = taskById.get(ev.taskId);
-            if (isDuringCourseMeeting(task, startAt, durationMin)) {
-              toast.error(CLASS_CONFLICT_MESSAGE);
-              return;
-            }
             // optimistic update
             setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt } : x));
             moveWithPrefs({ eventId, startAt, endAt });
@@ -632,12 +761,6 @@ export default function CalendarPage() {
             let endAt = new Date(ev.endAt);
             if (at <= startAt) at = new Date(startAt.getTime() + 15 * 60000);
             endAt = at;
-            const durationMin = Math.max(1, calculateDurationMinutes(startAt, endAt));
-            const task = taskById.get(ev.taskId);
-            if (isDuringCourseMeeting(task, startAt, durationMin)) {
-              toast.error(CLASS_CONFLICT_MESSAGE);
-              return;
-            }
             // optimistic update
             setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, endAt } : x));
             moveWithPrefs({ eventId, startAt, endAt });
@@ -749,7 +872,7 @@ export default function CalendarPage() {
             className="hidden"
             onClick={() => {
               const now = new Date();
-              scheduleTask({ taskId: backlog[0].id, startAt: now, durationMinutes: defaultDuration });
+              scheduleWithPrefs({ taskId: backlog[0].id, startAt: now, durationMinutes: defaultDuration });
             }}
           >Simulate</button>
         )}
@@ -763,11 +886,6 @@ export default function CalendarPage() {
               const newStart = new Date(new Date(ev.startAt).getTime() + 60 * 60000);
               const durationMin = calculateDurationMinutes(ev.startAt, ev.endAt);
               const newEnd = new Date(newStart.getTime() + durationMin * 60000);
-              const task = taskById.get(ev.taskId);
-              if (isDuringCourseMeeting(task, newStart, durationMin)) {
-                toast.error(CLASS_CONFLICT_MESSAGE);
-                return;
-              }
               moveWithPrefs({ eventId: ev.id, startAt: newStart, endAt: newEnd });
             }}
           >Simulate Move</button>
@@ -781,18 +899,13 @@ export default function CalendarPage() {
             workStartHour={dayStart}
             workEndHour={dayEnd}
             onDropTask={(taskId, startAt) => {
-              scheduleTask({ taskId, startAt, durationMinutes: defaultDuration });
+              scheduleWithPrefs({ taskId, startAt, durationMinutes: defaultDuration });
             }}
             onMoveEvent={(eventId, startAt) => {
               const ev = eventsData.find((e) => e.id === eventId);
               if (!ev) return;
               const durationMin = calculateDurationMinutes(ev.startAt, ev.endAt);
               const endAt = new Date(startAt.getTime() + durationMin * 60000);
-              const task = taskById.get(ev.taskId);
-              if (isDuringCourseMeeting(task, startAt, durationMin)) {
-                toast.error(CLASS_CONFLICT_MESSAGE);
-                return;
-              }
               moveWithPrefs({ eventId, startAt, endAt });
             }}
             onResizeEvent={(eventId, edge, at) => {
@@ -806,12 +919,6 @@ export default function CalendarPage() {
               } else {
                 if (at <= startAt) at = new Date(startAt.getTime() + 15 * 60000);
                 endAt = at;
-              }
-              const durationMin = Math.max(1, calculateDurationMinutes(startAt, endAt));
-              const task = taskById.get(ev.taskId);
-              if (isDuringCourseMeeting(task, startAt, durationMin)) {
-                toast.error(CLASS_CONFLICT_MESSAGE);
-                return;
               }
               // optimistic update
               setEventsLocal((prev) => prev.map((x) => x.id === eventId ? { ...x, startAt, endAt } : x));
@@ -838,14 +945,8 @@ export default function CalendarPage() {
             const ev = eventsLocal[0];
             const startAt = new Date(ev.startAt);
             const newEnd = new Date(startAt.getTime() + 120 * 60000); // extend to 2h total
-            const durationMin = Math.max(1, calculateDurationMinutes(startAt, newEnd));
-            const task = taskById.get(ev.taskId);
-            if (isDuringCourseMeeting(task, startAt, durationMin)) {
-              toast.error(CLASS_CONFLICT_MESSAGE);
-              return;
-            }
             setEventsLocal((prev) => prev.map((x) => x.id === ev.id ? { ...x, endAt: newEnd } : x));
-            moveWithPrefs({ eventId: ev.id, startAt, endAt: newEnd });
+              moveWithPrefs({ eventId: ev.id, startAt, endAt: newEnd });
           }}
         >Simulate Resize</button>
       )}
@@ -877,7 +978,7 @@ export default function CalendarPage() {
                   {
                     onSuccess: async (task) => {
                       if (newTaskStart) {
-                        scheduleTask({
+                        scheduleWithPrefs({
                           taskId: task.id,
                           startAt: newTaskStart,
                           durationMinutes: defaultDuration,
@@ -946,6 +1047,33 @@ export default function CalendarPage() {
               min={1}
               value={defaultDuration}
               onChange={(e) => setDefaultDuration(Number(e.target.value))}
+            />
+          </label>
+          <label className="block text-sm">
+            <span>Focus work duration (minutes)</span>
+            <Input
+              type="number"
+              min={5}
+              value={focusWorkMinutes}
+              onChange={(e) => setFocusWorkMinutes(Number(e.target.value))}
+            />
+          </label>
+          <label className="block text-sm">
+            <span>Focus break duration (minutes)</span>
+            <Input
+              type="number"
+              min={1}
+              value={focusBreakMinutes}
+              onChange={(e) => setFocusBreakMinutes(Number(e.target.value))}
+            />
+          </label>
+          <label className="block text-sm">
+            <span>Focus intervals per session</span>
+            <Input
+              type="number"
+              min={1}
+              value={focusCycleCount}
+              onChange={(e) => setFocusCycleCount(Number(e.target.value))}
             />
           </label>
         </div>

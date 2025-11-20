@@ -14,21 +14,6 @@ import type { RouterOutputs } from "@/server/api/root";
 type Task = RouterOutputs["task"]["list"][number];
 type Reminder = RouterOutputs["task"]["listReminders"][number];
 type ReminderChannel = Reminder["channel"];
-type TaskAttachment = NonNullable<Task["attachments"]>[number];
-
-interface AttachmentViewModel {
-  id: string;
-  name: string;
-  url: string;
-  size: number | null;
-}
-
-const toAttachmentViewModel = (attachment: TaskAttachment): AttachmentViewModel => ({
-  id: attachment.id,
-  name: attachment.originalName ?? attachment.fileName,
-  url: attachment.url,
-  size: attachment.size ?? null,
-});
 
 const reminderChannels: ReminderChannel[] = ["EMAIL", "PUSH", "SMS"];
 const MAX_REMINDERS = 5;
@@ -82,17 +67,6 @@ export function TaskModal({
     { channel: "EMAIL", offset: "60" },
   ]);
   const [reminderError, setReminderError] = useState<string | null>(null);
-  const [existingAttachments, setExistingAttachments] = useState<AttachmentViewModel[]>([]);
-  const [pendingAttachments, setPendingAttachments] = useState<File[]>([]);
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
-  const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
-  const [attachmentInputKey, setAttachmentInputKey] = useState(0);
-  const [gradeScore, setGradeScore] = useState("");
-  const [gradeTotal, setGradeTotal] = useState("");
-  const [gradeWeight, setGradeWeight] = useState("");
-  const [gradeScoreError, setGradeScoreError] = useState<string | null>(null);
-  const [gradeTotalError, setGradeTotalError] = useState<string | null>(null);
-  const [gradeWeightError, setGradeWeightError] = useState<string | null>(null);
 
   const { data: subtasks = [] } = api.task.list.useQuery(
     { filter: 'all', parentId: task?.id },
@@ -120,13 +94,9 @@ export function TaskModal({
       setProjectId((task as any).projectId ?? null);
       setCourseId((task as any).courseId ?? null);
       setEffortMinutes(task.effortMinutes != null ? String(task.effortMinutes) : '');
-      setGradeScore(task.gradeScore != null ? String(task.gradeScore) : '');
-      setGradeTotal(task.gradeTotal != null ? String(task.gradeTotal) : '');
-      setGradeWeight(task.gradeWeight != null ? String(task.gradeWeight) : '');
       const hasDue = task.dueAt != null;
       setDue(hasDue ? formatLocalDateTime(new Date(task.dueAt!)) : "");
       setDueEnabled(hasDue);
-      setExistingAttachments((task.attachments ?? []).map(toAttachmentViewModel));
       if (remindersQuery.data) {
         setReminders(remindersQuery.data.map((reminder) => ({
           id: reminder.id,
@@ -148,9 +118,6 @@ export function TaskModal({
       setProjectId(initialProjectId ?? null);
       setCourseId(initialCourseId ?? null);
       setEffortMinutes('');
-      setGradeScore('');
-      setGradeTotal('');
-      setGradeWeight('');
       if (initialDueAt) {
         setDueEnabled(true);
         setDue(formatLocalDateTime(new Date(initialDueAt)));
@@ -159,17 +126,9 @@ export function TaskModal({
         setDueEnabled(false);
       }
       setReminders([{ channel: "EMAIL", offset: "60" }]);
-      setExistingAttachments([]);
     }
     setTitleError(null);
     setReminderError(null);
-    setPendingAttachments([]);
-    setAttachmentError(null);
-    setIsUploadingAttachments(false);
-    setAttachmentInputKey((key) => key + 1);
-    setGradeScoreError(null);
-    setGradeTotalError(null);
-    setGradeWeightError(null);
   }, [
     open,
     isEdit,
@@ -180,16 +139,6 @@ export function TaskModal({
     initialCourseId,
     remindersQuery.data,
   ]);
-
-  useEffect(() => {
-    if (!open) {
-      setPendingAttachments([]);
-      setAttachmentError(null);
-      setIsUploadingAttachments(false);
-      setAttachmentInputKey((key) => key + 1);
-      setExistingAttachments([]);
-    }
-  }, [open]);
 
   const create = api.task.create.useMutation();
 
@@ -249,134 +198,12 @@ export function TaskModal({
     return null;
   }, [parsedReminders, reminders]);
 
-  const fileKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
-
-  const handleAttachmentSelect = (fileList: FileList | null) => {
-    if (!fileList) return;
-    const files = Array.from(fileList);
-    if (files.length === 0) return;
-    setPendingAttachments((prev) => {
-      const next = [...prev];
-      const seen = new Set(next.map(fileKey));
-      for (const file of files) {
-        const key = fileKey(file);
-        if (!seen.has(key)) {
-          seen.add(key);
-          next.push(file);
-        }
-      }
-      return next;
-    });
-    setAttachmentError(null);
-    setAttachmentInputKey((key) => key + 1);
-  };
-
-  const handleRemovePendingAttachment = (index: number) => {
-    setPendingAttachments((prev) => prev.filter((_, idx) => idx !== index));
-    setAttachmentError(null);
-    setAttachmentInputKey((key) => key + 1);
-  };
-
-  const uploadPendingAttachments = async (taskId: string) => {
-    const uploaded: AttachmentViewModel[] = [];
-    for (const file of pendingAttachments) {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch(`/api/tasks/${taskId}/attachments`, {
-        method: "POST",
-        body: formData,
-      });
-      let payload: unknown = null;
-      try {
-        payload = await response.json();
-      } catch (error) {
-        payload = null;
-      }
-      if (!response.ok) {
-        const message =
-          payload && typeof payload === "object" && "error" in payload
-            ? (payload as { error?: string }).error ?? "Failed to upload attachment"
-            : "Failed to upload attachment";
-        throw new Error(message);
-      }
-      if (
-        !payload ||
-        typeof payload !== "object" ||
-        !("attachment" in payload) ||
-        typeof (payload as any).attachment !== "object"
-      ) {
-        throw new Error("Invalid attachment response");
-      }
-      const record = (payload as { attachment: { id: string; originalName: string; url: string; size: number | null } }).attachment;
-      uploaded.push({
-        id: record.id,
-        name: record.originalName,
-        url: record.url,
-        size: record.size ?? null,
-      });
-    }
-    return uploaded;
-  };
-
   const handleSave = async () => {
     if (recurrenceConflict) return;
-    setGradeScoreError(null);
-    setGradeTotalError(null);
-    setGradeWeightError(null);
     if (reminderValidationError) {
       setReminderError(reminderValidationError);
       return;
     }
-    const trimmedGradeScore = gradeScore.trim();
-    const trimmedGradeTotal = gradeTotal.trim();
-    const trimmedGradeWeight = gradeWeight.trim();
-    let gradeScoreValue: number | null = null;
-    let gradeTotalValue: number | null = null;
-    let gradeWeightValue: number | null = null;
-    let gradeHasError = false;
-    if (trimmedGradeScore) {
-      const parsed = Number(trimmedGradeScore);
-      if (Number.isNaN(parsed) || parsed < 0) {
-        setGradeScoreError('Score must be zero or greater.');
-        gradeHasError = true;
-      } else {
-        gradeScoreValue = parsed;
-      }
-    }
-    if (trimmedGradeTotal) {
-      const parsed = Number(trimmedGradeTotal);
-      if (Number.isNaN(parsed) || parsed <= 0) {
-        setGradeTotalError('Total points must be greater than zero.');
-        gradeHasError = true;
-      } else {
-        gradeTotalValue = parsed;
-      }
-    }
-    if (trimmedGradeWeight) {
-      const parsed = Number(trimmedGradeWeight);
-      if (Number.isNaN(parsed) || parsed <= 0) {
-        setGradeWeightError('Weight must be greater than zero.');
-        gradeHasError = true;
-      } else {
-        gradeWeightValue = parsed;
-      }
-    }
-    if (trimmedGradeScore && !trimmedGradeTotal) {
-      setGradeTotalError('Provide total points when recording a score.');
-      gradeHasError = true;
-    }
-    if (!trimmedGradeScore && trimmedGradeTotal) {
-      setGradeScoreError('Provide a score when setting total points.');
-      gradeHasError = true;
-    }
-    if (gradeHasError) return;
-
-    const gradeScoreForUpdate =
-      trimmedGradeScore === '' ? null : gradeScoreValue ?? null;
-    const gradeTotalForUpdate =
-      trimmedGradeTotal === '' ? null : gradeTotalValue ?? null;
-    const gradeWeightForUpdate =
-      trimmedGradeWeight === '' ? null : gradeWeightValue ?? null;
 
     const parsedDue = parseLocalDateTime(due);
     const dueAt = dueEnabled && parsedDue ? parsedDue : null;
@@ -387,23 +214,23 @@ export function TaskModal({
       isRecurring && recurrenceCount !== '' ? recurrenceCount : undefined;
     const recurringFields = isRecurring
       ? {
-        recurrenceType,
-        recurrenceInterval,
-        ...(recurrenceCountVal !== undefined ? { recurrenceCount: recurrenceCountVal } : {}),
-        ...(recurrenceUntilDate ? { recurrenceUntil: recurrenceUntilDate } : {}),
-      }
+          recurrenceType,
+          recurrenceInterval,
+          ...(recurrenceCountVal !== undefined ? { recurrenceCount: recurrenceCountVal } : {}),
+          ...(recurrenceUntilDate ? { recurrenceUntil: recurrenceUntilDate } : {}),
+        }
       : {};
     const recurringUpdateFields = isRecurring
       ? {
-        recurrenceType,
-        recurrenceInterval,
-        ...(recurrenceCountVal !== undefined
-          ? { recurrenceCount: recurrenceCountVal }
-          : { recurrenceCount: null }),
-        ...(recurrenceUntilDate
-          ? { recurrenceUntil: recurrenceUntilDate }
-          : { recurrenceUntil: null }),
-      }
+          recurrenceType,
+          recurrenceInterval,
+          ...(recurrenceCountVal !== undefined
+            ? { recurrenceCount: recurrenceCountVal }
+            : { recurrenceCount: null }),
+          ...(recurrenceUntilDate
+            ? { recurrenceUntil: recurrenceUntilDate }
+            : { recurrenceUntil: null }),
+        }
       : { recurrenceType: 'NONE' as const, recurrenceCount: null, recurrenceUntil: null };
     const trimmedEffort = effortMinutes.trim();
     const hasEffort = trimmedEffort.length > 0;
@@ -418,10 +245,9 @@ export function TaskModal({
       return;
     }
 
-    setAttachmentError(null);
-    let saved: { id: string };
+    let saved: Task;
     if (isEdit && task) {
-      saved = await update.mutateAsync({
+      saved = (await update.mutateAsync({
         id: task.id,
         title: title.trim() || task.title,
         subject: subject.trim() || null,
@@ -432,10 +258,7 @@ export function TaskModal({
         projectId,
         courseId,
         effortMinutes: updateEffort,
-        gradeScore: gradeScoreForUpdate,
-        gradeTotal: gradeTotalForUpdate,
-        gradeWeight: gradeWeightForUpdate,
-      });
+      })) as Task;
     } else {
       saved = await create.mutateAsync({
         title: title.trim(),
@@ -447,15 +270,6 @@ export function TaskModal({
         projectId: projectId || undefined,
         courseId: courseId || undefined,
         ...(typeof createEffort !== "undefined" ? { effortMinutes: createEffort } : {}),
-        ...(trimmedGradeScore
-          ? { gradeScore: gradeScoreValue as number }
-          : {}),
-        ...(trimmedGradeTotal
-          ? { gradeTotal: gradeTotalValue as number }
-          : {}),
-        ...(trimmedGradeWeight
-          ? { gradeWeight: gradeWeightValue as number }
-          : {}),
       }) as Task;
     }
 
@@ -468,28 +282,6 @@ export function TaskModal({
       taskId: saved.id,
       reminders: reminderPayload,
     });
-
-    if (pendingAttachments.length > 0) {
-      setIsUploadingAttachments(true);
-      try {
-        const uploaded = await uploadPendingAttachments(saved.id);
-        if (uploaded.length > 0) {
-          setExistingAttachments((prev) => [...prev, ...uploaded]);
-        }
-        setPendingAttachments([]);
-        setAttachmentInputKey((key) => key + 1);
-        setAttachmentError(null);
-      } catch (error) {
-        setAttachmentError(
-          error instanceof Error ? error.message : "Failed to upload attachments",
-        );
-        setIsUploadingAttachments(false);
-        await utils.task.list.invalidate();
-        await utils.task.listReminders.invalidate({ taskId: saved.id });
-        return;
-      }
-      setIsUploadingAttachments(false);
-    }
 
     await utils.task.list.invalidate();
     await utils.task.listReminders.invalidate({ taskId: saved.id });
@@ -515,8 +307,7 @@ export function TaskModal({
           create.isPending ||
           update.isPending ||
           replaceReminders.isPending ||
-          recurrenceConflict ||
-          isUploadingAttachments
+          recurrenceConflict
         }
         onClick={() => void handleSave()}
       >
@@ -565,24 +356,6 @@ export function TaskModal({
           onNotesChange={setNotes}
           effortMinutes={effortMinutes}
           onEffortMinutesChange={setEffortMinutes}
-          gradeScore={gradeScore}
-          onGradeScoreChange={(value) => {
-            setGradeScore(value);
-            if (gradeScoreError) setGradeScoreError(null);
-          }}
-          gradeScoreError={gradeScoreError}
-          gradeTotal={gradeTotal}
-          onGradeTotalChange={(value) => {
-            setGradeTotal(value);
-            if (gradeTotalError) setGradeTotalError(null);
-          }}
-          gradeTotalError={gradeTotalError}
-          gradeWeight={gradeWeight}
-          onGradeWeightChange={(value) => {
-            setGradeWeight(value);
-            if (gradeWeightError) setGradeWeightError(null);
-          }}
-          gradeWeightError={gradeWeightError}
           onDraftDueChange={onDraftDueChange}
           recurrenceControls={
             <RecurrenceControls
@@ -596,13 +369,6 @@ export function TaskModal({
               onRecurrenceUntilChange={setRecurrenceUntil}
             />
           }
-          existingAttachments={existingAttachments}
-          pendingAttachments={pendingAttachments}
-          onAttachmentSelect={handleAttachmentSelect}
-          onRemovePendingAttachment={handleRemovePendingAttachment}
-          attachmentError={attachmentError}
-          attachmentInputKey={attachmentInputKey}
-          isUploadingAttachments={isUploadingAttachments}
         />
         {isEdit && task && (
           <SubtaskList
@@ -621,7 +387,7 @@ export function TaskModal({
             <span className="text-sm font-medium">Reminders</span>
             <Button
               variant="secondary"
-              className="px-3 py-1 text-sm"
+              size="sm"
               disabled={reminders.length >= MAX_REMINDERS}
               onClick={() => {
                 setReminders((prev) => [
@@ -660,8 +426,8 @@ export function TaskModal({
                       {channel === "EMAIL"
                         ? "Email"
                         : channel === "PUSH"
-                          ? "Push notification"
-                          : "SMS"}
+                        ? "Push notification"
+                        : "SMS"}
                     </option>
                   ))}
                 </select>
@@ -687,8 +453,8 @@ export function TaskModal({
                 />
                 <span className="text-sm text-muted-foreground">minutes before</span>
                 <Button
-                  variant="tertiary"
-                  className="px-2 py-1 text-sm"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setReminders((prev) => prev.filter((_, idx) => idx !== index));
                     setReminderError(null);

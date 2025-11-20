@@ -150,6 +150,9 @@ export const userRouter = router({
         llmProvider: true,
         openaiApiKey: true,
         lmStudioUrl: true,
+        focusWorkMinutes: true,
+        focusBreakMinutes: true,
+        focusCycleCount: true,
       },
     });
     if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
@@ -165,6 +168,9 @@ export const userRouter = router({
       llmProvider: z.nativeEnum(LlmProvider),
       openaiApiKey: z.string().max(512).optional().nullable(),
       lmStudioUrl: z.string().url(),
+      focusWorkMinutes: z.number().int().min(5).max(24 * 60),
+      focusBreakMinutes: z.number().int().min(1).max(24 * 60),
+      focusCycleCount: z.number().int().min(1).max(12),
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -193,6 +199,9 @@ export const userRouter = router({
           llmProvider: input.llmProvider,
           openaiApiKey: trimmedApiKey,
           lmStudioUrl: input.lmStudioUrl,
+          focusWorkMinutes: input.focusWorkMinutes,
+          focusBreakMinutes: input.focusBreakMinutes,
+          focusCycleCount: input.focusCycleCount,
         },
       });
       return { success: true };

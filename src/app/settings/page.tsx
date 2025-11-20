@@ -6,31 +6,6 @@ import { toast } from "@/lib/toast";
 import { api } from "@/server/api/react";
 
 type LlmProviderOption = "NONE" | "OPENAI" | "LM_STUDIO";
-type CalendarProviderOption = "GOOGLE" | "MICROSOFT" | "APPLE";
-
-const CALENDAR_PROVIDER_OPTIONS: { value: CalendarProviderOption; label: string; description: string }[] = [
-  {
-    value: "GOOGLE",
-    label: "Google Calendar",
-    description: "Sync events using your connected Google account.",
-  },
-  {
-    value: "MICROSOFT",
-    label: "Microsoft Outlook / Office 365",
-    description: "Sync tasks to Microsoft calendars via Graph API.",
-  },
-  {
-    value: "APPLE",
-    label: "Apple Calendar",
-    description: "Sync using your iCloud (CalDAV) connection.",
-  },
-];
-
-const CALENDAR_PROVIDER_ORDER = CALENDAR_PROVIDER_OPTIONS.map((option) => option.value);
-const sortProviders = (values: Iterable<CalendarProviderOption>) => {
-  const set = new Set(values);
-  return CALENDAR_PROVIDER_ORDER.filter((value) => set.has(value));
-};
 
 function SettingsContent() {
   const router = useRouter();
@@ -40,14 +15,23 @@ function SettingsContent() {
   const [startHour, setStartHour] = React.useState(8);
   const [endHour, setEndHour] = React.useState(18);
   const [defaultDuration, setDefaultDuration] = React.useState(30);
+  const [focusWorkMinutes, setFocusWorkMinutes] = React.useState(25);
+  const [focusBreakMinutes, setFocusBreakMinutes] = React.useState(5);
+  const [focusCycleCount, setFocusCycleCount] = React.useState(4);
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const storedStart = window.localStorage.getItem("dayWindowStartHour");
     const storedEnd = window.localStorage.getItem("dayWindowEndHour");
     const storedDuration = window.localStorage.getItem("defaultDurationMinutes");
+    const storedFocusWork = window.localStorage.getItem("focusWorkMinutes");
+    const storedFocusBreak = window.localStorage.getItem("focusBreakMinutes");
+    const storedFocusCycles = window.localStorage.getItem("focusCycleCount");
     if (storedStart) setStartHour(Number(storedStart));
     if (storedEnd) setEndHour(Number(storedEnd));
     if (storedDuration) setDefaultDuration(Number(storedDuration));
+    if (storedFocusWork) setFocusWorkMinutes(Number(storedFocusWork));
+    if (storedFocusBreak) setFocusBreakMinutes(Number(storedFocusBreak));
+    if (storedFocusCycles) setFocusCycleCount(Number(storedFocusCycles));
   }, []);
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -61,11 +45,30 @@ function SettingsContent() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem("defaultDurationMinutes", String(defaultDuration));
   }, [defaultDuration]);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("focusWorkMinutes", String(focusWorkMinutes));
+  }, [focusWorkMinutes]);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("focusBreakMinutes", String(focusBreakMinutes));
+  }, [focusBreakMinutes]);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("focusCycleCount", String(focusCycleCount));
+  }, [focusCycleCount]);
 
   // Google Calendar sync toggle (localStorage)
-  const [calendarProviders, setCalendarProviders] = React.useState<CalendarProviderOption[]>(
-    sortProviders(["GOOGLE"]),
-  );
+  const [syncEnabled, setSyncEnabled] = React.useState(true);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("googleSyncEnabled");
+    setSyncEnabled(stored !== "false");
+  }, []);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("googleSyncEnabled", String(syncEnabled));
+  }, [syncEnabled]);
 
   // User settings (tRPC)
   type UserSettings = {
@@ -73,10 +76,13 @@ function SettingsContent() {
     dayWindowStartHour: number;
     dayWindowEndHour: number;
     defaultDurationMinutes: number;
-    calendarSyncProviders: CalendarProviderOption[];
+    googleSyncEnabled: boolean;
     llmProvider: LlmProviderOption;
     openaiApiKey: string | null;
     lmStudioUrl: string;
+    focusWorkMinutes: number;
+    focusBreakMinutes: number;
+    focusCycleCount: number;
   };
   const settings = api.user.getSettings.useQuery().data as UserSettings | undefined;
   const [tz, setTz] = React.useState(
@@ -100,17 +106,22 @@ function SettingsContent() {
     setStartHour(settings.dayWindowStartHour);
     setEndHour(settings.dayWindowEndHour);
     setDefaultDuration(settings.defaultDurationMinutes);
-    const nextProviders =
-      settings.calendarSyncProviders?.length ? settings.calendarSyncProviders : ["GOOGLE"];
-    setCalendarProviders(sortProviders(nextProviders));
+    setSyncEnabled(settings.googleSyncEnabled);
     setLlmProvider(settings.llmProvider ?? "NONE");
     setOpenaiApiKey(settings.openaiApiKey ?? "");
     setLmStudioUrl(settings.lmStudioUrl || "http://localhost:1234");
+    setFocusWorkMinutes(settings.focusWorkMinutes);
+    setFocusBreakMinutes(settings.focusBreakMinutes);
+    setFocusCycleCount(settings.focusCycleCount);
     // Keep localStorage in sync for other pages
     if (typeof window !== "undefined") {
       window.localStorage.setItem("dayWindowStartHour", String(settings.dayWindowStartHour));
       window.localStorage.setItem("dayWindowEndHour", String(settings.dayWindowEndHour));
       window.localStorage.setItem("defaultDurationMinutes", String(settings.defaultDurationMinutes));
+      window.localStorage.setItem("googleSyncEnabled", String(settings.googleSyncEnabled));
+      window.localStorage.setItem("focusWorkMinutes", String(settings.focusWorkMinutes));
+      window.localStorage.setItem("focusBreakMinutes", String(settings.focusBreakMinutes));
+      window.localStorage.setItem("focusCycleCount", String(settings.focusCycleCount));
     }
   }, [settings]);
   const saveSettings = api.user.setSettings.useMutation({
@@ -187,47 +198,57 @@ function SettingsContent() {
             className="w-20 rounded border px-2 py-1"
           />
         </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="focus-work" className="w-48">
+            Focus work (minutes)
+          </label>
+          <input
+            id="focus-work"
+            type="number"
+            min={5}
+            value={focusWorkMinutes}
+            onChange={(e) => setFocusWorkMinutes(Number(e.target.value))}
+            className="w-20 rounded border px-2 py-1"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="focus-break" className="w-48">
+            Focus break (minutes)
+          </label>
+          <input
+            id="focus-break"
+            type="number"
+            min={1}
+            value={focusBreakMinutes}
+            onChange={(e) => setFocusBreakMinutes(Number(e.target.value))}
+            className="w-20 rounded border px-2 py-1"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="focus-cycles" className="w-48">
+            Focus intervals per session
+          </label>
+          <input
+            id="focus-cycles"
+            type="number"
+            min={1}
+            value={focusCycleCount}
+            onChange={(e) => setFocusCycleCount(Number(e.target.value))}
+            className="w-20 rounded border px-2 py-1"
+          />
+        </div>
       </section>
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Integrations</h2>
-        <div className="space-y-3">
-          {CALENDAR_PROVIDER_OPTIONS.map((option) => {
-            const checked = calendarProviders.includes(option.value);
-            return (
-              <label key={option.value} className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(event) => {
-                    const isChecked = event.target.checked;
-                    setCalendarProviders((prev) => {
-                      const next = new Set(prev);
-                      if (isChecked) {
-                        next.add(option.value);
-                      } else {
-                        next.delete(option.value);
-                      }
-                      if (next.size === 0) {
-                        // Keep at least one provider enabled to avoid disabling sync entirely accidentally.
-                        next.add("GOOGLE");
-                      }
-                      return sortProviders(next);
-                    });
-                  }}
-                  aria-label={option.label}
-                  className="mt-1"
-                />
-                <span>
-                  <span className="block font-medium leading-tight">{option.label}</span>
-                  <span className="block text-sm text-muted-foreground">
-                    {option.description}
-                  </span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={syncEnabled}
+            onChange={(e) => setSyncEnabled(e.target.checked)}
+          />
+          Enable Google Calendar sync
+        </label>
       </section>
 
       <section className="space-y-3">
@@ -305,6 +326,10 @@ function SettingsContent() {
               return;
             }
             const normalizedLmStudioUrl = trimmedLmStudio || "http://localhost:1234";
+            if (focusWorkMinutes <= 0 || focusBreakMinutes <= 0 || focusCycleCount <= 0) {
+              toast.error("Focus session settings must be positive values.");
+              return;
+            }
             if (trimmedApiKey !== openaiApiKey) {
               setOpenaiApiKey(trimmedApiKey);
             }
@@ -316,6 +341,10 @@ function SettingsContent() {
               window.localStorage.setItem("dayWindowStartHour", String(startHour));
               window.localStorage.setItem("dayWindowEndHour", String(endHour));
               window.localStorage.setItem("defaultDurationMinutes", String(defaultDuration));
+              window.localStorage.setItem("googleSyncEnabled", String(syncEnabled));
+              window.localStorage.setItem("focusWorkMinutes", String(focusWorkMinutes));
+              window.localStorage.setItem("focusBreakMinutes", String(focusBreakMinutes));
+              window.localStorage.setItem("focusCycleCount", String(focusCycleCount));
             }
 
             // Persist all settings via API (always save all fields)
@@ -324,10 +353,13 @@ function SettingsContent() {
               dayWindowStartHour: startHour,
               dayWindowEndHour: endHour,
               defaultDurationMinutes: defaultDuration,
-              calendarSyncProviders,
+              googleSyncEnabled: syncEnabled,
               llmProvider,
               openaiApiKey: trimmedApiKey || null,
               lmStudioUrl: normalizedLmStudioUrl,
+              focusWorkMinutes,
+              focusBreakMinutes,
+              focusCycleCount,
             });
           }}
           className="space-y-2 max-w-md"

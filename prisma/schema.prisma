@@ -35,6 +35,9 @@ model User {
   llmProvider          LlmProvider @default(NONE)
   openaiApiKey         String?  @db.Text
   lmStudioUrl          String   @default("http://localhost:1234")
+  focusWorkMinutes     Int     @default(25)
+  focusBreakMinutes    Int     @default(5)
+  focusCycleCount      Int     @default(4)
 
   tasks    Task[]
   projects Project[]
@@ -45,6 +48,7 @@ model User {
   taskMemberships    TaskMember[]
   projectMemberships ProjectMember[]
   courseMemberships  CourseMember[]
+  focusIntervals FocusIntervalLog[]
 }
 
 model Account {
@@ -191,6 +195,7 @@ model Task {
   timeLogs  TaskTimeLog[]
   members   TaskMember[]
   attachments Attachment[]
+  focusIntervals FocusIntervalLog[]
 
   @@index([dueAt, status])
   @@unique([userId, title, dueAt, recurrenceType, recurrenceInterval])
@@ -231,6 +236,24 @@ model TaskTimeLog {
 
   @@index([taskId])
   @@index([userId])
+}
+
+enum FocusIntervalType {
+  WORK
+  BREAK
+}
+
+model FocusIntervalLog {
+  id        String            @id @default(cuid())
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  task      Task?             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId    String?
+  type      FocusIntervalType
+  startedAt DateTime
+  endedAt   DateTime
+
+  @@index([userId, startedAt])
 }
 
 enum LlmProvider {
